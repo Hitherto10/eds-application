@@ -129,7 +129,7 @@ export default function CompleteRegistration() {
         try {
             await completeRegistration(payload);
             showToast("Registration complete", "success", 2000, () => {
-                navigate(`/login`);
+                navigate(`/`);
             });
         } catch (err) {
             showToast(err?.message || "Registration failed");

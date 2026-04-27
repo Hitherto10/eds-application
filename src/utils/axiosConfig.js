@@ -89,7 +89,7 @@ apiClient.interceptors.response.use(
                 if (authContext && authContext.logout) {
                     await authContext.logout();
                 }
-                window.location.href = '/login/welcome';
+                window.location.href = '/';
                 return Promise.reject(error);
             }
 
@@ -133,7 +133,7 @@ apiClient.interceptors.response.use(
                     if (authContext && authContext.logout) {
                         await authContext.logout();
                     }
-                    window.location.href = '/login';
+                    window.location.href = '/';
                 }
                 return Promise.reject(refreshError);
             } finally {

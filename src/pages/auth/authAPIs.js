@@ -63,7 +63,6 @@ export async function resendOTP(payload) {
     }
 }
 
-// New API function for dashboard data
 export async function getDashboardAnalytics() {
     try {
         const { data } = await apiClient.get('/api/admin/dashboard/analytics');
@@ -73,7 +72,6 @@ export async function getDashboardAnalytics() {
     }
 }
 
-// New API function for dashboard data
 export async function getParentDashboard() {
     try {
         const { data } = await apiClient.get('/api/parent/dashboard');
@@ -83,8 +81,6 @@ export async function getParentDashboard() {
     }
 }
 
-
-// New API function for dashboard data
 export async function getTeacherDashboard() {
     try {
         const { data } = await apiClient.get('/api/teacher/dashboard');
@@ -94,8 +90,6 @@ export async function getTeacherDashboard() {
     }
 }
 
-
-// New API function for dashboard data
 export async function getTeacherClasses() {
     try {
         const { data } = await apiClient.get('/api/teacher/classes');
@@ -113,7 +107,6 @@ export async function getTeacherStudents() {
         throw error?.response?.data || error;
     }
 }
-
 
 export async function getSubjectsByClass(className) {
 
@@ -133,7 +126,6 @@ export async function getStudentsByClassandSubject(className, subjectName) {
         throw error?.response?.data || error;
     }
 }
-
 
 export async function assignGrade(payload) {
     try {
@@ -162,7 +154,6 @@ export async function updateGrade(payload, gradeId) {
     }
 }
 
-
 export async function viewGrade(studentId) {
     try {
         const { data } = await apiClient.get(`/api/teacher/students/${studentId}/grades`);
@@ -172,10 +163,6 @@ export async function viewGrade(studentId) {
     }
 }
 
-
-
-
-// New API function for dashboard data
 export async function getDashboardUsers(role = '', status = '') {
     try {
         const { data } = await apiClient.get('/api/admin/dashboard/users', {
@@ -191,7 +178,6 @@ export async function getDashboardUsers(role = '', status = '') {
     }
 }
 
-// function to invite a teacher
 export async function inviteTeacher(payload) {
     try {
         const { data } = await apiClient.post('/api/school/auth/invite-teacher', payload);
@@ -201,7 +187,6 @@ export async function inviteTeacher(payload) {
     }
 }
 
-// function to invite a teacher
 export async function inviteParent(payload) {
     try {
         const { data } = await apiClient.post('/api/school/auth/invite-parent', payload);
@@ -211,8 +196,6 @@ export async function inviteParent(payload) {
     }
 }
 
-
-// Function Returns a maximum of 10 pending invitations
 export async function getInvitations() {
     try {
         const { data } = await apiClient.get('/api/school/auth/invitations?status=pending');
@@ -222,7 +205,6 @@ export async function getInvitations() {
     }
 }
 
-// function to invite a teacher
 export async function resendInvitation(payload) {
     try {
         const { data } = await apiClient.post('/api/school/auth/resend-invitation', payload);
@@ -232,7 +214,6 @@ export async function resendInvitation(payload) {
     }
 }
 
-// function to invite a teacher
 export async function terminateInvitation(payload) {
     try {
         const { data } = await apiClient.post('/api/school/auth/cancel-invitation', payload);
@@ -279,13 +260,6 @@ export async function createStudent(payload) {
 }
 
 export async function deactivateSchool(payload) {
-    /*
-        {
-          "schoolId": "SPR5866",
-          "isActive": false,
-          "reason": "School requested temporary suspension"
-        }
-    */
     try {
         const { data } = await apiClient.post('/api/school/profile/status', payload);
         return data;
@@ -295,13 +269,6 @@ export async function deactivateSchool(payload) {
 }
 
 export async function reactivateSchool(payload) {
-    /*
-        {
-          "schoolId": "SPR5866",
-          "isActive": true,
-          "reason": "School requested activation"
-        }
-    */
     try {
         const { data } = await apiClient.post('/api/school/profile/status', payload);
         return data;
@@ -309,9 +276,6 @@ export async function reactivateSchool(payload) {
         throw error?.response?.data || error;
     }
 }
-
-
-
 
 export async function verifySession() {
     try {
@@ -323,14 +287,6 @@ export async function verifySession() {
 }
 
 export async function updateStudent(studentId, payload) {
-    // expected payload:
-    // {
-    //     "firstName": "Alice",
-    //     "lastName": "Johnson-Updated",
-    //     "class": "JSS2",
-    //     "section": "B",
-    //     "phone": "09033820144"
-    // }
     try {
         const { data } = await apiClient.put(`/api/students/${studentId}`, payload);
         return data;
@@ -338,7 +294,6 @@ export async function updateStudent(studentId, payload) {
         throw error?.response?.data || error;
     }
 }
-
 
 export async function updateSchool(payload) {
     try {
@@ -349,8 +304,6 @@ export async function updateSchool(payload) {
     }
 }
 
-
-// Toggle User Status for Teachers and Parents
 export async function toggleStatus(payload) {
     try {
         const { data } = await apiClient.post(`/api/admin/dashboard/users/toggle-status`, payload);
@@ -360,7 +313,6 @@ export async function toggleStatus(payload) {
     }
 }
 
-// Toggle User Status for Students
 export async function toggleStudentStatus(payload) {
     try {
         const { data } = await apiClient.post(`/api/students/toggle-status`, payload);
@@ -370,7 +322,6 @@ export async function toggleStudentStatus(payload) {
     }
 }
 
-// Toggle User Status for Students
 export async function deleteUser(payload) {
     try {
         const { data } = await apiClient.delete(`/api/admin/dashboard/users/remove`, {data: payload});
@@ -399,12 +350,6 @@ export async function deleteGrade(payload, studentId) {
 }
 
 export async function deleteClasses(payload) {
-    // expected payload:
-    // {
-    //     "teacherId": "694fe6e4f6a5eff53cd7f8eb",
-    //     "classes": ["JSS2"],
-    //     "schoolId": "SPR5866"
-    // }
     try {
         const { data } = await apiClient.delete(`/api/admin/teachers/remove-classes`, {data: payload});
         return data;
@@ -412,9 +357,6 @@ export async function deleteClasses(payload) {
         throw error?.response?.data || error;
     }
 }
-
-
-
 
 export async function linkStudentToParent(payload, parentId) {
     try {
@@ -426,7 +368,6 @@ export async function linkStudentToParent(payload, parentId) {
     }
 }
 
-
 export async function unlinkStudentToParent(payload, parentId) {
     try {
         const { data } = await apiClient.post(`/api/parent-management/parents/${parentId}/unlink-students`,
@@ -436,7 +377,6 @@ export async function unlinkStudentToParent(payload, parentId) {
         throw error?.response?.data || error;
     }
 }
-
 
 export async function assignSubjects(payload) {
     try {
@@ -448,8 +388,6 @@ export async function assignSubjects(payload) {
     }
 }
 
-
-
 export async function completeRegistration(payload) {
     try {
         const { data } = await apiClient.post(`/api/user/auth/complete-registration`,
@@ -459,8 +397,6 @@ export async function completeRegistration(payload) {
         throw error?.response?.data || error;
     }
 }
-
-
 
 export async function assignStudenttoTeacher(payload) {
     // expected payload:
@@ -490,12 +426,6 @@ export async function bulkAssignStudentToTeacher(payload) {
 }
 
 export async function unassignStudentToTeacher(payload) {
-    // expected payload:
-    // {
-    //     "teacherId": "507f1f77bcf86cd799439011",
-    //     "studentIds": ["507f1f77bcf86cd799439012"],
-    //     "schoolId": "SCH0001"
-    // }
     try {
         const { data } = await apiClient.post(`/api/admin/unassign-teacher`,
             payload);
@@ -505,29 +435,7 @@ export async function unassignStudentToTeacher(payload) {
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 export async function assignClasses(payload) {
-    // expected Payload:
-    // {
-    //     "teacherId": "6962b912fa5cba86752091ff",
-    //     "classes": ["JSS1"],
-    //     "schoolId": "FED9474"
-    // }
     try {
         const { data } = await apiClient.post(`/api/admin/teachers/assign-classes`,
             payload);
@@ -536,8 +444,6 @@ export async function assignClasses(payload) {
         throw error?.response?.data || error;
     }
 }
-
-
 
 export async function updateParentProfile(payload) {
     try {
@@ -549,14 +455,7 @@ export async function updateParentProfile(payload) {
     }
 }
 
-
 export async function updateAdminProfile(payload) {
-    // expected Payload:
-    // {
-    //     "firstName": "John",
-    //     "lastName": "Doe-Updated",
-    //     "phone": "01234567890"
-    // }
     try {
         const { data } = await apiClient.put(`/api/school/profile/admin`,
             payload);
@@ -566,6 +465,248 @@ export async function updateAdminProfile(payload) {
     }
 }
 
+// =========================
+// Attendance APIs
+// =========================
+
+
+/*
+Expected Input (payload):
+
+{
+  attendances: [
+    {
+      academicYearId: "70abc...",
+      termId: "71abc...",
+      classId: "69ed...",
+      studentId: "60abc...",
+      date: "2025-09-15",
+      status: "present" // present | absent | late | excused
+      reason: "Medical" // optional, used for absent/excused
+    }
+  ]
+}
+
+Expected Output:
+
+{
+  success: true,
+  message: "10 attendance record(s) marked successfully",
+  data: {...}
+}
+*/
+export async function markAttendance(payload) {
+    try {
+        const { data } = await apiClient.post(
+            `/api/attendance/mark`,
+            payload
+        );
+        return data;
+    } catch (error) {
+        throw error?.response?.data || error;
+    }
+}
+
+
+
+/*
+Expected Input:
+
+studentId: "60abc..."
+days: 30 (optional, defaults to 30)
+
+Example request:
+getStudentAttendance("60abc...", 30)
+
+
+Expected Output:
+
+{
+  success: true,
+  data: {
+    attendance: [...],
+    total: 25,
+    present: 22,
+    absent: 2,
+    late: 1,
+    excused: 0
+  }
+}
+*/
+export async function getStudentAttendance(studentId, days = 30) {
+    try {
+        const { data } = await apiClient.get(
+            `/api/attendance/student/${studentId}?days=${days}`
+        );
+        return data;
+    } catch (error) {
+        throw error?.response?.data || error;
+    }
+}
+
+
+
+/*
+Expected Input:
+
+classId: "69ed..."
+date: "2025-09-15"
+
+Example:
+getClassAttendance("69ed...", "2025-09-15")
+
+
+Expected Output:
+
+{
+  success: true,
+  data: {
+    date: "2025-09-15",
+    totalStudents: 45,
+    present: 40,
+    absent: 3,
+    late: 2,
+    excused: 0,
+    records: [...]
+  }
+}
+*/
+export async function getClassAttendance(classId, date) {
+    try {
+        const { data } = await apiClient.get(
+            `/api/attendance/class/${classId}?date=${date}`
+        );
+        return data;
+    } catch (error) {
+        throw error?.response?.data || error;
+    }
+}
+
+
+
+/*
+Expected Input:
+
+{
+  classId: "69ed...",
+  startDate: "2025-09-01",
+  endDate: "2025-12-01"
+}
+
+Example:
+getAttendanceStats({
+   classId,
+   startDate,
+   endDate
+})
+
+
+Expected Output:
+
+{
+  success: true,
+  data: {
+    classId: "69ed...",
+    totalStudents: 45,
+    averageAttendance: 92.5,
+    byStatus: {
+      present: 828,
+      absent: 45,
+      late: 27,
+      excused: 3
+    }
+  }
+}
+*/
+export async function getAttendanceStats(params) {
+    try {
+        const { classId, startDate, endDate } = params;
+
+        const { data } = await apiClient.get(
+            `/api/attendance/stats?classId=${classId}&startDate=${startDate}&endDate=${endDate}`
+        );
+
+        return data;
+    } catch (error) {
+        throw error?.response?.data || error;
+    }
+}
+
+
+
+/*
+Expected Input:
+
+classId: "69ed..."
+threshold: 3 (optional)
+
+Example:
+getChronicAbsentees("69ed...", 3)
+
+
+Expected Output:
+
+{
+  success: true,
+  data: {
+    students: [
+      {
+        studentId: "60abc...",
+        firstName: "John",
+        lastName: "Doe",
+        absentCount: 5,
+        attendanceRate: 85.0
+      }
+    ],
+    total: 2
+  }
+}
+*/
+export async function getChronicAbsentees(classId, threshold = 3) {
+    try {
+        const { data } = await apiClient.get(
+            `/api/attendance/chronic/absent?classId=${classId}&threshold=${threshold}`
+        );
+
+        return data;
+    } catch (error) {
+        throw error?.response?.data || error;
+    }
+}
+
+
+
+/*
+Expected Input:
+
+classId: "69ed..."
+threshold: 2 (optional)
+
+Example:
+getChronicLateStudents("69ed...", 2)
+
+
+Expected Output:
+
+{
+  success: true,
+  data: {
+    students: [...],
+    total: 3
+  }
+}
+*/
+export async function getChronicLateStudents(classId, threshold = 2) {
+    try {
+        const { data } = await apiClient.get(
+            `/api/attendance/chronic/late?classId=${classId}&threshold=${threshold}`
+        );
+
+        return data;
+    } catch (error) {
+        throw error?.response?.data || error;
+    }
+}
 
 
 

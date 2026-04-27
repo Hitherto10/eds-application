@@ -353,7 +353,7 @@ export function RegisterSchool() {
             <div className="mt-5 text-center space-y-2">
                 <p className="text-sm text-gray-500">
                     Already registered?{' '}
-                    <NavLink to="/login" className="text-[#0A61A4] font-semibold hover:underline">Sign in</NavLink>
+                    <NavLink to="/" className="text-[#0A61A4] font-semibold hover:underline">Sign in</NavLink>
                 </p>
                 {step === 3 && (
                     <p className="text-xs text-gray-400 max-w-sm mx-auto leading-relaxed">

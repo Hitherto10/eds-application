@@ -44,7 +44,7 @@ export const VerifySchoolModal = ({ onClose, email, showToast }) => {
             showToast('School verified successfully! Please proceed to login', 'success');
             onClose(); // Close modal on success
             setTimeout(() => {
-                navigate('/login');
+                navigate('/');
             }, 3000); // Wait 1 second before navigating
         } catch (err) {
             const message = err?.message || err?.error || 'Verification failed';
