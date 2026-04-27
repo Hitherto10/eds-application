@@ -8,7 +8,7 @@ import {
     Settings,
     Users,
     X,
-    GraduationCap, User
+    GraduationCap, User, ClipboardCheck
 } from 'lucide-react';
 import { Header } from '../../../dashboardUtilities.jsx';
 import { useAuth } from '../../../../../contexts/AuthContext.jsx';
@@ -36,6 +36,7 @@ export const Sidebar = () => {
     const navItems = [
         { name: 'Dashboard', icon: LayoutDashboard, link: '/dashboard/teacher' },
         { name: 'My Classes', icon: GraduationCap, link: '/dashboard/teacher/classes', label: '' },
+        { name: 'Attendance', icon: ClipboardCheck, link: '/dashboard/teacher/attendance' },
         { name: 'User Profile', icon: User, link: '/dashboard/teacher/profile' },
     ];
 

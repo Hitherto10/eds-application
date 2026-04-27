@@ -35,6 +35,8 @@ const TeacherDashboard = lazy(() => import("./pages/application/TeacherDashboard
 const TeacherProfile = lazy(() => import("./pages/application/TeacherDashboard/UserProfile.jsx"));
 const ClassStudents = lazy(() => import("./pages/application/TeacherDashboard/ClassStudents.jsx"));
 const TeacherClasses = lazy(() => import("./pages/application/TeacherDashboard/TeacherClasses.jsx"));
+const AttendancePage = lazy(() => import("./pages/application/TeacherDashboard/AttendancePage.jsx"));
+const AttendanceRegisterPage = lazy(() => import("./pages/application/TeacherDashboard/AttendanceRegisterPage.jsx"));
 
 const LoadingFallback = () => (
     <div className="h-screen w-full flex items-center justify-center font-[Outfit]">
@@ -103,6 +105,8 @@ function AppRoutes() {
                 <Route path="/dashboard/teacher/profile" element={<ProtectedRoute requiredRole="teacher"><TeacherProfile /></ProtectedRoute>} />
                 <Route path="/dashboard/teacher/classes" element={<ProtectedRoute requiredRole="teacher"><TeacherClasses /></ProtectedRoute>} />
                 <Route path="/dashboard/teacher/students/:class/:subject" element={<ProtectedRoute requiredRole="teacher"><ClassStudents /></ProtectedRoute>} />
+                <Route path="/dashboard/teacher/attendance" element={<ProtectedRoute requiredRole="teacher"><AttendancePage /></ProtectedRoute>} />
+                <Route path="/dashboard/teacher/attendance/register/:scheduleId" element={<ProtectedRoute requiredRole="teacher"><AttendanceRegisterPage /></ProtectedRoute>} />
 
             </Routes>
 
