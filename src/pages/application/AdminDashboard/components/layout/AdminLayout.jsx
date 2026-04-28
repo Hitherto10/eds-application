@@ -25,7 +25,7 @@ import {
     AlertDialogTrigger,
 } from "../../../../../components/ui/alert-dialog";
 
-export const Sidebar = () => {
+export const Sidebar = ({ isMiniSidebar = false }) => {
     const [isOpen, setIsOpen] = useState(false);
     const location = useLocation();
     const { logout } = useAuth();
@@ -82,17 +82,18 @@ export const Sidebar = () => {
             )}
 
             {/* Sidebar Container */}
-            <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 
-                    flex flex-col h-screen transition-transform duration-300 ease-in-out
+            <div className={`fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200 
+                    flex flex-col h-screen transition-all duration-300 ease-in-out
                     lg:translate-x-0 lg:sticky lg:top-0
-                    ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+                    ${isOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:translate-x-0'}
+                    ${isMiniSidebar ? 'lg:w-[72px]' : 'lg:w-64'}
                 `}>
 
-                <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 shrink-0">
+                <div className={`flex items-center h-16 border-b border-gray-200 shrink-0 ${isMiniSidebar ? 'justify-center px-0' : 'justify-between px-6'}`}>
                     {isDark ? (
-                        <img src={`${Images.main_logo_light}`} alt="Logo" className="w-32" />
+                        <img src={`${Images.main_logo_light}`} alt="Logo" className={isMiniSidebar ? "w-8 h-8 object-cover object-left" : "w-32"} />
                     ) : (
-                        <img src={`${Images.main_logo}`} alt="Logo" className="w-32" />
+                        <img src={`${Images.main_logo}`} alt="Logo" className={isMiniSidebar ? "w-8 h-8 object-cover object-left" : "w-32"} />
                     )}
 
                     <button
@@ -103,10 +104,12 @@ export const Sidebar = () => {
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto pt-6 px-4">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 mb-2">
-                        Menu
-                    </p>
+                <div className={`flex-1 overflow-y-auto pt-6 ${isMiniSidebar ? 'px-2' : 'px-4'}`}>
+                    {!isMiniSidebar && (
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 mb-2">
+                          Menu
+                      </p>
+                    )}
                     <nav className="space-y-1">
                         {navItems.map((item) => (
                             <NavLink
@@ -114,15 +117,20 @@ export const Sidebar = () => {
                                 to={item.link}
                                 end={item.name === 'Dashboard'}
                                 className={({ isActive }) =>
-                                    `flex items-center p-3 rounded-lg transition duration-150 ${
+                                    `flex items-center rounded-lg transition duration-150 group relative ${isMiniSidebar ? 'justify-center p-3' : 'p-3'} ${
                                         isActive
                                             ? 'bg-blue-50 text-blue-600 font-semibold'
                                             : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
                                     }`
                                 }
                             >
-                                <item.icon className="w-5 h-5 mr-3" />
-                                <span className="flex-1 text-sm">{item.name}</span>
+                                <item.icon className="w-5 h-5 shrink-0" />
+                                {!isMiniSidebar && <span className="flex-1 text-sm ml-3">{item.name}</span>}
+                                {isMiniSidebar && (
+                                    <div className="absolute left-full ml-3 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none z-50 whitespace-nowrap transition-opacity">
+                                        {item.name}
+                                    </div>
+                                )}
                             </NavLink>
                         ))}
                     </nav>
@@ -132,10 +140,15 @@ export const Sidebar = () => {
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <button
-                                className="flex items-center cursor-pointer w-full p-3 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition duration-150"
+                                className={`flex items-center cursor-pointer w-full text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition duration-150 group relative ${isMiniSidebar ? 'justify-center p-3' : 'p-3'}`}
                             >
-                                <LogOut className="w-5 h-5 mr-3" />
-                                Logout
+                                <LogOut className="w-5 h-5 shrink-0" />
+                                {!isMiniSidebar && <span className="ml-3">Logout</span>}
+                                {isMiniSidebar && (
+                                    <div className="absolute left-full ml-3 px-2 py-1 bg-red-600 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none z-50 whitespace-nowrap transition-opacity">
+                                        Logout
+                                    </div>
+                                )}
                             </button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -161,7 +174,7 @@ export const Sidebar = () => {
 }
 
 
-const AdminLayout = ({ children }) => {
+const AdminLayout = ({ children, isMiniSidebar = false }) => {
     const { logout } = useAuth();
 
     const handleLogout = async () => {
@@ -169,11 +182,11 @@ const AdminLayout = ({ children }) => {
     };
 
     return (
-        <div className="flex min-h-screen bg-gray-50">
-            <Sidebar />
-            <div className="flex-1 flex flex-col">
+        <div className="flex min-h-screen bg-gray-50 overflow-hidden">
+            <Sidebar isMiniSidebar={isMiniSidebar} />
+            <div className="flex-1 flex flex-col min-w-0">
                 <Header/>
-                <main className="flex-1 p-2 md:p-4 lg:p-6 items-center content-center justify-center ">
+                <main className="flex-1 flex flex-col bg-white">
                     {children}
                 </main>
             </div>

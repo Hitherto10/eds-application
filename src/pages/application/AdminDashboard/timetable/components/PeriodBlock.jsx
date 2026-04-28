@@ -75,9 +75,13 @@ export default function PeriodBlock({ entry, isSelected, isConflicted, isWarned,
         </div>
       )}
 
-      {/* Room */}
-      {entry.roomName && (
-        <p className={`text-[9px] mt-0.5 ${color.text} opacity-50 truncate`}>{entry.roomName}</p>
+      {/* Arm String */}
+      {entry.armName && (
+        <div className="flex items-center gap-1 mt-0.5">
+          <span className={`px-1 rounded-sm text-[8px] font-bold uppercase tracking-wider ${color.bg} ${color.text} opacity-80 border ${color.border}`}>
+            {entry.armName}
+          </span>
+        </div>
       )}
 
       {/* Remove button — visible on hover, not when dragging */}

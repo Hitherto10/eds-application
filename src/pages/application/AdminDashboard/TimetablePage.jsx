@@ -5,12 +5,14 @@ import { CalendarDays, Settings2, Loader2, LayoutGrid } from 'lucide-react';
 import AcademicCalendarBuilder from './timetable/AcademicCalendarBuilder';
 import TimetableBuilder from './timetable/TimetableBuilder';
 import SubjectSetupBuilder from './timetable/components/SubjectSetupBuilder';
+import ClassSetupBuilder from './timetable/components/ClassSetupBuilder';
+import TimetableSecondarySidebar from './timetable/components/TimetableSecondarySidebar';
 
 // API
 import { getAcademicYears, getTerms, getHolidays, getTimetableDraft, getPublishedTimetable } from './timetable/timetableAPIs';
-// import { getSchoolSubjects } from '../..//services/subjectAPIs';
-import * as adminService from '../AdminDashboard/services/adminService';
-import * as authAPIs from '../../auth/authAPIs'; // we need classes from here
+import { getSchoolClasses } from './services/classAPIs';
+import * as adminService from './services/adminService';
+// authAPIs removed as we longer borrow teacher classes for global taxonomy
 
 /**
  * TimetablePage
@@ -46,9 +48,9 @@ function TimetableContent() {
           resSubjects
         ] = await Promise.all([
           getAcademicYears(),
-          getSchoolSubjects(),
-          authAPIs.getTeacherClasses(), // We borrow this to get the list of classes in the school
-          adminService.getAllUsers() // Need users to filter out teachers
+          getSchoolClasses(),
+          adminService.getDashboardUsers(), // Need users to filter out teachers
+          getSchoolSubjects()
         ]);
 
         if (resYears.success) {
@@ -58,11 +60,11 @@ function TimetableContent() {
           if (active) dispatch({ type: 'SELECT_YEAR', payload: active });
         }
 
-        if (resClasses.success) {
+        if (resClasses && resClasses.success) {
           dispatch({ type: 'SET_CLASSES', payload: resClasses.data.classes });
         }
 
-        if (resTeachers.success && Array.isArray(resTeachers.data.users)) {
+        if (resTeachers && resTeachers.success && Array.isArray(resTeachers.data.users)) {
           const teachersOnly = resTeachers.data.users.filter(u => u.role === 'teacher').map(t => ({
             id: t.id,
             name: `${t.firstName} ${t.lastName}`,
@@ -70,7 +72,7 @@ function TimetableContent() {
           dispatch({ type: 'SET_TEACHERS', payload: teachersOnly });
         }
 
-        if (resSubjects.success) {
+        if (resSubjects && resSubjects.success) {
           dispatch({ type: 'SET_SUBJECTS', payload: resSubjects.data.subjects });
         }
       } catch (err) {
@@ -166,37 +168,11 @@ function TimetableContent() {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-[calc(100vh-80px)] overflow-hidden p-2 lg:p-4">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 shrink-0">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 leading-tight">Academic Scheduling</h1>
-          <p className="text-sm font-medium text-gray-500 mt-1">Design the school year and manage class timetables.</p>
-        </div>
-
-        {/* Tab Toggle */}
-        <div className="flex p-1 bg-gray-100 rounded-lg">
-          <button
-            onClick={() => setActiveTab('subjects')}
-            className={`px-4 py-2 text-sm font-semibold rounded-md flex items-center gap-2 transition-all ${activeTab === 'subjects' ? 'bg-white text-blue-700 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}`}
-          >
-            Subject Setup
-          </button>
-          <button
-            onClick={() => setActiveTab('calendar')}
-            className={`px-4 py-2 text-sm font-semibold rounded-md flex items-center gap-2 transition-all ${activeTab === 'calendar' ? 'bg-white text-blue-700 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}`}
-          >
-            <CalendarDays size={16} /> Calendar Settings
-          </button>
-          <button
-            onClick={() => setActiveTab('timetable')}
-            className={`px-4 py-2 text-sm font-semibold rounded-md flex items-center gap-2 transition-all ${activeTab === 'timetable' ? 'bg-white text-blue-700 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}`}
-          >
-            <LayoutGrid size={16} /> Timetable Builder
-          </button>
-        </div>
-      </div>
-
+    <div className="flex-1 flex flex-col lg:flex-row h-full lg:h-[calc(100vh-80px)] overflow-hidden">
+      <TimetableSecondarySidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      
+      <div className="flex-1 flex flex-col h-full overflow-hidden p-2 lg:p-6 bg-gray-50/30">
+      
       {/* Global Builder Context Bar (Class Selector) - Only show on timetable tab */}
       {activeTab === 'timetable' && (
         <div className="flex flex-wrap shadow-sm items-center gap-4 p-3 bg-white border border-gray-200 rounded-lg mb-4 shrink-0 overflow-visible z-10">
@@ -237,15 +213,18 @@ function TimetableContent() {
 
       {/* Core Working Area */}
       {activeTab === 'subjects' && <SubjectSetupBuilder />}
+      {activeTab === 'classes' && <ClassSetupBuilder />}
       {activeTab === 'calendar' && <AcademicCalendarBuilder />}
       {activeTab === 'timetable' && <TimetableBuilder />}
+      
+      </div>
     </div>
   );
 }
 
 export default function TimetablePage() {
   return (
-      <AdminLayout>
+      <AdminLayout isMiniSidebar={true}>
         <TimetableProvider>
           <TimetableContent />
         </TimetableProvider>

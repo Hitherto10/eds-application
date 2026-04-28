@@ -318,7 +318,7 @@ export const availableSubjects = [
     "Environmental Management"
 ];
 
-const registryStyles = [
+export const registryStyles = [
     {
         id: "nigerian-standard",
         name: "Nigerian 6-3-3-4 (Primary/SS)",

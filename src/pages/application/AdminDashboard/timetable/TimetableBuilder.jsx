@@ -99,8 +99,8 @@ export default function TimetableBuilder() {
         subjectName: subject.name,
         teacherId: null,
         teacherName: null,
-        roomId: null,
-        roomName: null,
+        armId: null,
+        armName: null,
       };
       dispatch({ type: 'ADD_SCHEDULE_ENTRY', payload: newEntry });
       dispatch({ type: 'SELECT_ENTRY', id: newEntry.id });
@@ -115,15 +115,15 @@ export default function TimetableBuilder() {
           payload: { id: cellEntries[0].id, teacherId: teacher.id, teacherName: teacher.name },
         });
       }
-    } else if (sourceData.type === 'ROOM') {
-      const room = sourceData.payload;
+    } else if (sourceData.type === 'ARM') {
+      const arm = sourceData.payload;
       const cellEntries = state.schedules.filter(
           s => s.dayOfWeek === dropData.day && s.periodId === dropData.periodId
       );
       if (cellEntries.length === 1) {
         dispatch({
           type: 'UPDATE_SCHEDULE_ENTRY',
-          payload: { id: cellEntries[0].id, roomId: room.name, roomName: room.name },
+          payload: { id: cellEntries[0].id, armId: arm.name, armName: arm.name },
         });
       }
     } else if (sourceData.type === 'PLACED_BLOCK') {
@@ -183,9 +183,9 @@ export default function TimetableBuilder() {
               <div className="px-3 py-1.5 bg-gray-800 text-white font-bold text-xs rounded shadow-2xl opacity-90 scale-105 pointer-events-none">
                 Assign: {activeDragData.payload.name}
               </div>
-          ) : activeDragData?.type === 'ROOM' ? (
-              <div className="px-3 py-1.5 bg-amber-600 text-white font-bold text-xs rounded shadow-2xl opacity-90 scale-105 pointer-events-none">
-                Room: {activeDragData.payload.name}
+          ) : activeDragData?.type === 'ARM' ? (
+              <div className="px-3 py-1.5 bg-indigo-600 text-white font-bold text-xs rounded shadow-2xl opacity-90 scale-105 pointer-events-none">
+                Arm: {activeDragData.payload.name}
               </div>
           ) : activeDragData?.type === 'PLACED_BLOCK' ? (
               <div className="w-[120px] pointer-events-none opacity-80 scale-105 shadow-2xl">

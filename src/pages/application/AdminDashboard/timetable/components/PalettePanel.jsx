@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
-import { Search, ChevronDown, ChevronRight, BookOpen, User, MapPin } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, BookOpen, User, Layers, Users } from 'lucide-react';
 import { useTimetable } from '../TimetableContext';
 import { getSubjectColor } from '../TimetableContext';
 
@@ -15,7 +15,7 @@ export default function PalettePanel() {
   const [openSections, setOpenSections] = useState({
     subjects: true,
     teachers: true,
-    rooms: false
+    arms: false
   });
 
   const toggle = (section) => setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -26,7 +26,15 @@ export default function PalettePanel() {
 
   const filteredSubjects = state.subjects.filter(s => s.name.toLowerCase().includes(term));
   const filteredTeachers = state.teachers.filter(t => t.name.toLowerCase().includes(term));
-  const filteredRooms = state.rooms.filter(r => r.toLowerCase().includes(term));
+  
+  // Extract arms that belong to the baseLevel of the currently selected class
+  const classArms = Array.from(new Set(
+    state.classes
+      .filter(c => state.selectedClass && c.baseLevel === state.selectedClass.baseLevel && c.arm)
+      .map(c => c.arm)
+  ));
+  
+  const filteredArms = classArms.filter(a => a.toLowerCase().includes(term));
 
   return (
     <div className="w-64 bg-white border-r border-gray-200 flex flex-col h-full shrink-0 hidden lg:flex">
@@ -88,20 +96,20 @@ export default function PalettePanel() {
           )}
         </div>
 
-        {/* Rooms Section */}
+        {/* Arms Section */}
         <div>
-          <button onClick={() => toggle('rooms')} className="flex items-center justify-between w-full p-1 text-sm font-semibold text-gray-600 hover:text-gray-900 group">
-            <span className="flex items-center gap-2"><MapPin className="w-4 h-4" /> Rooms ({filteredRooms.length})</span>
-            {openSections.rooms ? <ChevronDown className="w-4 h-4 opacity-50" /> : <ChevronRight className="w-4 h-4 opacity-50" />}
+          <button onClick={() => toggle('arms')} className="flex items-center justify-between w-full p-1 text-sm font-semibold text-gray-600 hover:text-gray-900 group">
+            <span className="flex items-center gap-2"><Layers className="w-4 h-4" /> Arms/Streams ({filteredArms.length})</span>
+            {openSections.arms ? <ChevronDown className="w-4 h-4 opacity-50" /> : <ChevronRight className="w-4 h-4 opacity-50" />}
           </button>
           
-          {openSections.rooms && (
+          {openSections.arms && (
             <div className="mt-2 space-y-1.5 pl-1">
-               {filteredRooms.length === 0 ? (
-                <p className="text-xs text-gray-400 p-2 text-center bg-gray-50 rounded">No rooms found.</p>
+               {filteredArms.length === 0 ? (
+                <p className="text-xs text-gray-400 p-2 text-center bg-gray-50 rounded">No arms found for {state.selectedClass?.baseLevel}.</p>
               ) : (
-                filteredRooms.map(room => (
-                  <PaletteItem key={room} id={`base_room_${room}`} type="ROOM" payload={{ name: room }} />
+                filteredArms.map(arm => (
+                  <PaletteItem key={arm} id={`base_arm_${arm}`} type="ARM" payload={{ name: arm }} />
                 ))
               )}
             </div>
@@ -133,8 +141,8 @@ function PaletteItem({ id, type, payload }) {
     baseStyle = `${color.bg} ${color.text} ${color.border}`;
   } else if (type === 'TEACHER') {
     Icon = User;
-  } else if (type === 'ROOM') {
-    Icon = MapPin;
+  } else if (type === 'ARM') {
+    Icon = Users;
   }
 
   const disabledClass = (state.isPublished || !state.selectedClass) ? 'opacity-50 cursor-not-allowed grayscale' : 'cursor-grab active:cursor-grabbing hover:shadow-sm hover:-translate-y-px transition-all';
