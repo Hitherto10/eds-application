@@ -42,6 +42,14 @@ function scheduleId(className, subjectName, periodNumber) {
 // period slot. Once a real timetable API is available, replace the body below.
 // ─────────────────────────────────────────────────────────────────────────────
 export async function getScheduledClasses(date = new Date().toISOString().split('T')[0]) {
+  if (TIMETABLE_BACKEND_LIVE) {
+    // Direct call to the published timetable endpoint once backend exists
+    const res = await getTeacherDailySchedule(date);
+    if (res.success) return res.data;
+    throw new Error("Failed to fetch formal timetable");
+  }
+
+  // 1. Fetch real classes assigned to this teacher
   // Fetch classes and dashboard (for academic context) in parallel
   const [classRes, dashboardRes] = await Promise.all([
     getTeacherClasses(),

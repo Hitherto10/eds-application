@@ -7,7 +7,8 @@ import {
     School,
     Users,
     X,
-    GraduationCap
+    GraduationCap,
+    CalendarDays
 } from 'lucide-react';
 import { Header } from '../../../dashboardUtilities.jsx';
 import { useAuth } from '../../../../../contexts/AuthContext.jsx';
@@ -42,6 +43,7 @@ export const Sidebar = () => {
         { name: 'User Management', icon: Users, link: '/dashboard/admin/users' },
         { name: 'Students', icon: GraduationCap, link: '/dashboard/admin/students' },
         { name: 'School Profile', icon: School, link: '/dashboard/admin/school-profile' },
+        { name: 'Timetable', icon: CalendarDays, link: '/dashboard/admin/timetable' },
     ];
 
     const [isDark, setIsDark] = useState(false);

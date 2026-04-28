@@ -1,0 +1,253 @@
+import React, { createContext, useContext, useReducer, useMemo, useCallback } from 'react';
+import { detectConflicts, getConflictedEntryIds, getWarnedEntryIds, hasBlockingConflicts } from './conflictEngine';
+
+// Periods are now dynamic and configured per draft.
+
+export const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+// ─── Subject color palette ────────────────────────────────────────────────────
+const COLOR_PALETTE = [
+  { bg: 'bg-blue-100',    text: 'text-blue-800',    border: 'border-blue-300',    dot: 'bg-blue-500',    dragBg: 'bg-blue-200' },
+  { bg: 'bg-violet-100',  text: 'text-violet-800',  border: 'border-violet-300',  dot: 'bg-violet-500',  dragBg: 'bg-violet-200' },
+  { bg: 'bg-emerald-100', text: 'text-emerald-800', border: 'border-emerald-300', dot: 'bg-emerald-500', dragBg: 'bg-emerald-200' },
+  { bg: 'bg-orange-100',  text: 'text-orange-800',  border: 'border-orange-300',  dot: 'bg-orange-500',  dragBg: 'bg-orange-200' },
+  { bg: 'bg-pink-100',    text: 'text-pink-800',    border: 'border-pink-300',    dot: 'bg-pink-500',    dragBg: 'bg-pink-200' },
+  { bg: 'bg-cyan-100',    text: 'text-cyan-800',    border: 'border-cyan-300',    dot: 'bg-cyan-500',    dragBg: 'bg-cyan-200' },
+  { bg: 'bg-amber-100',   text: 'text-amber-800',   border: 'border-amber-300',   dot: 'bg-amber-500',   dragBg: 'bg-amber-200' },
+  { bg: 'bg-rose-100',    text: 'text-rose-800',    border: 'border-rose-300',    dot: 'bg-rose-500',    dragBg: 'bg-rose-200' },
+  { bg: 'bg-teal-100',    text: 'text-teal-800',    border: 'border-teal-300',    dot: 'bg-teal-500',    dragBg: 'bg-teal-200' },
+  { bg: 'bg-indigo-100',  text: 'text-indigo-800',  border: 'border-indigo-300',  dot: 'bg-indigo-500',  dragBg: 'bg-indigo-200' },
+];
+
+/**
+ * Returns a stable color scheme for a given subject name/id.
+ * Hash is based on character codes — same subject always gets the same color.
+ */
+export function getSubjectColor(subjectId) {
+  if (!subjectId) return COLOR_PALETTE[0];
+  const hash = String(subjectId).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return COLOR_PALETTE[hash % COLOR_PALETTE.length];
+}
+
+/** Lightweight unique ID with no external dependency. */
+export const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
+
+// ─── State ────────────────────────────────────────────────────────────────────
+const initialState = {
+  // Academic context
+  academicYears: [],
+  selectedYear: null,
+  terms: [],
+  selectedTerm: null,
+  holidays: [],
+
+  // Available resources
+  classes: [],           // [{ id, name }] — filled from API or admin input
+  teachers: [],          // [{ id, name, subjects }]
+  subjectMap: {},        // { className: [{ id, name }] }
+  rooms: ['Room 101', 'Room 102', 'Room 103', 'Lab 1', 'Library', 'Gym'],
+
+  // Builder
+  selectedClass: null,   // { id, name }
+  periods: [],           // Configured via Wizard
+  schedules: [],         // ScheduleEntry[]
+  draftId: null,
+  isDraft: true,
+  isPublished: false,
+  publishedAt: null,
+
+  // Selection
+  selectedEntryId: null,
+
+  // Draft save
+  lastSavedAt: null,
+  isSaving: false,
+
+  // Loading flags
+  loading: { years: false, terms: false, classes: false, teachers: false, draft: false },
+};
+
+// ─── Reducer ──────────────────────────────────────────────────────────────────
+function timetableReducer(state, action) {
+  switch (action.type) {
+
+    // ── Academic ──────────────────────────────────────────────────────────────
+    case 'SET_ACADEMIC_YEARS':
+      return { ...state, academicYears: action.payload };
+    case 'ADD_ACADEMIC_YEAR':
+      return { ...state, academicYears: [...state.academicYears, action.payload] };
+    case 'SELECT_YEAR':
+      return { ...state, selectedYear: action.payload, selectedTerm: null, periods: [], schedules: [], draftId: null, isPublished: false };
+    case 'SET_TERMS':
+      return { ...state, terms: action.payload };
+    case 'ADD_TERM':
+      return { ...state, terms: [...state.terms, action.payload] };
+    case 'SELECT_TERM':
+      return { ...state, selectedTerm: action.payload, periods: [], schedules: [], draftId: null, isPublished: false };
+    case 'SET_HOLIDAYS':
+      return { ...state, holidays: action.payload };
+    case 'ADD_HOLIDAY':
+      return { ...state, holidays: [...state.holidays, action.payload] };
+    case 'REMOVE_HOLIDAY':
+      return { ...state, holidays: state.holidays.filter(h => h.id !== action.id) };
+
+    // ── Resources ─────────────────────────────────────────────────────────────
+    case 'SET_CLASSES':
+      return { ...state, classes: action.payload };
+    case 'ADD_CLASS':
+      return { ...state, classes: [...state.classes, action.payload] };
+    case 'SET_TEACHERS':
+      return { ...state, teachers: action.payload };
+    case 'SET_SUBJECTS_FOR_CLASS':
+      return { ...state, subjectMap: { ...state.subjectMap, [action.className]: action.subjects } };
+    case 'ADD_ROOM':
+      return { ...state, rooms: [...state.rooms, action.room] };
+    case 'REMOVE_ROOM':
+      return { ...state, rooms: state.rooms.filter(r => r !== action.room) };
+
+    // ── Class selection ───────────────────────────────────────────────────────
+    case 'SELECT_CLASS':
+      return { ...state, selectedClass: action.payload, periods: [], schedules: [], draftId: null, selectedEntryId: null, isPublished: false };
+
+    // ── Periods config ────────────────────────────────────────────────────────
+    case 'SET_PERIODS':
+      return { ...state, periods: action.payload };
+
+    // ── Schedule entries ──────────────────────────────────────────────────────
+    case 'SET_DRAFT':
+      return { ...state, schedules: action.schedules, periods: action.periods || [], draftId: action.draftId, isDraft: true };
+
+    case 'ADD_SCHEDULE_ENTRY':
+      return { ...state, schedules: [...state.schedules, action.payload] };
+
+    case 'UPDATE_SCHEDULE_ENTRY':
+      return {
+        ...state,
+        schedules: state.schedules.map(s =>
+          s.id === action.payload.id ? { ...s, ...action.payload } : s
+        ),
+      };
+
+    case 'MOVE_SCHEDULE_ENTRY':
+      return {
+        ...state,
+        schedules: state.schedules.map(s =>
+          s.id === action.id
+            ? { ...s, dayOfWeek: action.day, periodId: action.periodId, startTime: action.startTime, endTime: action.endTime, periodNumber: action.periodNumber }
+            : s
+        ),
+      };
+
+    case 'REMOVE_SCHEDULE_ENTRY':
+      return {
+        ...state,
+        schedules: state.schedules.filter(s => s.id !== action.id),
+        selectedEntryId: state.selectedEntryId === action.id ? null : state.selectedEntryId,
+      };
+
+    case 'CLEAR_SCHEDULES':
+      return { ...state, schedules: [], selectedEntryId: null };
+
+    case 'CLEAR_PERIODS_AND_SCHEDULES':
+      return { ...state, periods: [], schedules: [], selectedEntryId: null, draftId: null, isPublished: false, lastSavedAt: null };
+
+    // ── Copy from another class (bulk) ────────────────────────────────────────
+    case 'PASTE_SCHEDULES': {
+      // Restamp classId/className to the current class, regenerate IDs
+      const { targetClass, entries } = action;
+      const stampedEntries = entries.map(e => ({
+        ...e,
+        id: uid(),
+        classId: targetClass.id,
+        className: targetClass.name,
+        teacherId: null,    // teacher assignments are class-specific
+        teacherName: null,
+      }));
+      return { ...state, schedules: stampedEntries };
+    }
+
+    // ── Published ─────────────────────────────────────────────────────────────
+    case 'SET_PUBLISHED':
+      return { ...state, isPublished: true, isDraft: false, publishedAt: action.publishedAt };
+
+    // ── UI selection ──────────────────────────────────────────────────────────
+    case 'SELECT_ENTRY':
+      return { ...state, selectedEntryId: action.id };
+    case 'DESELECT_ENTRY':
+      return { ...state, selectedEntryId: null };
+
+    // ── Draft save state ──────────────────────────────────────────────────────
+    case 'SET_SAVING':
+      return { ...state, isSaving: action.value };
+    case 'SET_SAVED':
+      return { ...state, lastSavedAt: action.at, isSaving: false, draftId: action.draftId ?? state.draftId };
+
+    // ── Loading ───────────────────────────────────────────────────────────────
+    case 'SET_LOADING':
+      return { ...state, loading: { ...state.loading, ...action.payload } };
+
+    default:
+      return state;
+  }
+}
+
+// ─── Context ──────────────────────────────────────────────────────────────────
+const TimetableContext = createContext(null);
+
+export function TimetableProvider({ children }) {
+  const [state, dispatch] = useReducer(timetableReducer, initialState);
+
+  // Derived: conflict analysis (re-runs every time schedules change)
+  const conflicts = useMemo(() => detectConflicts(state.schedules), [state.schedules]);
+  const conflictedIds = useMemo(() => getConflictedEntryIds(conflicts), [conflicts]);
+  const warnedIds = useMemo(() => getWarnedEntryIds(conflicts), [conflicts]);
+  const hasErrors = useMemo(() => hasBlockingConflicts(conflicts), [conflicts]);
+
+  // Derived: selected entry
+  const selectedEntry = useMemo(
+    () => state.schedules.find(s => s.id === state.selectedEntryId) ?? null,
+    [state.schedules, state.selectedEntryId]
+  );
+
+  // Derived: schedule lookup by day+period (for WeeklyGrid)
+  const scheduleByCell = useMemo(() => {
+    const map = {};
+    for (const entry of state.schedules) {
+      const key = `${entry.dayOfWeek}__${entry.periodId}`;
+      if (!map[key]) map[key] = [];
+      map[key].push(entry);
+    }
+    return map;
+  }, [state.schedules]);
+
+  // Available subjects for the currently selected class
+  const availableSubjects = useMemo(
+    () => (state.selectedClass ? (state.subjectMap[state.selectedClass.name] ?? []) : []),
+    [state.selectedClass, state.subjectMap]
+  );
+
+  const value = {
+    state,
+    dispatch,
+    // Derived
+    conflicts,
+    conflictedIds,
+    warnedIds,
+    hasErrors,
+    selectedEntry,
+    scheduleByCell,
+    availableSubjects,
+  };
+
+  return (
+    <TimetableContext.Provider value={value}>
+      {children}
+    </TimetableContext.Provider>
+  );
+}
+
+export function useTimetable() {
+  const ctx = useContext(TimetableContext);
+  if (!ctx) throw new Error('useTimetable must be used inside <TimetableProvider>');
+  return ctx;
+}

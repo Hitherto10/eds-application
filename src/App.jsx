@@ -24,6 +24,7 @@ const UserManagementPage = lazy(() => import("./pages/application/AdminDashboard
 const Students = lazy(() => import("./pages/application/AdminDashboard/pages/StudentManagement.jsx"));
 const SchoolProfilePage = lazy(() => import("./pages/application/AdminDashboard/pages/SchoolProfilePage.jsx"));
 const AdminProfilePage = lazy(() => import("./pages/application/AdminDashboard/pages/AdminProfilePage.jsx"));
+const TimetablePage = lazy(() => import("./pages/application/AdminDashboard/TimetablePage.jsx"));
 
 // Parent Pages
 const ParentDashboard = lazy(() => import("./pages/application/ParentDashboard/ParentDashboard.jsx"));
@@ -94,6 +95,7 @@ function AppRoutes() {
                 <Route path="/dashboard/admin/users/parents" element={<ProtectedRoute requiredRole="admin"><UserManagementPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/students" element={<ProtectedRoute requiredRole="admin"><Students /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/users/teachers" element={<ProtectedRoute requiredRole="admin"><UserManagementPage /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/timetable" element={<ProtectedRoute requiredRole="admin"><TimetablePage /></ProtectedRoute>} />
 
                 {/* Parent Protected Routes */}
                 <Route path="/dashboard/parent" element={<ProtectedRoute requiredRole="parent"><ParentDashboard /></ProtectedRoute>}/>
