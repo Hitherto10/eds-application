@@ -43,7 +43,7 @@ export const Sidebar = () => {
         { name: 'User Management', icon: Users, link: '/dashboard/admin/users' },
         { name: 'Students', icon: GraduationCap, link: '/dashboard/admin/students' },
         { name: 'School Profile', icon: School, link: '/dashboard/admin/school-profile' },
-        { name: 'Timetable', icon: CalendarDays, link: '/dashboard/admin/timetable' },
+        { name: 'Configuration', icon: CalendarDays, link: '/dashboard/admin/config' },
     ];
 
     const [isDark, setIsDark] = useState(false);

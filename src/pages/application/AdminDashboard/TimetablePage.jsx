@@ -4,11 +4,13 @@ import { CalendarDays, Settings2, Loader2, LayoutGrid } from 'lucide-react';
 
 import AcademicCalendarBuilder from './timetable/AcademicCalendarBuilder';
 import TimetableBuilder from './timetable/TimetableBuilder';
+import SubjectSetupBuilder from './timetable/components/SubjectSetupBuilder';
 
 // API
 import { getAcademicYears, getTerms, getHolidays, getTimetableDraft, getPublishedTimetable } from './timetable/timetableAPIs';
+// import { getSchoolSubjects } from '../..//services/subjectAPIs';
 import * as adminService from '../AdminDashboard/services/adminService';
-import * as authAPIs from '../../auth/authAPIs'; // we need classes/subjects from here
+import * as authAPIs from '../../auth/authAPIs'; // we need classes from here
 
 /**
  * TimetablePage
@@ -19,36 +21,17 @@ import * as authAPIs from '../../auth/authAPIs'; // we need classes/subjects fro
  */
 import { TimetableProvider } from './timetable/TimetableContext';
 import AdminLayout from "./components/layout/AdminLayout.jsx";
+import {getSchoolSubjects} from "./services/subjectAPIs.js";
 
 function TimetableContent() {
   const { state, dispatch } = useTimetable();
-  const [activeTab, setActiveTab] = useState('calendar'); // 'calendar' | 'timetable'
+  const [activeTab, setActiveTab] = useState('subjects'); // 'subjects' | 'calendar' | 'timetable'
   const [initialLoad, setInitialLoad] = useState(true);
 
   const normalizePeriods = (rawPeriods) => {
     if (!Array.isArray(rawPeriods)) return [];
     return rawPeriods.filter(p => p && typeof p === 'object' && p.id && p.start && p.end);
   };
-
-  const getSchoolClasses = {
-    success: true,
-    data: {
-      classes: [
-        { id: "primary-1", name: "Primary 1" },
-        { id: "primary-2", name: "Primary 2" },
-        { id: "primary-3", name: "Primary 3" },
-        { id: "primary-4", name: "Primary 4" },
-        { id: "primary-5", name: "Primary 5" },
-        { id: "primary-6", name: "Primary 6" },
-        { id: "jss-1",     name: "JSS 1" },
-        { id: "jss-2",     name: "JSS 2" },
-        { id: "jss-3",     name: "JSS 3" },
-        { id: "ss-1",      name: "SS 1" },
-        { id: "ss-2",      name: "SS 2" },
-        { id: "ss-3",      name: "SS 3" }
-      ]
-    }
-  }
 
   // 1. Initial Data Fetch (Years, Classes, Teachers)
   useEffect(() => {
@@ -59,14 +42,14 @@ function TimetableContent() {
         const [
           resYears,
           resClasses,
-          resTeachers
+          resTeachers,
+          resSubjects
         ] = await Promise.all([
           getAcademicYears(),
-          getSchoolClasses, // get the list of classes in the school from static data, no existing add classes option
-
-          authAPIs.getDashboardUsers() // Need users to filter out teachers
+          getSchoolSubjects(),
+          authAPIs.getTeacherClasses(), // We borrow this to get the list of classes in the school
+          adminService.getAllUsers() // Need users to filter out teachers
         ]);
-
 
         if (resYears.success) {
           dispatch({ type: 'SET_ACADEMIC_YEARS', payload: resYears.data.academicYears });
@@ -85,6 +68,10 @@ function TimetableContent() {
             name: `${t.firstName} ${t.lastName}`,
           }));
           dispatch({ type: 'SET_TEACHERS', payload: teachersOnly });
+        }
+
+        if (resSubjects.success) {
+          dispatch({ type: 'SET_SUBJECTS', payload: resSubjects.data.subjects });
         }
       } catch (err) {
         console.error('Failed to load global timetable configs:', err);
@@ -123,25 +110,7 @@ function TimetableContent() {
     loadHolidays();
   }, [state.selectedTerm, dispatch]);
 
-  // 4. Cascade load Subjects when Class changes (for Palette)
-  useEffect(() => {
-    if (!state.selectedClass || state.subjectMap[state.selectedClass.name]) return;
-    
-    // We lazily load subjects for a class rather than prefetching everything
-    async function loadClassSubjects() {
-       const res = await authAPIs.getSubjectsByClass(state.selectedClass.name); // Using standard authAPIs for this
-       if (res.success) {
-         dispatch({ 
-           type: 'SET_SUBJECTS_FOR_CLASS', 
-           className: state.selectedClass.name, 
-           subjects: res.data.subjects 
-         });
-       }
-    }
-    loadClassSubjects();
-  }, [state.selectedClass, state.subjectMap, dispatch]);
-
-  // 5. Load Timetable Draft/Published when Class + Term change
+  // 4. Load Timetable Draft/Published when Class + Term change
   useEffect(() => {
     if (!state.selectedClass || !state.selectedTerm) return;
 
@@ -208,6 +177,12 @@ function TimetableContent() {
         {/* Tab Toggle */}
         <div className="flex p-1 bg-gray-100 rounded-lg">
           <button
+            onClick={() => setActiveTab('subjects')}
+            className={`px-4 py-2 text-sm font-semibold rounded-md flex items-center gap-2 transition-all ${activeTab === 'subjects' ? 'bg-white text-blue-700 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}`}
+          >
+            Subject Setup
+          </button>
+          <button
             onClick={() => setActiveTab('calendar')}
             className={`px-4 py-2 text-sm font-semibold rounded-md flex items-center gap-2 transition-all ${activeTab === 'calendar' ? 'bg-white text-blue-700 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}`}
           >
@@ -261,7 +236,9 @@ function TimetableContent() {
       )}
 
       {/* Core Working Area */}
-      {activeTab === 'calendar' ? <AcademicCalendarBuilder /> : <TimetableBuilder />}
+      {activeTab === 'subjects' && <SubjectSetupBuilder />}
+      {activeTab === 'calendar' && <AcademicCalendarBuilder />}
+      {activeTab === 'timetable' && <TimetableBuilder />}
     </div>
   );
 }
@@ -275,3 +252,4 @@ export default function TimetablePage() {
       </AdminLayout>
   );
 }
+

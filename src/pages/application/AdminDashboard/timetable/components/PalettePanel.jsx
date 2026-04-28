@@ -10,7 +10,7 @@ import { getSubjectColor } from '../TimetableContext';
  * Left sidebar containing draggable entities (Subjects, Teachers, Rooms).
  */
 export default function PalettePanel() {
-  const { availableSubjects, state } = useTimetable();
+  const { state } = useTimetable();
   
   const [openSections, setOpenSections] = useState({
     subjects: true,
@@ -24,7 +24,7 @@ export default function PalettePanel() {
   const [search, setSearch] = useState('');
   const term = search.toLowerCase();
 
-  const filteredSubjects = availableSubjects.filter(s => s.name.toLowerCase().includes(term));
+  const filteredSubjects = state.subjects.filter(s => s.name.toLowerCase().includes(term));
   const filteredTeachers = state.teachers.filter(t => t.name.toLowerCase().includes(term));
   const filteredRooms = state.rooms.filter(r => r.toLowerCase().includes(term));
 

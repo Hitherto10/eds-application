@@ -44,7 +44,7 @@ const initialState = {
   // Available resources
   classes: [],           // [{ id, name }] — filled from API or admin input
   teachers: [],          // [{ id, name, subjects }]
-  subjectMap: {},        // { className: [{ id, name }] }
+  subjects: [],          // Shared school-wide subjects
   rooms: ['Room 101', 'Room 102', 'Room 103', 'Lab 1', 'Library', 'Gym'],
 
   // Builder
@@ -98,8 +98,12 @@ function timetableReducer(state, action) {
       return { ...state, classes: [...state.classes, action.payload] };
     case 'SET_TEACHERS':
       return { ...state, teachers: action.payload };
-    case 'SET_SUBJECTS_FOR_CLASS':
-      return { ...state, subjectMap: { ...state.subjectMap, [action.className]: action.subjects } };
+    case 'SET_SUBJECTS':
+      return { ...state, subjects: action.payload };
+    case 'ADD_SUBJECT':
+      return { ...state, subjects: [...state.subjects, action.payload] };
+    case 'REMOVE_SUBJECT':
+      return { ...state, subjects: state.subjects.filter(s => s.id !== action.id) };
     case 'ADD_ROOM':
       return { ...state, rooms: [...state.rooms, action.room] };
     case 'REMOVE_ROOM':
@@ -220,12 +224,6 @@ export function TimetableProvider({ children }) {
     return map;
   }, [state.schedules]);
 
-  // Available subjects for the currently selected class
-  const availableSubjects = useMemo(
-    () => (state.selectedClass ? (state.subjectMap[state.selectedClass.name] ?? []) : []),
-    [state.selectedClass, state.subjectMap]
-  );
-
   const value = {
     state,
     dispatch,
@@ -236,7 +234,6 @@ export function TimetableProvider({ children }) {
     hasErrors,
     selectedEntry,
     scheduleByCell,
-    availableSubjects,
   };
 
   return (
