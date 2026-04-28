@@ -46,7 +46,7 @@ const LoadingFallback = () => (
 );
 
 // TODO: Add Skeleton Loaders
-
+// TODO: Make it a configuration tab instead of time table, they set up the following: SUbjects, Academic Year and Term, View Timetables, Class locations/Names
 /**
  * AuthContextBridge
  *
