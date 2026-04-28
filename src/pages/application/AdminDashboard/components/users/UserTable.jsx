@@ -173,8 +173,26 @@ const UserTable = ({
                                     </button>
 
                                     {openMenuId === user.id && (
-                                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-                                            {/* same menu logic */}
+                                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-100 z-50 py-1">
+                                            {user.role === "teacher" && (
+                                                <>
+                                                    <button onClick={() => { onAssignStudents(user); handleMenuToggle(null); }} className="menu-item">Assign Students</button>
+                                                    <button onClick={() => { onUnassignStudents(user); handleMenuToggle(null); }} className="menu-item">Unassign Students</button>
+                                                    <button onClick={() => { onAssignClasses(user); handleMenuToggle(null); }} className="menu-item">Assign Classes</button>
+                                                    <button onClick={() => { onUnassignClasses(user); handleMenuToggle(null); }} className="menu-item">Unassign Classes</button>
+                                                </>
+                                            )}
+                                            {user.role === "parent" && (
+                                                <button onClick={() => { onManageParentLinks(user); handleMenuToggle(null); }} className="menu-item">
+                                                    Manage Student Links
+                                                </button>
+                                            )}
+                                            <button onClick={() => { onStatusChange(user); handleMenuToggle(null); }} className="menu-item">
+                                                Change Status
+                                            </button>
+                                            <button onClick={() => { onDelete(user); handleMenuToggle(null); }} className="menu-item text-red-600 hover:bg-red-50">
+                                                Remove
+                                            </button>
                                         </div>
                                     )}
                                 </td>
