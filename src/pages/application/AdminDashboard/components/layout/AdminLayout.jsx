@@ -8,7 +8,7 @@ import {
     Users,
     X,
     GraduationCap,
-    CalendarDays
+    CalendarDays, BookOpen, Layers, LayoutGrid
 } from 'lucide-react';
 import { Header } from '../../../dashboardUtilities.jsx';
 import { useAuth } from '../../../../../contexts/AuthContext.jsx';
@@ -38,12 +38,38 @@ export const Sidebar = ({ isMiniSidebar = false }) => {
         await logout();
     };
 
+
+
     const navItems = [
-        { name: 'Dashboard', icon: LayoutDashboard, link: '/dashboard/admin' },
-        { name: 'User Management', icon: Users, link: '/dashboard/admin/users' },
-        { name: 'Students', icon: GraduationCap, link: '/dashboard/admin/students' },
-        { name: 'School Profile', icon: School, link: '/dashboard/admin/school-profile' },
-        { name: 'Configuration', icon: CalendarDays, link: '/dashboard/admin/config' },
+        { name: 'Dashboard', icon: LayoutDashboard, link: '/dashboard/admin', sec_bar: []},
+        { name: 'User Management', icon: Users, link: '/dashboard/admin/users', sec_bar: []},
+        { name: 'Students', icon: GraduationCap, link: '/dashboard/admin/students', sec_bar: []},
+        { name: 'School Profile', icon: School, link: '/dashboard/admin/school-profile', sec_bar: []},
+        { name: 'Configuration', icon: CalendarDays, link: '/dashboard/admin/config',
+        sec_bar: [{
+                id: 'subjects',
+                label: 'Subject Setup',
+                icon: BookOpen,
+                desc: 'Define the global school subjects'
+            },
+            {
+                id: 'classes',
+                label: 'Class Setup',
+                icon: Layers,
+                desc: 'Configure arms, streams and taxonomy'
+            },
+            {
+                id: 'calendar',
+                label: 'Calendar Settings',
+                icon: CalendarDays,
+                desc: 'Set terms, years, and holidays'
+            },
+            {
+                id: 'timetable',
+                label: 'Timetable Builder',
+                icon: LayoutGrid,
+                desc: 'Construct the drag-and-drop grid'
+            }]},
     ];
 
     const [isDark, setIsDark] = useState(false);
@@ -169,8 +195,60 @@ export const Sidebar = ({ isMiniSidebar = false }) => {
                     </AlertDialog>
                 </div>
             </div>
+
+
         </>
     );
+}
+
+export const MiniSidebar = ({ activeTab, setActiveTab}) => {
+
+    return (
+        <div className="shrink-0 border-r border-gray-200 bg-gray-50/50 flex flex-col w-full lg:w-64 lg:h-full transition-all">
+            <div className="p-4 border-b border-gray-200 hidden lg:block shrink-0">
+                <h2 className="text-sm font-black uppercase text-gray-400 tracking-widest">Configuration</h2>
+                <p className="text-lg font-bold text-gray-900 leading-tight mt-1">Academic Engine</p>
+            </div>
+
+            {/* Subnav List */}
+            <div className="flex-1 overflow-x-auto lg:overflow-y-auto lg:overflow-x-hidden hide-scrollbar p-2 lg:p-4 border-b border-gray-200 lg:border-b-0">
+                <ul className="flex flex-row lg:flex-col gap-1 lg:gap-2 m-0 p-0 list-none">
+                    {sections.map(sec => {
+                        const isActive = activeTab === sec.id;
+                        const Icon = sec.icon;
+                        return (
+                            <li key={sec.id} className="shrink-0">
+                                <button
+                                    onClick={() => setActiveTab(sec.id)}
+                                    className={`w-full text-left flex items-start gap-3 p-2.5 rounded-lg transition-all border ${
+                                        isActive
+                                            ? 'bg-white border-blue-200 shadow-sm ring-1 ring-blue-500/10'
+                                            : 'border-transparent hover:bg-gray-200/50 hover:border-gray-300/50'
+                                    }`}
+                                >
+                                    <Icon className={`w-5 h-5 shrink-0 mt-0.5 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                                    <div className="flex flex-col hidden lg:flex">
+                       <span className={`text-sm font-bold ${isActive ? 'text-gray-900' : 'text-gray-600'}`}>
+                         {sec.label}
+                       </span>
+                                        <span className={`text-xs ${isActive ? 'text-gray-500' : 'text-gray-400'}`}>
+                         {sec.desc}
+                       </span>
+                                    </div>
+                                    {/* Mobile Label Only */}
+                                    <div className="flex flex-col lg:hidden justify-center h-full">
+                       <span className={`text-sm font-semibold whitespace-nowrap ${isActive ? 'text-blue-700' : 'text-gray-600'}`}>
+                         {sec.label}
+                       </span>
+                                    </div>
+                                </button>
+                            </li>
+                        );
+                    })}
+                </ul>
+            </div>
+        </div>
+    )
 }
 
 
@@ -182,11 +260,11 @@ const AdminLayout = ({ children, isMiniSidebar = false }) => {
     };
 
     return (
-        <div className="flex min-h-screen bg-gray-50 overflow-hidden">
+        <div className="flex min-h-screen bg-gray-50">
             <Sidebar isMiniSidebar={isMiniSidebar} />
-            <div className="flex-1 flex flex-col min-w-0">
+            <div className="flex-1 flex flex-col">
                 <Header/>
-                <main className="flex-1 flex flex-col bg-white">
+                <main className="flex-1 p-2 md:p-4 lg:p-6 items-center content-center justify-center ">
                     {children}
                 </main>
             </div>

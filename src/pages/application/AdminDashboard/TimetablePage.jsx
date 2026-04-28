@@ -6,7 +6,6 @@ import AcademicCalendarBuilder from './timetable/AcademicCalendarBuilder';
 import TimetableBuilder from './timetable/TimetableBuilder';
 import SubjectSetupBuilder from './timetable/components/SubjectSetupBuilder';
 import ClassSetupBuilder from './timetable/components/ClassSetupBuilder';
-import TimetableSecondarySidebar from './timetable/components/TimetableSecondarySidebar';
 
 // API
 import { getAcademicYears, getTerms, getHolidays, getTimetableDraft, getPublishedTimetable } from './timetable/timetableAPIs';
@@ -22,7 +21,7 @@ import * as adminService from './services/adminService';
  * I will wrap the internal content in TimetableProvider.
  */
 import { TimetableProvider } from './timetable/TimetableContext';
-import AdminLayout from "./components/layout/AdminLayout.jsx";
+import AdminLayout, {MiniSidebar } from "./components/layout/AdminLayout.jsx";
 import {getSchoolSubjects} from "./services/subjectAPIs.js";
 
 function TimetableContent() {
@@ -167,10 +166,11 @@ function TimetableContent() {
     );
   }
 
+
   return (
     <div className="flex-1 flex flex-col lg:flex-row h-full lg:h-[calc(100vh-80px)] overflow-hidden">
-      <TimetableSecondarySidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-      
+      <MiniSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+
       <div className="flex-1 flex flex-col h-full overflow-hidden p-2 lg:p-6 bg-gray-50/30">
       
       {/* Global Builder Context Bar (Class Selector) - Only show on timetable tab */}

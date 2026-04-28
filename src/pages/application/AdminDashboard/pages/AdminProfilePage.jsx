@@ -58,7 +58,7 @@ const AdminProfilePage = () => {
                     onClose={() => setToast({ ...toast, show: false })}
                 />
             )}
-            <div className="max-w-3xl mx-auto space-y-6">
+            <div className="max-w-3xl items-start mx-auto space-y-6">
                 <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center">
                         <User className="w-6 h-6 text-gray-600" />
