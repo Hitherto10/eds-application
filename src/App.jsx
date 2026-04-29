@@ -24,7 +24,12 @@ const UserManagementPage = lazy(() => import("./pages/application/AdminDashboard
 const Students = lazy(() => import("./pages/application/AdminDashboard/pages/StudentManagement.jsx"));
 const SchoolProfilePage = lazy(() => import("./pages/application/AdminDashboard/pages/SchoolProfilePage.jsx"));
 const AdminProfilePage = lazy(() => import("./pages/application/AdminDashboard/pages/AdminProfilePage.jsx"));
-const TimetablePage = lazy(() => import("./pages/application/AdminDashboard/TimetablePage.jsx"));
+
+// Config sub-pages (each is a standalone page inside TimetablePage shell)
+const SubjectsPage   = lazy(() => import("./pages/application/AdminDashboard/pages/config/SubjectsPage.jsx"));
+const ClassesPage    = lazy(() => import("./pages/application/AdminDashboard/pages/config/ClassesPage.jsx"));
+const CalendarPage   = lazy(() => import("./pages/application/AdminDashboard/pages/config/CalendarPage.jsx"));
+const TimetablePage  = lazy(() => import("./pages/application/AdminDashboard/pages/config/TimetablePage.jsx"));
 
 // Parent Pages
 const ParentDashboard = lazy(() => import("./pages/application/ParentDashboard/ParentDashboard.jsx"));
@@ -45,8 +50,6 @@ const LoadingFallback = () => (
     </div>
 );
 
-// TODO: Add Skeleton Loaders
-// TODO: Make it a configuration tab instead of time table, they set up the following: SUbjects, Arms or Sections, Academic Year and Term, View Timetables, Class locations/Names
 /**
  * AuthContextBridge
  *
@@ -73,12 +76,9 @@ function AppRoutes() {
     if (isLoading) {
         return <LoadingFallback />;
     }
-    const isInDashboard = location.pathname.startsWith('/dashboard');
 
-    // TODO: add a bottom bar for cookie policy with accept button
     return (
         <div className={`font-[Inter]`}>
-
             <Routes>
                 <Route path="/" element={<AuthPage />} />
                 <Route path="/complete-registration" element={<CompleteRegistration />} />
@@ -95,7 +95,13 @@ function AppRoutes() {
                 <Route path="/dashboard/admin/users/parents" element={<ProtectedRoute requiredRole="admin"><UserManagementPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/students" element={<ProtectedRoute requiredRole="admin"><Students /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/users/teachers" element={<ProtectedRoute requiredRole="admin"><UserManagementPage /></ProtectedRoute>} />
-                <Route path="/dashboard/admin/config" element={<ProtectedRoute requiredRole="admin"><TimetablePage /></ProtectedRoute>} />
+
+                {/* Config sub-routes — each is its own page */}
+                <Route path="/dashboard/admin/config" element={<ProtectedRoute requiredRole="admin"><Navigate to="/dashboard/admin/config/subjects" replace /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/config/subjects"  element={<ProtectedRoute requiredRole="admin"><SubjectsPage /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/config/classes"   element={<ProtectedRoute requiredRole="admin"><ClassesPage /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/config/calendar"  element={<ProtectedRoute requiredRole="admin"><CalendarPage /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/config/timetable" element={<ProtectedRoute requiredRole="admin"><TimetablePage /></ProtectedRoute>} />
 
                 {/* Parent Protected Routes */}
                 <Route path="/dashboard/parent" element={<ProtectedRoute requiredRole="parent"><ParentDashboard /></ProtectedRoute>}/>
@@ -109,9 +115,7 @@ function AppRoutes() {
                 <Route path="/dashboard/teacher/students/:class/:subject" element={<ProtectedRoute requiredRole="teacher"><ClassStudents /></ProtectedRoute>} />
                 <Route path="/dashboard/teacher/attendance" element={<ProtectedRoute requiredRole="teacher"><AttendancePage /></ProtectedRoute>} />
                 <Route path="/dashboard/teacher/attendance/register/:scheduleId" element={<ProtectedRoute requiredRole="teacher"><AttendanceRegisterPage /></ProtectedRoute>} />
-
             </Routes>
-
 
             <PWAUpdateBanner />
             <PWAInstallPrompt />

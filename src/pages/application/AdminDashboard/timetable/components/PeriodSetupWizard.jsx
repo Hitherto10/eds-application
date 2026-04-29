@@ -126,14 +126,11 @@ export default function PeriodSetupWizard() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-      <div className="flex-1 flex items-center justify-center bg-gray-50/50 p-4 overflow-y-auto">
+      <div className="flex-1 flex items-center justify-center p-4 overflow-y-auto">
         <div className="bg-white max-w-2xl w-full p-8 rounded-2xl shadow-sm border border-gray-200">
 
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-blue-100">
-              <Settings2 className="w-8 h-8" />
-            </div>
             <h2 className="text-2xl font-bold text-gray-900">Period Configuration Wizard</h2>
             <p className="text-gray-500 mt-2">
               {state.selectedClass

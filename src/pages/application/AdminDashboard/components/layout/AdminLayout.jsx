@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard,
     LogOut,
@@ -8,11 +8,15 @@ import {
     Users,
     X,
     GraduationCap,
-    CalendarDays, BookOpen, Layers, LayoutGrid
+    CalendarDays,
+    BookOpen,
+    Layers,
+    LayoutGrid,
+    ChevronDown,
 } from 'lucide-react';
 import { Header } from '../../../dashboardUtilities.jsx';
 import { useAuth } from '../../../../../contexts/AuthContext.jsx';
-import {Images} from "../../../../../components/images.jsx";
+import { Images } from '../../../../../components/images.jsx';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -23,245 +27,245 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
     AlertDialogTrigger,
-} from "../../../../../components/ui/alert-dialog";
+} from '../../../../../components/ui/alert-dialog';
 
-export const Sidebar = ({ isMiniSidebar = false }) => {
-    const [isOpen, setIsOpen] = useState(false);
+// ─── Nav definition ───────────────────────────────────────────────────────────
+const navItems = [
+    { name: 'Dashboard',       icon: LayoutDashboard, link: '/dashboard/admin',               children: [] },
+    { name: 'User Management', icon: Users,            link: '/dashboard/admin/users',          children: [] },
+    { name: 'Students',        icon: GraduationCap,   link: '/dashboard/admin/students',       children: [] },
+    { name: 'School Profile',  icon: School,          link: '/dashboard/admin/school-profile', children: [] },
+    {
+        name: 'Configuration',
+        icon: CalendarDays,
+        link: '/dashboard/admin/config',
+        children: [
+            { name: 'Subject Setup',     icon: BookOpen,    link: '/dashboard/admin/config/subjects'  },
+            { name: 'Class Setup',       icon: Layers,      link: '/dashboard/admin/config/classes'   },
+            { name: 'Calendar Settings', icon: CalendarDays,link: '/dashboard/admin/config/calendar'  },
+            { name: 'Timetable Builder', icon: LayoutGrid,  link: '/dashboard/admin/config/timetable' },
+        ],
+    },
+];
+
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
+export const Sidebar = () => {
     const location = useLocation();
+    const navigate  = useNavigate();
     const { logout } = useAuth();
-
-    useEffect(() => {
-        setIsOpen(false);
-    }, [location]);
-
-    const handleLogout = async () => {
-        await logout();
-    };
-
-
-
-    const navItems = [
-        { name: 'Dashboard', icon: LayoutDashboard, link: '/dashboard/admin', sec_bar: []},
-        { name: 'User Management', icon: Users, link: '/dashboard/admin/users', sec_bar: []},
-        { name: 'Students', icon: GraduationCap, link: '/dashboard/admin/students', sec_bar: []},
-        { name: 'School Profile', icon: School, link: '/dashboard/admin/school-profile', sec_bar: []},
-        { name: 'Configuration', icon: CalendarDays, link: '/dashboard/admin/config',
-        sec_bar: [{
-                id: 'subjects',
-                label: 'Subject Setup',
-                icon: BookOpen,
-                desc: 'Define the global school subjects'
-            },
-            {
-                id: 'classes',
-                label: 'Class Setup',
-                icon: Layers,
-                desc: 'Configure arms, streams and taxonomy'
-            },
-            {
-                id: 'calendar',
-                label: 'Calendar Settings',
-                icon: CalendarDays,
-                desc: 'Set terms, years, and holidays'
-            },
-            {
-                id: 'timetable',
-                label: 'Timetable Builder',
-                icon: LayoutGrid,
-                desc: 'Construct the drag-and-drop grid'
-            }]},
-    ];
-
+    const [mobileOpen, setMobileOpen] = useState(false);
     const [isDark, setIsDark] = useState(false);
 
-    useEffect(() => {
-        const updateTheme = () => {
-            setIsDark(document.documentElement.dataset.theme === 'dark');
-        };
-        updateTheme();
-        window.addEventListener('themeChange', updateTheme);
+    // Which accordion parents are open — auto-open if current route is a child
+    const [openItems, setOpenItems] = useState(() => {
+        const initial = {};
+        navItems.forEach(item => {
+            if (item.children?.length && location.pathname.startsWith(item.link)) {
+                initial[item.name] = true;
+            }
+        });
+        return initial;
+    });
 
-        return () => {
-            window.removeEventListener('themeChange', updateTheme);
-        };
+    useEffect(() => { setMobileOpen(false); }, [location]);
+
+    // Keep accordion open when navigating between children
+    useEffect(() => {
+        navItems.forEach(item => {
+            if (item.children?.length && location.pathname.startsWith(item.link)) {
+                setOpenItems(prev => ({ ...prev, [item.name]: true }));
+            }
+        });
+    }, [location.pathname]);
+
+    useEffect(() => {
+        const update = () => setIsDark(document.documentElement.dataset.theme === 'dark');
+        update();
+        window.addEventListener('themeChange', update);
+        return () => window.removeEventListener('themeChange', update);
     }, []);
 
+    const logoSrc = isDark ? Images.main_logo_light : Images.main_logo;
+
+    const toggleItem = (name) =>
+        setOpenItems(prev => ({ ...prev, [name]: !prev[name] }));
+
+    const handleLogout = async () => { await logout(); };
+
+    // ── Nav list ──────────────────────────────────────────────────────────────
+    const NavContent = ({ onNavigate }) => (
+        <nav className="space-y-0.5">
+            {navItems.map(item => {
+                const hasChildren   = item.children?.length > 0;
+                const isOpen        = openItems[item.name] || false;
+                const isParentActive = hasChildren
+                    ? location.pathname.startsWith(item.link)
+                    : item.name === 'Dashboard'
+                        ? location.pathname === item.link
+                        : location.pathname.startsWith(item.link);
+
+                return (
+                    <div key={item.name}>
+                        {/* Parent row */}
+                        <button
+                            onClick={() => {
+                                if (hasChildren) {
+                                    toggleItem(item.name);
+                                } else {
+                                    onNavigate?.();
+                                    navigate(item.link);
+                                }
+                            }}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150
+                                ${isParentActive && !hasChildren
+                                ? 'bg-blue-50 text-blue-600 font-semibold'
+                                : isParentActive && hasChildren
+                                    ? 'text-gray-900 font-semibold'
+                                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
+                            }`}
+                        >
+                            <item.icon className="w-[18px] h-[18px] shrink-0" />
+                            <span className="flex-1 text-left">{item.name}</span>
+                            {hasChildren && (
+                                <ChevronDown
+                                    className={`w-4 h-4 shrink-0 text-gray-400 transition-transform duration-200 ${
+                                        isOpen ? 'rotate-180' : ''
+                                    }`}
+                                />
+                            )}
+                        </button>
+
+                        {/* Children — slide open/close */}
+                        {hasChildren && (
+                            <div className={`overflow-hidden transition-all duration-200 ease-in-out ${
+                                isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                            }`}>
+                                <div className="ml-3 mt-0.5 mb-1 pl-4 space-y-0.5">
+                                    {item.children.map(child => (
+                                        <NavLink
+                                            key={child.link}
+                                            to={child.link}
+                                            onClick={onNavigate}
+                                            className={({ isActive }) =>
+                                                `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors duration-150 ${
+                                                    isActive
+                                                        ? 'bg-blue-50 text-blue-600 font-semibold'
+                                                        : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
+                                                }`
+                                            }
+                                        >
+                                            <child.icon className="w-4 h-4 shrink-0" />
+                                            {child.name}
+                                        </NavLink>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
+        </nav>
+    );
+
+    // ── Logout ────────────────────────────────────────────────────────────────
+    const LogoutButton = () => (
+        <AlertDialog>
+            <AlertDialogTrigger asChild>
+                <button className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors duration-150">
+                    <LogOut className="w-[18px] h-[18px] shrink-0" />
+                    Logout
+                </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
+                    <AlertDialogDescription>Are you sure you want to logout?</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction className="bg-red-600" onClick={handleLogout}>
+                        Logout
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+
+    // ── Shared shell ──────────────────────────────────────────────────────────
+    const SidebarShell = ({ onNavigate }) => (
+        <div className="flex flex-col h-full">
+            <div className="flex items-center h-16 px-6 border-b border-gray-200 shrink-0">
+                <img src={logoSrc} alt="Logo" className="w-32" />
+            </div>
+            <div className="flex-1 overflow-y-auto py-4 px-3">
+                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">
+                    Menu
+                </p>
+                <NavContent onNavigate={onNavigate} />
+            </div>
+            <div className="shrink-0 px-3 py-4 border-t border-gray-200">
+                <LogoutButton />
+            </div>
+        </div>
+    );
 
     return (
         <>
-            {/* Mobile Toggle Button */}
-            {!isOpen && (
+            {/* Mobile hamburger */}
+            {!mobileOpen && (
                 <button
-                    onClick={() => setIsOpen(true)}
-                    className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg "
+                    onClick={() => setMobileOpen(true)}
+                    className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-white shadow-sm border border-gray-200"
                 >
-                    <Menu className="w-6 h-6 text-gray-600" />
+                    <Menu className="w-5 h-5 text-gray-600" />
                 </button>
             )}
 
-            {/* Backdrop Overlay */}
-            {isOpen && (
+            {/* Mobile backdrop */}
+            {mobileOpen && (
                 <div
                     className="fixed inset-0 bg-black/40 z-40 lg:hidden"
-                    onClick={() => setIsOpen(false)}
+                    onClick={() => setMobileOpen(false)}
                 />
             )}
 
-            {/* Sidebar Container */}
-            <div className={`fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200 
-                    flex flex-col h-screen transition-all duration-300 ease-in-out
-                    lg:translate-x-0 lg:sticky lg:top-0
-                    ${isOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:translate-x-0'}
-                    ${isMiniSidebar ? 'lg:w-[72px]' : 'lg:w-64'}
-                `}>
-
-                <div className={`flex items-center h-16 border-b border-gray-200 shrink-0 ${isMiniSidebar ? 'justify-center px-0' : 'justify-between px-6'}`}>
-                    {isDark ? (
-                        <img src={`${Images.main_logo_light}`} alt="Logo" className={isMiniSidebar ? "w-8 h-8 object-cover object-left" : "w-32"} />
-                    ) : (
-                        <img src={`${Images.main_logo}`} alt="Logo" className={isMiniSidebar ? "w-8 h-8 object-cover object-left" : "w-32"} />
-                    )}
-
-                    <button
-                        onClick={() => setIsOpen(false)}
-                        className="lg:hidden text-gray-500 hover:text-gray-600 p-2"
-                    >
-                        <X className="w-6 h-6" />
-                    </button>
-                </div>
-
-                <div className={`flex-1 overflow-y-auto pt-6 ${isMiniSidebar ? 'px-2' : 'px-4'}`}>
-                    {!isMiniSidebar && (
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 mb-2">
-                          Menu
-                      </p>
-                    )}
-                    <nav className="space-y-1">
-                        {navItems.map((item) => (
-                            <NavLink
-                                key={item.name}
-                                to={item.link}
-                                end={item.name === 'Dashboard'}
-                                className={({ isActive }) =>
-                                    `flex items-center rounded-lg transition duration-150 group relative ${isMiniSidebar ? 'justify-center p-3' : 'p-3'} ${
-                                        isActive
-                                            ? 'bg-blue-50 text-blue-600 font-semibold'
-                                            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
-                                    }`
-                                }
-                            >
-                                <item.icon className="w-5 h-5 shrink-0" />
-                                {!isMiniSidebar && <span className="flex-1 text-sm ml-3">{item.name}</span>}
-                                {isMiniSidebar && (
-                                    <div className="absolute left-full ml-3 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none z-50 whitespace-nowrap transition-opacity">
-                                        {item.name}
-                                    </div>
-                                )}
-                            </NavLink>
-                        ))}
-                    </nav>
-                </div>
-
-                <div className="p-4 border-t border-gray-200 shrink-0 relative z-60">
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <button
-                                className={`flex items-center cursor-pointer w-full text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition duration-150 group relative ${isMiniSidebar ? 'justify-center p-3' : 'p-3'}`}
-                            >
-                                <LogOut className="w-5 h-5 shrink-0" />
-                                {!isMiniSidebar && <span className="ml-3">Logout</span>}
-                                {isMiniSidebar && (
-                                    <div className="absolute left-full ml-3 px-2 py-1 bg-red-600 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none z-50 whitespace-nowrap transition-opacity">
-                                        Logout
-                                    </div>
-                                )}
-                            </button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    Are you sure you want to logout?
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                    className={` bg-red-600`}
-                                    onClick={handleLogout}
-                                >Logout</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                </div>
+            {/* Mobile drawer */}
+            <div className={`
+                lg:hidden fixed inset-y-0 left-0 z-50 w-64
+                bg-white border-r border-gray-200
+                transition-transform duration-300 ease-in-out
+                ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
+            `}>
+                <button
+                    onClick={() => setMobileOpen(false)}
+                    className="absolute top-4 right-4 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                >
+                    <X className="w-5 h-5" />
+                </button>
+                <SidebarShell onNavigate={() => setMobileOpen(false)} />
             </div>
 
-
+            {/* Desktop sidebar — sticky, part of flex layout, no fixed positioning */}
+            <div className="hidden lg:flex flex-col w-64 shrink-0 bg-white border-r border-gray-200 h-screen sticky top-0">
+                <SidebarShell />
+            </div>
         </>
     );
-}
+};
 
-export const MiniSidebar = ({ activeTab, setActiveTab}) => {
+// ─── AdminLayout ──────────────────────────────────────────────────────────────
+const AdminLayout = ({ children }) => {
+    const location  = useLocation();
+    const ICON_RAIL = 72; // px — matches collapsed sidebar width
+    const FULL_NAV  = 256;
 
-    return (
-        <div className="shrink-0 border-r border-gray-200 bg-gray-50/50 flex flex-col w-full lg:w-64 lg:h-full transition-all">
-            <div className="p-4 border-b border-gray-200 hidden lg:block shrink-0">
-                <h2 className="text-sm font-black uppercase text-gray-400 tracking-widest">Configuration</h2>
-                <p className="text-lg font-bold text-gray-900 leading-tight mt-1">Academic Engine</p>
-            </div>
-
-            {/* Subnav List */}
-            <div className="flex-1 overflow-x-auto lg:overflow-y-auto lg:overflow-x-hidden hide-scrollbar p-2 lg:p-4 border-b border-gray-200 lg:border-b-0">
-                <ul className="flex flex-row lg:flex-col gap-1 lg:gap-2 m-0 p-0 list-none">
-                    {sections.map(sec => {
-                        const isActive = activeTab === sec.id;
-                        const Icon = sec.icon;
-                        return (
-                            <li key={sec.id} className="shrink-0">
-                                <button
-                                    onClick={() => setActiveTab(sec.id)}
-                                    className={`w-full text-left flex items-start gap-3 p-2.5 rounded-lg transition-all border ${
-                                        isActive
-                                            ? 'bg-white border-blue-200 shadow-sm ring-1 ring-blue-500/10'
-                                            : 'border-transparent hover:bg-gray-200/50 hover:border-gray-300/50'
-                                    }`}
-                                >
-                                    <Icon className={`w-5 h-5 shrink-0 mt-0.5 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
-                                    <div className="flex flex-col hidden lg:flex">
-                       <span className={`text-sm font-bold ${isActive ? 'text-gray-900' : 'text-gray-600'}`}>
-                         {sec.label}
-                       </span>
-                                        <span className={`text-xs ${isActive ? 'text-gray-500' : 'text-gray-400'}`}>
-                         {sec.desc}
-                       </span>
-                                    </div>
-                                    {/* Mobile Label Only */}
-                                    <div className="flex flex-col lg:hidden justify-center h-full">
-                       <span className={`text-sm font-semibold whitespace-nowrap ${isActive ? 'text-blue-700' : 'text-gray-600'}`}>
-                         {sec.label}
-                       </span>
-                                    </div>
-                                </button>
-                            </li>
-                        );
-                    })}
-                </ul>
-            </div>
-        </div>
-    )
-}
-
-
-const AdminLayout = ({ children, isMiniSidebar = false }) => {
-    const { logout } = useAuth();
-
-    const handleLogout = async () => {
-        await logout();
-    };
+    // Detect if we're inside a sec_bar section
+    const activeNavItem = navItems.find(item => item.sec_bar?.length > 0 && location.pathname.startsWith(item.link));
+    const isCollapsed   = Boolean(activeNavItem);
 
     return (
         <div className="flex min-h-screen bg-gray-50">
-            <Sidebar isMiniSidebar={isMiniSidebar} />
+            <Sidebar />
             <div className="flex-1 flex flex-col">
                 <Header/>
                 <main className="flex-1 p-2 md:p-4 lg:p-6 items-center content-center justify-center ">
@@ -269,6 +273,8 @@ const AdminLayout = ({ children, isMiniSidebar = false }) => {
                 </main>
             </div>
         </div>
+
+
     );
 };
 

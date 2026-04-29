@@ -83,9 +83,7 @@ export default function SubjectSetupBuilder() {
       <div className="flex-1 overflow-y-auto bg-gray-50 flex items-center justify-center p-6">
         <div className="max-w-3xl w-full">
           <div className="text-center mb-10">
-            <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-sm">
-              <BookOpen className="w-8 h-8" />
-            </div>
+            <span className={`text-red-500 text-xs`}>You have not added any subjects yet</span>
             <h2 className="text-2xl font-bold text-gray-900">Configure School Subjects</h2>
             <p className="text-gray-500 mt-2 max-w-lg mx-auto">
               Before building timetables, you must define the subjects offered at this school. 
@@ -146,7 +144,6 @@ export default function SubjectSetupBuilder() {
       <div className="flex items-center justify-between mb-6 shrink-0">
          <div>
            <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-             <BookOpen className="text-blue-600" />
              School Subjects ({state.subjects.length})
            </h2>
          </div>
@@ -195,25 +192,23 @@ export default function SubjectSetupBuilder() {
         </form>
       )}
 
-      <div className="flex-1 overflow-y-auto min-h-0 bg-gray-50 border border-gray-100 rounded-xl p-4">
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-           {filtered.map(s => (
-             <div key={s.id} className="bg-white border border-gray-200 rounded-lg p-3 flex justify-between items-center group">
-                <div className="flex gap-3 items-center truncate">
-                   <div className="w-8 h-8 rounded bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
-                      {s.code || s.name.substring(0, 2).toUpperCase()}
-                   </div>
-                   <span className="font-semibold text-gray-800 text-sm truncate">{s.name}</span>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        {filtered.map(s => (
+            <div key={s.id} className="bg-white border border-gray-200 rounded-lg p-3 flex justify-between items-center group">
+              <div className="flex gap-3 items-center truncate">
+                <div className="w-8 h-8 rounded bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
+                  {s.code || s.name.substring(0, 2).toUpperCase()}
                 </div>
-                <button onClick={() => handleDelete(s.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-all">
-                  <Trash2 size={14} />
-                </button>
-             </div>
-           ))}
-           {filtered.length === 0 && (
-             <p className="col-span-full py-8 text-center text-gray-500">No subjects found matching {search}</p>
-           )}
-         </div>
+                <span className="font-semibold text-gray-800 text-sm truncate">{s.name}</span>
+              </div>
+              <button onClick={() => handleDelete(s.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-all">
+                <Trash2 size={14} />
+              </button>
+            </div>
+        ))}
+        {filtered.length === 0 && (
+            <p className="col-span-full py-8 text-center text-gray-500">No subjects found matching {search}</p>
+        )}
       </div>
     </div>
   );

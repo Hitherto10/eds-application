@@ -156,7 +156,6 @@ export default function ClassSetupBuilder() {
          <div className="flex items-center justify-between mb-6 shrink-0">
            <div>
              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-               <Layers className="text-blue-600" />
                School Class Structure ({state.classes.length})
              </h2>
              <p className="text-sm text-gray-500 mt-1">Manage the finalized taxonomy assigned to the timetable.</p>
@@ -192,25 +191,24 @@ export default function ClassSetupBuilder() {
            </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto mb-1 bg-gray-50 border border-gray-100 rounded-xl p-4">
-           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-             {filtered.map(c => (
-               <div key={c.id} className="bg-white border border-gray-200 rounded-lg p-3 flex justify-between items-center group shadow-sm hover:border-blue-300 transition-colors">
-                  <div className="flex flex-col truncate">
-                     <span className="font-bold text-gray-800 text-sm truncate">{c.name}</span>
-                     {c.arm && <span className="text-[10px] uppercase font-bold text-gray-400 mt-0.5 tracking-wider">{c.baseLevel} • {c.arm}</span>}
-                     {!c.arm && <span className="text-[10px] uppercase font-bold text-gray-400 mt-0.5 tracking-wider">Base Block</span>}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+              {filtered.map(c => (
+                  <div key={c.id} className="bg-white border border-gray-200 rounded-lg p-3 flex justify-between items-center group shadow-sm hover:border-blue-300 transition-colors">
+                      <div className="flex flex-col truncate">
+                          <span className="font-bold text-gray-800 text-sm truncate">{c.name}</span>
+                          {c.arm && <span className="text-[10px] uppercase font-bold text-gray-400 mt-0.5 tracking-wider">{c.baseLevel} • {c.arm}</span>}
+                          {!c.arm && <span className="text-[10px] uppercase font-bold text-gray-400 mt-0.5 tracking-wider">Base Block</span>}
+                      </div>
+                      <button onClick={() => handleDeleteRemoteClass(c.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-all">
+                          <Trash2 size={14} />
+                      </button>
                   </div>
-                  <button onClick={() => handleDeleteRemoteClass(c.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-all">
-                    <Trash2 size={14} />
-                  </button>
-               </div>
-             ))}
-             {filtered.length === 0 && (
-               <p className="col-span-full py-8 text-center text-gray-500">No classes found matching {search}</p>
-             )}
-           </div>
-        </div>
+              ))}
+              {filtered.length === 0 && (
+                  <p className="col-span-full py-8 text-center text-gray-500">No classes found matching {search}</p>
+              )}
+          </div>
+
       </div>
     )
   }
@@ -219,33 +217,29 @@ export default function ClassSetupBuilder() {
   return (
     <div className="flex-1 bg-gray-50 flex flex-col relative h-full overflow-hidden">
       {/* Header */}
-      <div className="p-4 md:p-6 bg-white border-b border-gray-200 shrink-0">
-         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-           <div>
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <Layers className="text-blue-600" /> Matrix Generation Builder
-              </h2>
-              <p className="text-sm text-gray-500 mt-1">Construct your class taxonomy visually by mapping arms to base levels.</p>
-           </div>
-           
-           <div className="flex items-center gap-3">
-              <div className="text-right mr-4">
-                <div className="text-sm text-gray-500 font-semibold mb-0.5 uppercase tracking-wider">Output Pool</div>
-                <div className="text-xl font-black text-blue-600">{generatedCount} <span className="text-sm text-gray-500 font-bold">Classes</span></div>
-              </div>
-              <button 
-                onClick={handleSaveMatrix}
-                disabled={loading || generatedCount === 0}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-lg transition shadow-sm flex items-center gap-2"
-              >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />} Commit Matrix
-              </button>
-           </div>
-         </div>
-      </div>
+        <div className="flex flex-col md:flex-row justify-between px-4 md:px-6 gap-4">
+            <div>
+                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">Academic Taxonomy</h2>
+                <p className="text-sm text-gray-500 mt-1">Construct your class structure visually by mapping arms to base levels.</p>
+            </div>
+
+            <div className="flex items-center gap-3">
+                <div className="text-right mr-4">
+                    <div className="text-sm text-gray-500 font-semibold mb-0.5 uppercase tracking-wider">Output Pool</div>
+                    <div className="text-xl font-black text-brand">{generatedCount} <span className="text-sm text-gray-500 font-bold">Classes</span></div>
+                </div>
+                <button
+                    onClick={handleSaveMatrix}
+                    disabled={loading || generatedCount === 0}
+                    className="px-6 py-2.5 bg-brand hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-lg transition shadow-sm flex items-center gap-2"
+                >
+                    {loading && <Loader2 className="w-5 h-5 animate-spin" />} Confirm Structure
+                </button>
+            </div>
+        </div>
 
       <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6 lg:gap-8 min-h-full items-stretch">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 min-h-full items-stretch">
            
            {/* Left Sidebar Form (Styles, Base, Streams) */}
            <div className="w-full lg:w-[350px] shrink-0 flex flex-col gap-6">
