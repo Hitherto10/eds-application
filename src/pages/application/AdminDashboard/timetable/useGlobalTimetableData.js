@@ -3,7 +3,7 @@ import { useTimetable } from './TimetableContext.jsx';
 import {
     getAcademicYears,
     getTerms,
-    getHolidays,
+    getEvents,
     getTimetableDraft,
     getPublishedTimetable,
 } from './timetableAPIs.js';
@@ -88,14 +88,14 @@ export function useGlobalTimetableData() {
         loadTerms();
     }, [state.selectedYear, dispatch]);
 
-    // 3. Cascade load Holidays when Term changes
+    // 3. Cascade load Events when Term changes
     useEffect(() => {
         if (!state.selectedTerm) return;
-        async function loadHolidays() {
-            const res = await getHolidays(state.selectedTerm.id);
-            if (res.success) dispatch({ type: 'SET_HOLIDAYS', payload: res.data.holidays });
+        async function loadEvents() {
+            const res = await getEvents(state.selectedTerm.id);
+            if (res.success) dispatch({ type: 'SET_EVENTS', payload: res.data.events });
         }
-        loadHolidays();
+        loadEvents();
     }, [state.selectedTerm, dispatch]);
 
     // 4. Load Timetable Draft/Published when Class + Term change

@@ -1,19 +1,15 @@
-// import apiClient from '../../../../../utils/axiosConfig';
-
 import apiClient from "../../../../utils/axiosConfig.js";
 
 export const SUBJECTS_BACKEND_LIVE = false;
 const delay = (ms = 400) => new Promise(r => setTimeout(r, ms));
 
 /**
- * ─────────────────────────────────────────────────────────────────────────────
  * GET /api/admin/subjects
  * Fetches all created school-wide subjects.
- * ─────────────────────────────────────────────────────────────────────────────
  */
 export async function getSchoolSubjects() {
   console.log('📡 GET /api/admin/subjects');
-  console.log('📦 Expected response shape:', {
+  console.log('📦 Expected response:', {
     success: true,
     data: { subjects: [{ id: 'string', name: 'string', code: 'string | null' }] },
   });

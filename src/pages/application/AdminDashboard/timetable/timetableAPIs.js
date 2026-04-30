@@ -26,6 +26,193 @@ function stub(label, payload, mockData) {
 }
 
 // =============================================================================
+// SCHOOL ACADEMIC PROFILE
+// GET  /api/school/profile  (extended with academic context fields)
+// PUT  /api/school/profile/academic-context
+//
+// BACKEND DEVELOPER NOTES:
+//   The GET /api/school/profile response must be extended to include the fields
+//   below. These are additive — existing consumers of the endpoint are unaffected.
+//   The PUT endpoint is a NEW dedicated endpoint for updating academic context
+//   so we do not collide with the existing updateSchool() used for school info.
+// =============================================================================
+
+export async function getAcademicProfile() {
+  /**
+   * 📡 GET /api/school/profile
+   *
+   * No request payload required.
+   *
+   * 📦 Expected response (extended model — new fields marked [NEW]):
+   * {
+   *   "success": true,
+   *   "message": "School profile retrieved successfully",
+   *   "data": {
+   *     "school": {
+   *       "id": "string",
+   *       "schoolId": "string",
+   *       "schoolName": "string",
+   *       "terms": [],           // legacy field — keep as-is
+   *       "events": [],          // formerly holidays
+   *       "settings": {},
+   *
+   *       "[NEW] currentAcademicYear": {
+   *         "id": "year-123",
+   *         "name": "2025/2026",
+   *         "startDate": "YYYY-MM-DD",
+   *         "endDate": "YYYY-MM-DD",
+   *         "expectedEndDate": "2026-07-30T00:00:00Z",
+   *         "isActive": true
+   *       },
+   *
+   *       "[NEW] currentTerm": {
+   *         "id": "term-456",
+   *         "name": "First Term",
+   *         "academicYearId": "year-123",
+   *         "startDate": "YYYY-MM-DD",
+   *         "endDate": "YYYY-MM-DD",
+   *         "expectedEndDate": "2025-12-15T00:00:00Z",
+   *         "isCurrent": true
+   *       },
+   *
+   *       "[NEW] academicYears": [
+   *         {
+   *           "id": "year-123",
+   *           "name": "2025/2026",
+   *           "startDate": "YYYY-MM-DD",
+   *           "endDate": "YYYY-MM-DD",
+   *           "isActive": true
+   *         },
+   *         {
+   *           "id": "year-124",
+   *           "name": "2026/2027",
+   *           "startDate": "YYYY-MM-DD",
+   *           "endDate": "YYYY-MM-DD",
+   *           "isActive": false
+   *         }
+   *       ]
+   *     }
+   *   }
+   * }
+   *
+   * ❌ Error response example:
+   * { "success": false, "message": "Unauthorized" }
+   */
+  console.log('📡 GET /api/school/profile (extended with academic context)');
+
+  if (TIMETABLE_BACKEND_LIVE) {
+    const { data } = await apiClient.get('/api/school/profile');
+    return data;
+  }
+
+  await delay();
+
+  // ── DEMO DATA ──────────────────────────────────────────────────────────────
+  // Replace this with the real API call above when backend is ready.
+  const now = new Date().toISOString();
+  return {
+    success: true,
+    data: {
+      school: {
+        id: 'demo_school_1',
+        schoolId: 'SAM1504',
+        schoolName: 'Samsung International School',
+        terms: [],
+        events: [],
+        settings: {},
+        currentAcademicYear: {
+          id: 'ay_2025_2026',
+          name: '2025/2026',
+          startDate: '2025-09-01',
+          endDate: '2026-07-30',
+          expectedEndDate: '2026-07-30T00:00:00Z',
+          isActive: true,
+        },
+        currentTerm: {
+          id: 'term_first_2025',
+          name: 'First Term',
+          academicYearId: 'ay_2025_2026',
+          startDate: '2025-09-01',
+          endDate: '2025-12-15',
+          expectedEndDate: '2025-12-15T00:00:00Z',
+          isCurrent: true,
+        },
+        academicYears: [
+          {
+            id: 'ay_2024_2025',
+            name: '2024/2025',
+            startDate: '2024-09-01',
+            endDate: '2025-07-30',
+            isActive: false,
+          },
+          {
+            id: 'ay_2025_2026',
+            name: '2025/2026',
+            startDate: '2025-09-01',
+            endDate: '2026-07-30',
+            isActive: true,
+          },
+          {
+            id: 'ay_2026_2027',
+            name: '2026/2027',
+            startDate: '2026-09-01',
+            endDate: '2027-07-30',
+            isActive: false,
+          },
+        ],
+      },
+    },
+  };
+}
+
+export async function setAcademicContext(payload) {
+  /**
+   * 📡 PUT /api/school/profile/academic-context
+   *
+   * 📤 Request payload:
+   * {
+   *   "currentAcademicYearId": "year-123",   // set active year (null to clear)
+   *   "currentTermId": "term-456"             // set current term (null to clear)
+   * }
+   *
+   * 📦 Expected response:
+   * {
+   *   "success": true,
+   *   "message": "Academic context updated successfully",
+   *   "data": {
+   *     "currentAcademicYear": { "id": "year-123", "name": "2025/2026", ... },
+   *     "currentTerm": { "id": "term-456", "name": "First Term", ... }
+   *   }
+   * }
+   *
+   * ❌ Error response example:
+   * {
+   *   "success": false,
+   *   "message": "Academic year not found",
+   *   "error": "INVALID_ACADEMIC_YEAR_ID"
+   * }
+   */
+  console.log('📡 PUT /api/school/profile/academic-context', payload);
+  console.log('📦 Expected response:', {
+    success: true,
+    message: 'Academic context updated successfully',
+    data: { currentAcademicYear: { id: 'year-123', name: '2025/2026' }, currentTerm: { id: 'term-456', name: 'First Term' } },
+  });
+
+  if (TIMETABLE_BACKEND_LIVE) {
+    const { data } = await apiClient.put('/api/school/profile/academic-context', payload);
+    return data;
+  }
+
+  await delay(500);
+  return {
+    success: true,
+    message: 'Academic context updated successfully',
+    data: { currentAcademicYearId: payload.currentAcademicYearId, currentTermId: payload.currentTermId },
+  };
+}
+
+// =============================================================================
 // ACADEMIC YEARS
 // POST /api/admin/academic-years
 // GET  /api/admin/academic-years
@@ -59,6 +246,32 @@ export async function createAcademicYear(payload) {
 
   await delay();
   return { success: true, data: { academicYear: { id: `ay_${Date.now()}`, ...payload, isActive: false } } };
+}
+
+export async function updateAcademicYear(id, payload) {
+  console.log(`📡 PUT /api/admin/academic-years/${id}`, payload);
+  console.log('📦 Expected response:', { success: true, data: { academicYear: { id, ...payload } } });
+
+  if (TIMETABLE_BACKEND_LIVE) {
+    const { data } = await apiClient.put(`/api/admin/academic-years/${id}`, payload);
+    return data;
+  }
+
+  await delay();
+  return { success: true, data: { academicYear: { id, ...payload } } };
+}
+
+export async function deleteAcademicYear(id) {
+  console.log(`📡 DELETE /api/admin/academic-years/${id}`);
+  console.log('📦 Expected response:', { success: true });
+
+  if (TIMETABLE_BACKEND_LIVE) {
+    const { data } = await apiClient.delete(`/api/admin/academic-years/${id}`);
+    return data;
+  }
+
+  await delay();
+  return { success: true };
 }
 
 // =============================================================================
@@ -96,43 +309,69 @@ export async function createTerm(payload) {
   return { success: true, data: { term: { id: `term_${Date.now()}`, ...payload } } };
 }
 
-// =============================================================================
-// HOLIDAYS & EVENTS
-// GET  /api/admin/holidays?termId=
-// POST /api/admin/holidays
-// DELETE /api/admin/holidays/:id
-// =============================================================================
-
-export async function getHolidays(termId) {
-  console.log('📡 GET /api/admin/holidays', { params: { termId } });
+export async function updateTerm(id, payload) {
+  console.log(`📡 PUT /api/admin/terms/${id}`, payload);
+  console.log('📦 Expected response:', { success: true, data: { term: { id, ...payload } } });
 
   if (TIMETABLE_BACKEND_LIVE) {
-    const { data } = await apiClient.get('/api/admin/holidays', { params: { termId } });
+    const { data } = await apiClient.put(`/api/admin/terms/${id}`, payload);
     return data;
   }
 
   await delay();
-  return { success: true, data: { holidays: [] } };
+  return { success: true, data: { term: { id, ...payload } } };
 }
 
-export async function createHoliday(payload) {
+export async function deleteTerm(id) {
+  console.log(`📡 DELETE /api/admin/terms/${id}`);
+  console.log('📦 Expected response:', { success: true });
+
+  if (TIMETABLE_BACKEND_LIVE) {
+    const { data } = await apiClient.delete(`/api/admin/terms/${id}`);
+    return data;
+  }
+
+  await delay();
+  return { success: true };
+}
+
+// =============================================================================
+// EVENTS (Formerly Holidays)
+// GET  /api/admin/events?termId=
+// POST /api/admin/events
+// DELETE /api/admin/events/:id
+// =============================================================================
+
+export async function getEvents(termId) {
+  console.log('📡 GET /api/admin/events', { params: { termId } });
+
+  if (TIMETABLE_BACKEND_LIVE) {
+    const { data } = await apiClient.get('/api/admin/events', { params: { termId } });
+    return data;
+  }
+
+  await delay();
+  return { success: true, data: { events: [] } };
+}
+
+export async function createEvent(payload) {
   // payload: { termId, name, date, endDate, type: 'holiday'|'exam_period'|'midterm'|'event'|'closure', color }
-  console.log('📡 POST /api/admin/holidays', payload);
+  console.log('📡 POST /api/admin/events', payload);
 
   if (TIMETABLE_BACKEND_LIVE) {
-    const { data } = await apiClient.post('/api/admin/holidays', payload);
+    const { data } = await apiClient.post('/api/admin/events', payload);
     return data;
   }
 
   await delay();
-  return { success: true, data: { holiday: { id: `holiday_${Date.now()}`, ...payload } } };
+  return { success: true, data: { event: { id: `event_${Date.now()}`, ...payload } } };
 }
 
-export async function deleteHoliday(holidayId) {
-  console.log(`📡 DELETE /api/admin/holidays/${holidayId}`);
+export async function deleteEvent(eventId) {
+  console.log(`📡 DELETE /api/admin/events/${eventId}`);
 
   if (TIMETABLE_BACKEND_LIVE) {
-    const { data } = await apiClient.delete(`/api/admin/holidays/${holidayId}`);
+    const { data } = await apiClient.delete(`/api/admin/events/${eventId}`);
     return data;
   }
 

@@ -13,6 +13,7 @@ import {
 import './dark-mode.css'
 
 import { getTheme, toggleTheme } from "../../utils/theme.js";
+import { getAcademicProfile } from "./AdminDashboard/timetable/timetableAPIs.js";
 
 export const Header = () => {
     const {user, logout} = useAuth();
@@ -24,6 +25,7 @@ export const Header = () => {
         ? `${user.firstName} ${user.lastName ?? ''}`
         : (user?.fullName ?? 'User');
 
+    const [academicContext, setAcademicContext] = useState({ year: 'Loading...', term: '...' });
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -42,6 +44,25 @@ export const Header = () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, [dropdownRef]);
+
+    useEffect(() => {
+        const fetchContext = async () => {
+            try {
+                const res = await getAcademicProfile();
+                if (res.success && res.data.school) {
+                    setAcademicContext({
+                        year: res.data.school.currentAcademicYear?.name || 'No Active Year',
+                        term: res.data.school.currentTerm?.name || 'No Active Term'
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to fetch academic context:', err);
+                setAcademicContext({ year: 'Setup Needed', term: 'Setup Needed' });
+            }
+        };
+        // Avoid fetching on every render, maybe just once per mount
+        fetchContext();
+    }, []);
 
 
 
@@ -71,6 +92,14 @@ export const Header = () => {
                                 <Moon className="w-5 h-5 text-gray-600" />
                             )}
                         </button>
+
+                        <div className="h-6 w-px bg-gray-200 mx-2"></div>
+
+                        {/* Academic Context Display */}
+                        <div className="hidden sm:flex flex-col items-end justify-center mr-2 pr-2">
+                            <span className="text-xs font-bold text-gray-800">{academicContext.year}</span>
+                            <span className="text-[10px] font-medium text-blue-600 uppercase">{academicContext.term}</span>
+                        </div>
 
                         <div className="h-6 w-px bg-gray-200 mx-1"></div>
 

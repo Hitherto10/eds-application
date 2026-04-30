@@ -13,36 +13,37 @@ import {
     PWAInstalledToast,
 } from './components/pwa';
 
-
-const AuthPage = lazy(() => import("./pages/auth/AuthPage.jsx"));
+// StandAlone Pages
+const AuthPage             = lazy(() => import("./pages/auth/AuthPage.jsx"));
 const CompleteRegistration = lazy(() => import("./pages/auth/UserRegistration/CompleteRegistration"));
-const RegisterSchool = lazy(() => import("./pages/auth/RegisterSchool.jsx").then(m => ({ default: m.RegisterSchool })));
+const RegisterSchool       = lazy(() => import("./pages/auth/RegisterSchool.jsx").then(m => ({ default: m.RegisterSchool })));
 
 // Admin Pages
-const DashboardPage = lazy(() => import("./pages/application/AdminDashboard/pages/DashboardPage.jsx"));
-const UserManagementPage = lazy(() => import("./pages/application/AdminDashboard/pages/UserManagementPage.jsx"));
-const Students = lazy(() => import("./pages/application/AdminDashboard/pages/StudentManagement.jsx"));
-const SchoolProfilePage = lazy(() => import("./pages/application/AdminDashboard/pages/SchoolProfilePage.jsx"));
-const AdminProfilePage = lazy(() => import("./pages/application/AdminDashboard/pages/AdminProfilePage.jsx"));
-
-// Config sub-pages (each is a standalone page inside TimetablePage shell)
-const SubjectsPage   = lazy(() => import("./pages/application/AdminDashboard/pages/config/SubjectsPage.jsx"));
-const ClassesPage    = lazy(() => import("./pages/application/AdminDashboard/pages/config/ClassesPage.jsx"));
-const CalendarPage   = lazy(() => import("./pages/application/AdminDashboard/pages/config/CalendarPage.jsx"));
-const TimetablePage  = lazy(() => import("./pages/application/AdminDashboard/pages/config/TimetablePage.jsx"));
+const DashboardPage       = lazy(() => import("./pages/application/AdminDashboard/pages/DashboardPage.jsx"));
+const UserManagementPage  = lazy(() => import("./pages/application/AdminDashboard/pages/UserManagementPage.jsx"));
+const Students            = lazy(() => import("./pages/application/AdminDashboard/pages/StudentManagement.jsx"));
+const SchoolProfilePage   = lazy(() => import("./pages/application/AdminDashboard/pages/SchoolProfilePage.jsx"));
+const AdminProfilePage    = lazy(() => import("./pages/application/AdminDashboard/pages/AdminProfilePage.jsx"));
+const SubjectsPage        = lazy(() => import("./pages/application/AdminDashboard/pages/config/SubjectsPage.jsx"));
+const ClassesPage         = lazy(() => import("./pages/application/AdminDashboard/pages/config/ClassesPage.jsx"));
+const CalendarPage        = lazy(() => import("./pages/application/AdminDashboard/pages/config/CalendarPage.jsx"));
+const TimetablePage       = lazy(() => import("./pages/application/AdminDashboard/pages/config/TimetablePage.jsx"));
+const EventPage           = lazy(() => import("./pages/application/AdminDashboard/pages/config/EventPage.jsx"));
 
 // Parent Pages
-const ParentDashboard = lazy(() => import("./pages/application/ParentDashboard/ParentDashboard.jsx"));
+const ParentDashboard    = lazy(() => import("./pages/application/ParentDashboard/ParentDashboard.jsx"));
 const ChildSelectionPage = lazy(() => import("./pages/application/ParentDashboard/MyChildren.jsx"));
-const ParentProfilePage = lazy(() => import("./pages/application/ParentDashboard/ParentProfilePage.jsx"));
+const ParentProfilePage  = lazy(() => import("./pages/application/ParentDashboard/ParentProfilePage.jsx"));
 
 // Teacher Pages
-const TeacherDashboard = lazy(() => import("./pages/application/TeacherDashboard/TeacherDashboard.jsx"));
-const TeacherProfile = lazy(() => import("./pages/application/TeacherDashboard/UserProfile.jsx"));
-const ClassStudents = lazy(() => import("./pages/application/TeacherDashboard/ClassStudents.jsx"));
-const TeacherClasses = lazy(() => import("./pages/application/TeacherDashboard/TeacherClasses.jsx"));
-const AttendancePage = lazy(() => import("./pages/application/TeacherDashboard/AttendancePage.jsx"));
+const TeacherDashboard       = lazy(() => import("./pages/application/TeacherDashboard/TeacherDashboard.jsx"));
+const TeacherProfile         = lazy(() => import("./pages/application/TeacherDashboard/UserProfile.jsx"));
+const ClassStudents          = lazy(() => import("./pages/application/TeacherDashboard/ClassStudents.jsx"));
+const TeacherClasses         = lazy(() => import("./pages/application/TeacherDashboard/TeacherClasses.jsx"));
+const AttendancePage         = lazy(() => import("./pages/application/TeacherDashboard/AttendancePage.jsx"));
 const AttendanceRegisterPage = lazy(() => import("./pages/application/TeacherDashboard/AttendanceRegisterPage.jsx"));
+
+
 
 const LoadingFallback = () => (
     <div className="h-screen w-full flex items-center justify-center font-[Outfit]">
@@ -91,6 +92,8 @@ function AppRoutes() {
                 <Route path="/dashboard/admin" element={<ProtectedRoute requiredRole="admin"><DashboardPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/school-profile" element={<ProtectedRoute requiredRole="admin"><SchoolProfilePage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/profile" element={<ProtectedRoute requiredRole="admin"><AdminProfilePage /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/events-planner" element={<ProtectedRoute requiredRole="admin"><EventPage />
+                </ProtectedRoute>} />
                 <Route path="/dashboard/admin/users" element={<ProtectedRoute requiredRole="admin"><UserManagementPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/users/parents" element={<ProtectedRoute requiredRole="admin"><UserManagementPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/students" element={<ProtectedRoute requiredRole="admin"><Students /></ProtectedRoute>} />

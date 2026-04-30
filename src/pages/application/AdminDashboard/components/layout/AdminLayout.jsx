@@ -46,6 +46,8 @@ const navItems = [
             { name: 'Timetable Builder', icon: LayoutGrid,  link: '/dashboard/admin/config/timetable' },
         ],
     },
+    { name: 'Events Planner',  icon: School,          link: '/dashboard/admin/events-planner', children: [] },
+
 ];
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────

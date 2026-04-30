@@ -12,7 +12,7 @@ import { useGlobalTimetableData } from '../../timetable/useGlobalTimetableData.j
  * global context (subjects, classes, etc.) to the builder.
  */
 function SubjectsContent() {
-    // Kick off global data load (years, classes, teachers, subjects)
+    // Global data load (years, classes, teachers, subjects)
     useGlobalTimetableData();
     return (
         <div className="flex flex-col h-full min-h-[calc(100vh-120px)]">

@@ -39,7 +39,7 @@ const initialState = {
   selectedYear: null,
   terms: [],
   selectedTerm: null,
-  holidays: [],
+  events: [],
 
   // Available resources
   classes: [],           // [{ id, name }] — filled from API or admin input
@@ -76,20 +76,28 @@ function timetableReducer(state, action) {
       return { ...state, academicYears: action.payload };
     case 'ADD_ACADEMIC_YEAR':
       return { ...state, academicYears: [...state.academicYears, action.payload] };
+    case 'UPDATE_ACADEMIC_YEAR':
+      return { ...state, academicYears: state.academicYears.map(y => y.id === action.payload.id ? action.payload : y), selectedYear: state.selectedYear?.id === action.payload.id ? action.payload : state.selectedYear };
+    case 'REMOVE_ACADEMIC_YEAR':
+      return { ...state, academicYears: state.academicYears.filter(y => y.id !== action.id), selectedYear: state.selectedYear?.id === action.id ? null : state.selectedYear };
     case 'SELECT_YEAR':
       return { ...state, selectedYear: action.payload, selectedTerm: null, periods: [], schedules: [], draftId: null, isPublished: false };
     case 'SET_TERMS':
       return { ...state, terms: action.payload };
     case 'ADD_TERM':
       return { ...state, terms: [...state.terms, action.payload] };
+    case 'UPDATE_TERM':
+      return { ...state, terms: state.terms.map(t => t.id === action.payload.id ? action.payload : t), selectedTerm: state.selectedTerm?.id === action.payload.id ? action.payload : state.selectedTerm };
+    case 'REMOVE_TERM':
+      return { ...state, terms: state.terms.filter(t => t.id !== action.id), selectedTerm: state.selectedTerm?.id === action.id ? null : state.selectedTerm };
     case 'SELECT_TERM':
       return { ...state, selectedTerm: action.payload, periods: [], schedules: [], draftId: null, isPublished: false };
-    case 'SET_HOLIDAYS':
-      return { ...state, holidays: action.payload };
-    case 'ADD_HOLIDAY':
-      return { ...state, holidays: [...state.holidays, action.payload] };
-    case 'REMOVE_HOLIDAY':
-      return { ...state, holidays: state.holidays.filter(h => h.id !== action.id) };
+    case 'SET_EVENTS':
+      return { ...state, events: action.payload };
+    case 'ADD_EVENT':
+      return { ...state, events: [...state.events, action.payload] };
+    case 'REMOVE_EVENT':
+      return { ...state, events: state.events.filter(h => h.id !== action.id) };
 
     // ── Resources ─────────────────────────────────────────────────────────────
     case 'SET_CLASSES':

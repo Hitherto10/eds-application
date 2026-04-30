@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTimetable } from '../TimetableContext';
 import { availableSubjects as defaultSubjects } from '../../../../../utils/imports';
-import { BookOpen, Search, Copy, CheckCircle2, Loader2, Plus, Trash2 } from 'lucide-react';
+import { BookOpen, Import, Search, Copy, CheckCircle2, Loader2, Plus, Trash2 } from 'lucide-react';
 import {bulkCreateSubjects, createSubject, deleteSubject} from "../../services/subjectAPIs.js";
 
 export default function SubjectSetupBuilder() {
@@ -93,7 +93,7 @@ export default function SubjectSetupBuilder() {
 
           <div className="grid md:grid-cols-2 gap-6">
             {/* Hybrid Path */}
-            <div className="p-8 bg-white border border-gray-200 rounded-2xl shadow-sm hover:border-blue-300 hover:shadow-md transition-all text-center flex flex-col h-full">
+            <div className="p-8 bg-white border border-gray-200 rounded-2xl hover:border-blue-300  transition-all text-center flex flex-col h-full">
               <div className="mb-4">
                 <span className="inline-block px-3 py-1 bg-green-100 text-green-800 text-xs font-bold uppercase rounded-full tracking-wider mb-4">Recommended</span>
                 <h3 className="text-xl font-bold text-gray-800 mb-2">Initialize Standard List</h3>
@@ -105,15 +105,15 @@ export default function SubjectSetupBuilder() {
                 <button 
                   onClick={handleLoadDefaults}
                   disabled={loading}
-                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors flex justify-center items-center gap-2 shadow-sm"
+                  className="w-full py-3 bg-white border  border-gray-200 hover:bg-gray-50 text-gray-700 cursor-pointer font-bold rounded-xl transition-colors flex justify-center items-center gap-2"
                 >
-                   {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Copy className="w-5 h-5" />} Focus on standard subjects
+                   {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Import className="w-5 h-5" />} import standard subjects
                 </button>
               </div>
             </div>
 
             {/* Custom Path */}
-            <div className="p-8 bg-white border border-gray-200 rounded-2xl shadow-sm hover:border-gray-300 hover:shadow-md transition-all text-center flex flex-col h-full">
+            <div className="p-8 bg-white border border-gray-200 rounded-2xl hover:border-gray-300  transition-all text-center flex flex-col h-full">
               <div className="mb-4">
                <span className="inline-block px-3 py-1 bg-gray-100 text-gray-800 text-xs font-bold uppercase rounded-full tracking-wider mb-4">Custom</span>
                 <h3 className="text-xl font-bold text-gray-800 mb-2">Blank State</h3>
@@ -124,7 +124,7 @@ export default function SubjectSetupBuilder() {
               <div className="mt-auto pt-6">
                 <button 
                   onClick={() => setShowCustomForm(true)}
-                  className="w-full py-3 bg-white border-2 border-gray-200 hover:bg-gray-50 text-gray-700 font-bold rounded-xl transition-colors flex justify-center items-center gap-2"
+                  className="w-full py-3 bg-white border  border-gray-200 hover:bg-gray-50 text-gray-700 cursor-pointer font-bold rounded-xl transition-colors flex justify-center items-center gap-2"
                 >
                    <Plus className="w-5 h-5" /> Add subjects manually
                 </button>
