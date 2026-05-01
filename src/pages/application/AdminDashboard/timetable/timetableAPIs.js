@@ -426,7 +426,7 @@ export async function saveTimetableDraft(payload) {
 
 export async function deleteTimetableDraft(classId, termId) {
   console.log('📡 DELETE /api/admin/timetable/draft', { params: { classId, termId } });
-  
+
   if (TIMETABLE_BACKEND_LIVE) {
     const { data } = await apiClient.delete('/api/admin/timetable/draft', { params: { classId, termId } });
     return data;
@@ -546,22 +546,22 @@ export async function getTeacherDailySchedule(date = new Date().toISOString().sp
       academicContext: { academicYearId: 'string', academicYear: 'string', termId: 'string', term: 'string' },
       scheduledClasses: [
         {
-          scheduleId:       'string',   // backend-generated, stable ID
-          classId:          'string',
-          className:        'string',   // e.g. "Grade 10A"
-          subjectId:        'string',
-          subjectName:      'string',
-          periodId:         'string',
-          periodNumber:     'number',
-          timeSlot:         { start: 'HH:mm', end: 'HH:mm' },
-          room:             'string | null',
-          teacherId:        'string',
+          scheduleId: 'string',   // backend-generated, stable ID
+          classId: 'string',
+          className: 'string',   // e.g. "Grade 10A"
+          subjectId: 'string',
+          subjectName: 'string',
+          periodId: 'string',
+          periodNumber: 'number',
+          timeSlot: { start: 'HH:mm', end: 'HH:mm' },
+          room: 'string | null',
+          teacherId: 'string',
           attendanceStatus: 'not_started | in_progress | completed',
-          attendanceId:     'string | null',
-          studentCount:     'number',
-          presentCount:     'number',
-          absentCount:      'number',
-          lateCount:        'number',
+          attendanceId: 'string | null',
+          studentCount: 'number',
+          presentCount: 'number',
+          absentCount: 'number',
+          lateCount: 'number',
         },
       ],
     },

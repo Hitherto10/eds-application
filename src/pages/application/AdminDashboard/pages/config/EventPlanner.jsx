@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTimetable } from '../../timetable/TimetableContext';
-import { Trash2, AlertCircle,ChevronLeft, ChevronRight } from 'lucide-react';
+import { Trash2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getAcademicProfile, createEvent, deleteEvent } from '../../timetable/timetableAPIs';
 import {
     AlertDialog,
@@ -105,9 +105,9 @@ export default function EventPlanner() {
 
     const handleDeleteEvent = async (id, e) => {
         e.stopPropagation();
-        if(confirm('Delete this event?')) {
+        if (confirm('Delete this event?')) {
             const res = await deleteEvent(id);
-            if(res.success) dispatch({ type: 'REMOVE_EVENT', id });
+            if (res.success) dispatch({ type: 'REMOVE_EVENT', id });
         }
     };
 
@@ -137,7 +137,7 @@ export default function EventPlanner() {
                                 <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200">Active</span>
                             </div>
                         ) : (
-                            <span className="text-sm font-medium text-amber-600 flex items-center gap-1"><AlertCircle size={14}/> Not Set</span>
+                            <span className="text-sm font-medium text-amber-600 flex items-center gap-1"><AlertCircle size={14} /> Not Set</span>
                         )}
                     </div>
 
@@ -151,7 +151,7 @@ export default function EventPlanner() {
                                 <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200">Active</span>
                             </div>
                         ) : (
-                            <span className="text-sm font-medium text-amber-600 flex items-center gap-1"><AlertCircle size={14}/> Not Set</span>
+                            <span className="text-sm font-medium text-amber-600 flex items-center gap-1"><AlertCircle size={14} /> Not Set</span>
                         )}
                     </div>
                 </div>
@@ -207,9 +207,9 @@ export default function EventPlanner() {
                                 className={`border-r border-b border-gray-100 min-h-[120px] p-2 hover:bg-blue-50/30 cursor-pointer transition flex flex-col group ${isToday ? 'bg-blue-50/10' : ''}`}
                             >
                                 <div className="flex justify-between items-start mb-2">
-                   <span className={`text-sm font-bold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-blue-600 text-white' : 'text-gray-700 group-hover:text-blue-600'}`}>
-                     {dateObj.getDate()}
-                   </span>
+                                    <span className={`text-sm font-bold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-blue-600 text-white' : 'text-gray-700 group-hover:text-blue-600'}`}>
+                                        {dateObj.getDate()}
+                                    </span>
                                 </div>
 
                                 <div className="flex-1 space-y-1 overflow-y-auto">
@@ -244,11 +244,11 @@ export default function EventPlanner() {
                     <div className="space-y-4 py-2">
                         <div>
                             <label className="text-xs font-bold text-gray-700 uppercase mb-1 block">Event Name</label>
-                            <input type="text" value={eventForm.name} onChange={e => setEventForm({...eventForm, name: e.target.value})} placeholder="e.g. Midterm Break" className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20" />
+                            <input type="text" value={eventForm.name} onChange={e => setEventForm({ ...eventForm, name: e.target.value })} placeholder="e.g. Midterm Break" className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20" />
                         </div>
                         <div>
                             <label className="text-xs font-bold text-gray-700 uppercase mb-1 block">Type</label>
-                            <select value={eventForm.type} onChange={e => setEventForm({...eventForm, type: e.target.value})} className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20">
+                            <select value={eventForm.type} onChange={e => setEventForm({ ...eventForm, type: e.target.value })} className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20">
                                 <option value="holiday">Holiday / Break</option>
                                 <option value="exam">Exam Period</option>
                                 <option value="event">Special Event</option>
