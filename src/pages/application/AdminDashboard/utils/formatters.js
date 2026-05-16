@@ -13,6 +13,15 @@ export const formatDate = (dateString) => {
     });
 };
 
+export const formatYear = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+    });
+};
+
 export const formatStatus = (status) => {
     // Handle Booleans
     if (typeof status === 'boolean') {

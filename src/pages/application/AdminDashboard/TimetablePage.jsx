@@ -52,6 +52,7 @@ function TimetableContent() {
           getSchoolSubjects()
         ]);
 
+
         if (resYears.success) {
           dispatch({ type: 'SET_ACADEMIC_YEARS', payload: resYears.data.academicYears });
           // Auto-select active year if exists

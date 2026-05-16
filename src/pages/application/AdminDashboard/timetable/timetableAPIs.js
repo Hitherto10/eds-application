@@ -14,7 +14,7 @@
 
 import apiClient from '../../../../utils/axiosConfig';
 
-export const TIMETABLE_BACKEND_LIVE = false;
+export const TIMETABLE_BACKEND_LIVE = true;
 
 const delay = (ms = 400) => new Promise(r => setTimeout(r, ms));
 
@@ -165,7 +165,7 @@ export async function getAcademicProfile() {
   };
 }
 
-export async function setAcademicContext(payload) {
+export async function setAcademicContext(yearID) {
   /**
    * 📡 PUT /api/school/profile/academic-context
    *
@@ -192,7 +192,7 @@ export async function setAcademicContext(payload) {
    *   "error": "INVALID_ACADEMIC_YEAR_ID"
    * }
    */
-  console.log('📡 PUT /api/school/profile/academic-context', payload);
+  console.log('📡 PUT /api/school/profile/academic-context', yearID);
   console.log('📦 Expected response:', {
     success: true,
     message: 'Academic context updated successfully',
@@ -200,7 +200,8 @@ export async function setAcademicContext(payload) {
   });
 
   if (TIMETABLE_BACKEND_LIVE) {
-    const { data } = await apiClient.put('/api/school/profile/academic-context', payload);
+    // const { data } = await apiClient.put('/api/school/profile/academic-context', payload);
+    const { data } = await apiClient.put(`/api/academic/calendar/years/${yearID}/current`);
     return data;
   }
 
@@ -208,7 +209,7 @@ export async function setAcademicContext(payload) {
   return {
     success: true,
     message: 'Academic context updated successfully',
-    data: { currentAcademicYearId: payload.currentAcademicYearId, currentTermId: payload.currentTermId },
+    data: { currentAcademicYearId: yearID.currentAcademicYearId, currentTermId: yearID.currentTermId },
   };
 }
 
@@ -226,8 +227,9 @@ export async function getAcademicYears() {
   });
 
   if (TIMETABLE_BACKEND_LIVE) {
-    const { data } = await apiClient.get('/api/admin/academic-years');
-    return data;
+    const { data } = await apiClient.get('/api/academic/years');
+    console.log(data.data)
+    return data.data;
   }
 
   await delay();
@@ -237,10 +239,18 @@ export async function getAcademicYears() {
 export async function createAcademicYear(payload) {
   // payload: { name: '2025/2026', startDate: 'YYYY-MM-DD', endDate: 'YYYY-MM-DD' }
   console.log('📡 POST /api/admin/academic-years', payload);
-  console.log('📦 Expected response:', { success: true, data: { academicYear: { id: 'string', ...payload, isActive: false } } });
+  console.log('📦 Expected response:', {
+    success: true,
+    data: {
+      academicYear: {
+        id: 'string',
+        ...payload,
+        isCurrent: false
+      }
+    }});
 
   if (TIMETABLE_BACKEND_LIVE) {
-    const { data } = await apiClient.post('/api/admin/academic-years', payload);
+    const { data } = await apiClient.post('/api/academic/years', payload);
     return data;
   }
 
@@ -301,7 +311,7 @@ export async function createTerm(payload) {
   console.log('📡 POST /api/admin/terms', payload);
 
   if (TIMETABLE_BACKEND_LIVE) {
-    const { data } = await apiClient.post('/api/admin/terms', payload);
+    const { data } = await apiClient.post('/api/academic/calendar/terms', payload);
     return data;
   }
 
@@ -355,7 +365,7 @@ export async function getEvents(termId) {
 }
 
 export async function createEvent(payload) {
-  // payload: { termId, name, date, endDate, type: 'holiday'|'exam_period'|'midterm'|'event'|'closure', color }
+  // payload: { termId, name, date, endDate, type: 'holiday'|'exam'|'event', notifications?: any }
   console.log('📡 POST /api/admin/events', payload);
 
   if (TIMETABLE_BACKEND_LIVE) {
@@ -364,7 +374,21 @@ export async function createEvent(payload) {
   }
 
   await delay();
-  return { success: true, data: { event: { id: `event_${Date.now()}`, ...payload } } };
+  const notificationConfigId = payload.notifications?.enabled ? `cfg_${Date.now()}` : null;
+  return { success: true, data: { event: { id: `event_${Date.now()}`, notificationConfigId, ...payload } } };
+}
+
+export async function updateEvent(eventId, payload) {
+  console.log(`📡 PUT /api/admin/events/${eventId}`, payload);
+
+  if (TIMETABLE_BACKEND_LIVE) {
+    const { data } = await apiClient.put(`/api/admin/events/${eventId}`, payload);
+    return data;
+  }
+
+  await delay();
+  const notificationConfigId = payload.notifications?.enabled ? `cfg_${Date.now()}` : null;
+  return { success: true, data: { event: { id: eventId, notificationConfigId, ...payload } } };
 }
 
 export async function deleteEvent(eventId) {
@@ -377,6 +401,54 @@ export async function deleteEvent(eventId) {
 
   await delay(200);
   return { success: true };
+}
+
+// =============================================================================
+// EVENT NOTIFICATIONS
+// PUT  /api/admin/events/:eventId/notifications
+// GET  /api/admin/events/:eventId/notifications
+// POST /api/admin/events/:eventId/notify
+// GET  /api/admin/notifications/logs
+// =============================================================================
+
+export async function updateEventNotificationSettings(eventId, payload) {
+  console.log(`📡 PUT /api/admin/events/${eventId}/notifications`, payload);
+  if (TIMETABLE_BACKEND_LIVE) {
+    const { data } = await apiClient.put(`/api/admin/events/${eventId}/notifications`, payload);
+    return data;
+  }
+  await delay(300);
+  return { success: true, data: { id: `cfg_${Date.now()}`, status: payload.schedule?.type === 'scheduled' ? 'scheduled' : 'processing' } };
+}
+
+export async function getEventNotificationsConfig(eventId) {
+  console.log(`📡 GET /api/admin/events/${eventId}/notifications`);
+  if (TIMETABLE_BACKEND_LIVE) {
+    const { data } = await apiClient.get(`/api/admin/events/${eventId}/notifications`);
+    return data;
+  }
+  await delay();
+  return { success: true, data: { id: `cfg_${eventId}`, targets: { roles: [], classIds: [], userIds: [] }, channels: [], schedule: { type: 'immediate' }, status: 'draft' } };
+}
+
+export async function sendNotificationOverride(eventId, payload) {
+  console.log(`📡 POST /api/admin/events/${eventId}/notify`, payload);
+  if (TIMETABLE_BACKEND_LIVE) {
+    const { data } = await apiClient.post(`/api/admin/events/${eventId}/notify`, payload);
+    return data;
+  }
+  await delay(400);
+  return { success: true, message: 'Notification job queued successfully.' };
+}
+
+export async function getNotificationLogs(eventId, status) {
+  console.log(`📡 GET /api/admin/notifications/logs`, { params: { eventId, status } });
+  if (TIMETABLE_BACKEND_LIVE) {
+    const { data } = await apiClient.get('/api/admin/notifications/logs', { params: { eventId, status } });
+    return data;
+  }
+  await delay();
+  return { success: true, data: { total: 0, failed: 0, logs: [] } };
 }
 
 // =============================================================================

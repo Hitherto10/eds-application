@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useMemo, useCallback } from 'react';
 import { detectConflicts, getConflictedEntryIds, getWarnedEntryIds, hasBlockingConflicts } from './conflictEngine';
+import {getAcademicYears} from "./timetableAPIs.js";
 
 // Periods are now dynamic and configured per draft.
 
@@ -32,17 +33,20 @@ export function getSubjectColor(subjectId) {
 /** Lightweight unique ID with no external dependency. */
 export const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 
+const res = await getAcademicYears();
 // ─── State ────────────────────────────────────────────────────────────────────
 const initialState = {
   // Academic context
-  academicYears: [],
+  academicYears: res.years ?? [], // e.g. [{ id: '2023-2024', name: '2023-2024' }]
   selectedYear: null,
   terms: [],
   selectedTerm: null,
   events: [],
 
   // Available resources
-  classes: [],           // [{ id, name }] — filled from API or admin input
+  classes: [],           // [{ id, name, level }] — base class levels from API
+  arms: [],              // [{ id, classId, name, subjects:[] }] — per-class sections
+  armSubjects: {},       // { [armId]: subject[] } — quick-access map for arm subjects
   teachers: [],          // [{ id, name, subjects }]
   subjects: [],          // Shared school-wide subjects
   rooms: ['Room 101', 'Room 102', 'Room 103', 'Lab 1', 'Library', 'Gym'],
@@ -64,7 +68,7 @@ const initialState = {
   isSaving: false,
 
   // Loading flags
-  loading: { years: false, terms: false, classes: false, teachers: false, draft: false },
+  loading: { years: false, terms: false, classes: false, teachers: false, draft: false, arms: false },
 };
 
 // ─── Reducer ──────────────────────────────────────────────────────────────────
@@ -116,6 +120,99 @@ function timetableReducer(state, action) {
       return { ...state, rooms: [...state.rooms, action.room] };
     case 'REMOVE_ROOM':
       return { ...state, rooms: state.rooms.filter(r => r !== action.room) };
+
+    // ── Arms ──────────────────────────────────────────────────────────────────
+    // SET_ARMS: replace the entire arms list (called after createArms or initial load)
+    case 'SET_ARMS':
+      return { ...state, arms: action.payload };
+
+    // ADD_ARMS: append one or more newly created arms
+    case 'ADD_ARMS': {
+      const newArms = Array.isArray(action.payload) ? action.payload : [action.payload];
+      return { ...state, arms: [...state.arms, ...newArms] };
+    }
+
+    // UPDATE_ARM: patch a single arm by id
+    case 'UPDATE_ARM':
+      return {
+        ...state,
+        arms: state.arms.map(a =>
+          a.id === action.payload.id ? { ...a, ...action.payload } : a
+        ),
+      };
+
+    // REMOVE_ARM: delete an arm (and its cached subjects)
+    case 'REMOVE_ARM': {
+      const { [action.id]: _removed, ...restSubjects } = state.armSubjects;
+      return {
+        ...state,
+        arms: state.arms.filter(a => a.id !== action.id),
+        armSubjects: restSubjects,
+      };
+    }
+
+    // REMOVE_CLASS_ARMS: wipe all arms belonging to a deleted class
+    case 'REMOVE_CLASS_ARMS': {
+      const survivingArms = state.arms.filter(a => a.classId !== action.classId);
+      const removedIds = state.arms
+        .filter(a => a.classId === action.classId)
+        .map(a => a.id);
+      const cleanedSubjects = { ...state.armSubjects };
+      removedIds.forEach(id => delete cleanedSubjects[id]);
+      return { ...state, arms: survivingArms, armSubjects: cleanedSubjects };
+    }
+
+    // ── Arm Subjects ──────────────────────────────────────────────────────────
+    // SET_ARM_SUBJECTS: store the full subject list for a specific arm
+    case 'SET_ARM_SUBJECTS':
+      return {
+        ...state,
+        armSubjects: { ...state.armSubjects, [action.armId]: action.subjects },
+      };
+
+    // ADD_ARM_SUBJECTS: merge new subjects into an arm (additive, deduped by id)
+    case 'ADD_ARM_SUBJECTS': {
+      const existing = state.armSubjects[action.armId] || [];
+      const existingIds = new Set(existing.map(s => s.id));
+      const incoming = (action.subjects || []).filter(s => !existingIds.has(s.id));
+      return {
+        ...state,
+        armSubjects: {
+          ...state.armSubjects,
+          [action.armId]: [...existing, ...incoming],
+        },
+      };
+    }
+
+    // REMOVE_ARM_SUBJECT: remove a single subject from an arm
+    case 'REMOVE_ARM_SUBJECT': {
+      const current = state.armSubjects[action.armId] || [];
+      return {
+        ...state,
+        armSubjects: {
+          ...state.armSubjects,
+          [action.armId]: current.filter(s => s.id !== action.subjectId),
+        },
+      };
+    }
+
+    // COPY_ARM_SUBJECTS: stamp sourceArm's subjects onto one or more target arms
+    case 'COPY_ARM_SUBJECTS': {
+      const source = state.armSubjects[action.sourceArmId] || [];
+      const updates = {};
+      (action.targetArmIds || []).forEach(targetId => {
+        const targetExisting = state.armSubjects[targetId] || [];
+        const targetIds = new Set(targetExisting.map(s => s.id));
+        updates[targetId] = [
+          ...targetExisting,
+          ...source.filter(s => !targetIds.has(s.id)),
+        ];
+      });
+      return {
+        ...state,
+        armSubjects: { ...state.armSubjects, ...updates },
+      };
+    }
 
     // ── Class selection ───────────────────────────────────────────────────────
     case 'SELECT_CLASS':

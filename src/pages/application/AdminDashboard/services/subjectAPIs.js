@@ -1,90 +1,260 @@
-import apiClient from "../../../../utils/axiosConfig.js";
-
-export const SUBJECTS_BACKEND_LIVE = false;
-const delay = (ms = 400) => new Promise(r => setTimeout(r, ms));
+import apiClient from '../../../../utils/axiosConfig.js';
 
 /**
- * GET /api/admin/subjects
- * Fetches all created school-wide subjects.
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Subject APIs  —  /api/academic/subjects
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * FEATURE FLAG:
+ *   Set SUBJECTS_BACKEND_LIVE = true once the backend is deployed.
+ *
+ * CATEGORY VALUES  (matches newFeatures.md):
+ *   'core' | 'elective' | 'optional' | 'religious'
+ *
+ * UNIFIED DELETE FORMAT:
+ *   deleteSubjects() accepts a single string OR an array of strings.
+ *   The deprecated deleteSubject(id) shim wraps it for backward compat.
+ *
+ * ID NORMALISATION:
+ *   Live backend returns _id.  normalizeId() maps it to id so the context
+ *   state shape stays consistent with the rest of the frontend.
  */
+
+export const SUBJECTS_BACKEND_LIVE = true;
+
+const delay = (ms = 400) => new Promise(r => setTimeout(r, ms));
+
+// ── Category constants ────────────────────────────────────────────────────────
+export const SUBJECT_CATEGORIES = ['core', 'elective', 'optional', 'religious'];
+
+export const CATEGORY_LABELS = {
+  core:      'Core',
+  elective:  'Elective',
+  optional:  'Optional',
+  religious: 'Religious',
+};
+
+export const CATEGORY_STYLES = {
+  core:      'bg-blue-50 text-blue-700 border border-blue-200',
+  elective:  'bg-violet-50 text-violet-700 border border-violet-200',
+  optional:  'bg-amber-50 text-amber-700 border border-amber-200',
+  religious: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+};
+
+// ── ID normalisation helpers (live-mode only) ─────────────────────────────────
+const normalizeId = (obj) => {
+  if (!obj || typeof obj !== 'object') return obj;
+  const { _id, ...rest } = obj;
+  return _id ? { id: _id, _id, ...rest } : obj;
+};
+const normalizeList = (list) =>
+  Array.isArray(list) ? list.map(normalizeId) : list;
+
+// ── Code auto-generator helper ────────────────────────────────────────────────
+/**
+ * Derives a short subject code from the subject name.
+ * Multi-word names → initials (e.g. "Basic Science" → "BS")
+ * Single word      → first 3 letters (e.g. "Mathematics" → "MAT")
+ */
+export function autoGenerateCode(name = '', currentCodes = []) {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  let code = '';
+
+  if (words.length >= 2) {
+    code = words
+        .map((w) => w[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 4);
+  } else {
+    code = name.trim().substring(0, 3).toUpperCase();
+  }
+
+  // Handle collisions
+  let finalCode = code;
+  let counter = 1;
+
+  while (currentCodes.includes(finalCode)) {
+    // If "BS" exists, try "BS1", then "BS2", etc.
+    const suffix = counter.toString();
+    finalCode = code.slice(0, 4 - suffix.length) + suffix;
+    counter++;
+  }
+
+  return finalCode;
+}
+
+// =============================================================================
+// GET /api/academic/subjects
+// Returns all school-wide subjects.
+// =============================================================================
 export async function getSchoolSubjects() {
-  console.log('📡 GET /api/admin/subjects');
+  console.log('📡 GET /api/academic/subjects');
   console.log('📦 Expected response:', {
     success: true,
-    data: { subjects: [{ id: 'string', name: 'string', code: 'string | null' }] },
+    data: {
+      subjects: [
+        {
+          _id: 'string',
+          name: 'Mathematics',
+          code: 'MTH',
+          category: 'core | elective | optional | religious',
+          description: 'string (optional)',
+        },
+      ],
+      total: 10,
+    },
   });
 
   if (SUBJECTS_BACKEND_LIVE) {
-    const { data } = await apiClient.get('/api/admin/subjects');
+    const { data } = await apiClient.get('/api/academic/subjects');
+    if (data.success) data.data.subjects = normalizeList(data.data.subjects);
     return data;
   }
 
   await delay();
-  return { success: true, data: { subjects: [] } };
+  return { success: true, data: { subjects: [], total: 0 } };
 }
 
-/**
- * ─────────────────────────────────────────────────────────────────────────────
- * POST /api/admin/subjects/bulk
- * Saves a batch of subjects to the system. Used mainly by hybrid setup wizard.
- * ─────────────────────────────────────────────────────────────────────────────
- */
+// =============================================================================
+// POST /api/academic/subjects  (bulk creation)
+//
+// Payload:
+//   {
+//     subjects: [
+//       { name: string, code: string, description?: string, category?: string }
+//     ]
+//   }
+//
+// newFeatures.md note: "Add Auto Generate button in UI" — see autoGenerateCode().
+//
+// Response (201):
+//   { success, message, data: { subjects: [...], total, errors: [] } }
+// =============================================================================
 export async function bulkCreateSubjects(payload) {
-  // payload: { subjects: [{ name: 'Mathematics', code: 'MTH' }, ...] }
-  console.log('📡 POST /api/admin/subjects/bulk', payload);
-  console.log('📦 Expected response form:', { 
-    success: true, 
-    data: { subjects: [{ id: 'db_generated_string', name: 'Mathematics', code: 'MTH' }] } 
+  console.log('📡 POST /api/academic/subjects (bulk)', payload);
+  console.log('📦 Expected response:', {
+    success: true,
+    message: '4 subject(s) created successfully',
+    data: {
+      subjects: [{ _id: 'string', name: 'Mathematics', code: 'MTH', category: 'core' }],
+      total: 4,
+      errors: [],
+    },
   });
 
   if (SUBJECTS_BACKEND_LIVE) {
-    const { data } = await apiClient.post('/api/admin/subjects/bulk', payload);
+    const { data } = await apiClient.post('/api/academic/subjects', payload);
+    if (data.success) data.data.subjects = normalizeList(data.data.subjects);
     return data;
   }
 
   await delay(800);
-  // Mock DB generation
+
+  const ts = Date.now();
   const generated = payload.subjects.map((s, i) => ({
-    id: `subj_${Date.now()}_${i}`,
-    ...s
+    id: `subj_${ts}_${i}`,
+    _id: `subj_${ts}_${i}`,
+    name: s.name,
+    code: s.code || autoGenerateCode(s.name),
+    description: s.description || '',
+    category: SUBJECT_CATEGORIES.includes(s.category) ? s.category : 'core',
   }));
 
-  return { success: true, data: { subjects: generated } };
+  return {
+    success: true,
+    message: `${generated.length} subject(s) created successfully`,
+    data: { subjects: generated, total: generated.length, errors: [] },
+  };
 }
 
-/**
- * ─────────────────────────────────────────────────────────────────────────────
- * POST /api/admin/subjects
- * Manually add a single subject.
- * ─────────────────────────────────────────────────────────────────────────────
- */
+// =============================================================================
+// POST /api/academic/subjects  (single — thin wrapper around bulk)
+//
+// Payload: { name, code?, description?, category? }
+// Response: { success, data: { subject: {...} } }
+// =============================================================================
 export async function createSubject(payload) {
-  // payload: { name: 'string', code: 'string' }
-  console.log('📡 POST /api/admin/subjects', payload);
+  console.log('📡 POST /api/academic/subjects (single)', payload);
+
+  const res = await bulkCreateSubjects({ subjects: [payload] });
+
+  if (res.success && res.data.subjects.length > 0) {
+    return { success: true, data: { subject: res.data.subjects[0] } };
+  }
+
+  // Propagate partial-success / error response as-is
+  return res;
+}
+
+// =============================================================================
+// PUT /api/academic/subjects/:subjectId
+//
+// Payload: { name?, code?, description?, category? }
+// Response: { success, message, data: { updated subject } }
+// =============================================================================
+export async function updateSubject(subjectId, payload) {
+  console.log(`📡 PUT /api/academic/subjects/${subjectId}`, payload);
+  console.log('📦 Expected response:', {
+    success: true,
+    message: 'Subject updated successfully',
+    data: { _id: subjectId, ...payload },
+  });
 
   if (SUBJECTS_BACKEND_LIVE) {
-    const { data } = await apiClient.post('/api/admin/subjects', payload);
+    const { data } = await apiClient.put(`/api/academic/subjects/${subjectId}`, payload);
+    if (data.success) data.data = normalizeId(data.data);
     return data;
   }
 
   await delay();
-  return { success: true, data: { subject: { id: `subj_${Date.now()}`, ...payload } } };
+  return {
+    success: true,
+    message: 'Subject updated successfully',
+    data: { id: subjectId, ...payload },
+  };
 }
 
+// =============================================================================
+// DELETE /api/academic/subjects
+// Unified format: subjectIds may be a single string OR an array of strings.
+//
+// Body sent:   { subjectIds: ['id1', 'id2'] }
+// Response:    { success, message, data: { deleted, errors } }
+// =============================================================================
+export async function deleteSubjects(subjectIds) {
+  const ids = Array.isArray(subjectIds) ? subjectIds : [subjectIds];
+  console.log('📡 DELETE /api/academic/subjects', { subjectIds: ids });
+  console.log('📦 Expected response:', {
+    success: true,
+    message: `${ids.length} subject(s) deleted successfully`,
+    data: { deleted: ids.length, errors: [] },
+  });
+
+  if (SUBJECTS_BACKEND_LIVE) {
+    const { data } = await apiClient.delete('/api/academic/subjects', {
+      data: { subjectIds: ids },
+    });
+    return data;
+  }
+
+  await delay();
+  return {
+    success: true,
+    message: `${ids.length} subject(s) deleted successfully`,
+    data: { deleted: ids.length, errors: [] },
+  };
+}
+
+// =============================================================================
+// DEPRECATED SHIM
+// =============================================================================
 /**
- * ─────────────────────────────────────────────────────────────────────────────
- * DELETE /api/admin/subjects/:id
- * Removes a subject from the school database.
- * ─────────────────────────────────────────────────────────────────────────────
+ * @deprecated  Use deleteSubjects(ids) with the unified format.
  */
 export async function deleteSubject(subjectId) {
-  console.log(`📡 DELETE /api/admin/subjects/${subjectId}`);
-
-  if (SUBJECTS_BACKEND_LIVE) {
-    const { data } = await apiClient.delete(`/api/admin/subjects/${subjectId}`);
-    return data;
-  }
-
-  await delay();
-  return { success: true };
+  console.warn(
+    '⚠️  deleteSubject(id) is deprecated. Call deleteSubjects(id) instead.'
+  );
+  return deleteSubjects(subjectId);
 }

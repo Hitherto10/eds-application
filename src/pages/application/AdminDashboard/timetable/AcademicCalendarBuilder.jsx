@@ -4,10 +4,10 @@ import {
   Plus, Edit2, Trash2, CheckCircle, AlertCircle, Calendar as CalendarIcon, 
   Clock, Check, X, ShieldAlert, ArrowRight, Settings, ChevronLeft, ChevronRight 
 } from 'lucide-react';
-import { 
-  createAcademicYear, updateAcademicYear, deleteAcademicYear, 
+import {
+  createAcademicYear, updateAcademicYear, deleteAcademicYear,
   createTerm, updateTerm, deleteTerm, setAcademicContext, getAcademicProfile,
-  createEvent, deleteEvent
+  createEvent, deleteEvent, getAcademicYears
 } from './timetableAPIs';
 import {
   AlertDialog,
@@ -19,6 +19,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter
 } from '../../../../components/ui/alert-dialog';
+import {formatYear} from "../utils/formatters";
 
 export default function AcademicCalendarBuilder() {
   const { state, dispatch } = useTimetable();
@@ -29,7 +30,6 @@ export default function AcademicCalendarBuilder() {
     currentTerm: null,
     isLoading: true
   });
-
   // UI State
   const [selectedViewYearId, setSelectedViewYearId] = useState(null);
   
@@ -61,6 +61,7 @@ export default function AcademicCalendarBuilder() {
   useEffect(() => {
     fetchProfile();
   }, []);
+
 
   const fetchProfile = async () => {
     try {
@@ -95,9 +96,15 @@ export default function AcademicCalendarBuilder() {
 
   const handleCreateYear = async () => {
     const payload = {
-      name: `${yearForm.startYear}/${yearForm.endYear}`,
-      startDate: yearForm.startDate,
-      endDate: yearForm.endDate
+      years: [
+        {
+          year: `${yearForm.startYear}-${yearForm.endYear}`,
+          name: `${yearForm.startYear}/${yearForm.endYear} Academic Year`,
+          startDate: yearForm.startDate,
+          endDate: yearForm.endDate,
+          isCurrent: false, // Temporary till Explanation is provided
+        }
+      ]
     };
     if (editYearId) {
       const res = await updateAcademicYear(editYearId, payload);
@@ -128,7 +135,12 @@ export default function AcademicCalendarBuilder() {
 
   const handleCreateTerm = async () => {
     if (!selectedViewYearId) return;
-    const payload = { ...termForm, academicYearId: selectedViewYearId };
+    const payload = {
+      ...termForm,
+      academicYearId: selectedViewYearId,
+      "termNumber": 1, // Temporary till Explanation is provided
+      isCurrent: false, // Temporary till Explanation is provided
+    };
     
     if (editTermId) {
       const res = await updateTerm(editTermId, payload);
@@ -139,6 +151,7 @@ export default function AcademicCalendarBuilder() {
       }
     } else {
       const res = await createTerm(payload);
+      console.log(payload);
       if (res.success) {
         dispatch({ type: 'ADD_TERM', payload: res.data.term });
         setShowTermModal(false);
@@ -154,11 +167,7 @@ export default function AcademicCalendarBuilder() {
   };
 
   const handleSetActiveContext = async (yearId, termId) => {
-    const payload = {
-      currentAcademicYearId: yearId || activeProfile.currentYear?.id,
-      currentTermId: termId !== undefined ? termId : activeProfile.currentTerm?.id
-    };
-    const res = await setAcademicContext(payload);
+    const res = await setAcademicContext(yearId);
     if (res.success) {
       fetchProfile(); // Refresh profile to get updated active objects
     }
@@ -278,7 +287,7 @@ export default function AcademicCalendarBuilder() {
                             >
                               <td className="py-3 px-4">
                                 <div className="font-bold text-gray-900">{y.name}</div>
-                                <div className="text-xs text-gray-500 mt-0.5">{y.startDate} - {y.endDate}</div>
+                                <div className="text-xs text-gray-500 mt-0.5">{formatYear(y.startDate)} - {formatYear(y.endDate)}</div>
                               </td>
                               <td className="py-3 px-4">
                                 {getStatusBadge(isSystemActive)}

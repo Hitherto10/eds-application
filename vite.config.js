@@ -21,7 +21,8 @@ export default defineConfig({
     server: {
         proxy: {
             '/api': {
-                target: 'https://educonnect-backend-t7j1.onrender.com',
+                target: 'https://educonnect-backend-staging.onrender.com',
+                // target: 'https://educonnect-backend-t7j1.onrender.com',
                 changeOrigin: true,
                 secure: true,
             },
