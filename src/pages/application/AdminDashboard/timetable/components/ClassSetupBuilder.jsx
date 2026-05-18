@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTimetable } from '../TimetableContext';
 import { createClasses, deleteClasses } from '../../services/classAPIs';
-import { createArms, deleteArms } from '../../services/armAPIs';
+import { createArms, deleteArms, updateArm } from '../../services/armAPIs';
 import { registryStyles } from '../../../../../utils/imports';
 import ArmSubjectsModal from './ArmSubjectsModal';
 import {
@@ -42,11 +42,16 @@ export default function ClassSetupBuilder() {
   const [newStreamInput, setNewStreamInput] = useState('');
   const [newBaseInput,   setNewBaseInput]   = useState('');
 
+  // Builder toggle (when existing data is present)
+  const [showBuilder, setShowBuilder] = useState(false);
+
   // Active-view state
-  const [expandedClassId,   setExpandedClassId]   = useState(null);
-  const [editingArmId,      setEditingArmId]      = useState(null);
-  const [editArmName,       setEditArmName]        = useState('');
-  const [armSubjectsTarget, setArmSubjectsTarget] = useState(null); // { arm, classArms }
+  const [expandedClassId,    setExpandedClassId]    = useState(null);
+  const [editingArmId,       setEditingArmId]       = useState(null);
+  const [editArmName,        setEditArmName]         = useState('');
+  const [addingArmToClassId, setAddingArmToClassId] = useState(null);
+  const [newArmName,         setNewArmName]          = useState('');
+  const [armSubjectsTarget,  setArmSubjectsTarget]  = useState(null); // { arm, classArms }
 
   // ─── 1. Base Levels ──────────────────────────────────────────────────────────
   const loadRegistryStyle = (styleId) => {
@@ -191,19 +196,57 @@ export default function ClassSetupBuilder() {
     } catch (e) { console.error(e); }
   };
 
-  // ─── 7. Edit arm name (optimistic) ────────────────────────────────────────────
+  // ─── 7. Edit arm name (optimistic + API) ──────────────────────────────────────
   const startEditArm = (arm) => {
     setEditingArmId(arm.id);
     setEditArmName(arm.name);
   };
 
-  const commitEditArm = (e) => {
+  const commitEditArm = async (e) => {
     e.preventDefault();
-    if (!editArmName.trim()) return;
-    dispatch({ type: 'UPDATE_ARM', payload: { id: editingArmId, name: editArmName.trim() } });
-    // TODO: call updateArm(editingArmId, { name: editArmName }) when backend is live
+    const name = editArmName.trim();
+    if (!name) return;
+    const id = editingArmId;
     setEditingArmId(null);
     setEditArmName('');
+    dispatch({ type: 'UPDATE_ARM', payload: { id, name } }); // optimistic
+    try {
+      await updateArm(id, { name });
+    } catch (err) {
+      console.error('[ClassSetupBuilder] updateArm failed:', err);
+    }
+  };
+
+  // ─── 8b. Add arm to existing class ────────────────────────────────────────────
+  const handleAddArm = async (e, cls) => {
+    e.preventDefault();
+    const name = newArmName.trim();
+    if (!name) return;
+    setNewArmName('');
+    setAddingArmToClassId(null);
+    try {
+      const res = await createArms({ arms: [{ classId: cls.id, name }] });
+      if (res.success && res.data?.arms?.length > 0) {
+        dispatch({ type: 'ADD_ARMS', payload: res.data.arms });
+      }
+    } catch (err) {
+      console.error('[ClassSetupBuilder] createArms failed:', err);
+    }
+  };
+
+  // ─── 8c. Enter builder mode pre-populated from existing data ──────────────────
+  const enterBuilderMode = () => {
+    const levels = state.classes.map(c => c.name);
+    const armNames = [...new Set(state.arms.map(a => a.name))];
+    const mat = {};
+    levels.forEach(lv => {
+      const cls = state.classes.find(c => c.name === lv);
+      mat[lv] = cls ? state.arms.filter(a => a.classId === cls.id).map(a => a.name) : [];
+    });
+    setBaseLevels(levels);
+    setStreams(armNames);
+    setMatrix(mat);
+    setShowBuilder(true);
   };
 
   // ─── 8. Arms-subjects modal ───────────────────────────────────────────────────
@@ -213,7 +256,7 @@ export default function ClassSetupBuilder() {
   };
 
   // ─── Derived data ─────────────────────────────────────────────────────────────
-  const hasExistingData = state.classes.length > 0;
+  const hasExistingData = state.classes.length > 0 && !showBuilder;
   const armsForClass    = (classId) => state.arms.filter(a => a.classId === classId);
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -255,15 +298,10 @@ export default function ClassSetupBuilder() {
                 />
               </div>
               <button
-                onClick={() => {
-                  if (confirm('Clear class structure and rebuild? Existing arm data will be lost.')) {
-                    dispatch({ type: 'SET_CLASSES', payload: [] });
-                    dispatch({ type: 'SET_ARMS',    payload: [] });
-                  }
-                }}
+                onClick={enterBuilderMode}
                 className="px-4 py-2 bg-gray-900 hover:bg-black text-white text-sm font-semibold rounded-lg flex items-center gap-2 transition"
               >
-                <Link size={16} /> Class Builder
+                <Link size={16} /> Edit Structure
               </button>
             </div>
           </div>
@@ -324,12 +362,12 @@ export default function ClassSetupBuilder() {
                   {/* Arms accordion */}
                   {isExpanded && (
                     <div className="bg-gray-50 border-t border-gray-200 px-4 py-3 space-y-2">
-                      {arms.length === 0 ? (
+                      {arms.length === 0 && addingArmToClassId !== cls.id && (
                         <p className="text-xs text-gray-400 italic py-2 text-center">
-                          No arms defined for this class. Rebuild the matrix to add arms.
+                          No arms defined. Use the button below to add one.
                         </p>
-                      ) : (
-                        arms.map(arm => {
+                      )}
+                      {arms.length > 0 && arms.map(arm => {
                           const subjectCount =
                             (state.armSubjects[arm.id] || []).length;
 
@@ -410,7 +448,26 @@ export default function ClassSetupBuilder() {
                               )}
                             </div>
                           );
-                        })
+                        })}
+                      {addingArmToClassId === cls.id ? (
+                        <form onSubmit={(e) => handleAddArm(e, cls)} className="flex gap-2 pt-1">
+                          <input
+                            autoFocus
+                            placeholder="Arm name (e.g. A, B, Science)"
+                            value={newArmName}
+                            onChange={e => setNewArmName(e.target.value)}
+                            className="flex-1 px-2 py-1.5 text-sm border border-blue-300 rounded outline-none focus:ring-2 focus:ring-blue-500/20"
+                          />
+                          <button type="submit" className="px-3 py-1 text-xs bg-blue-600 text-white rounded font-semibold hover:bg-blue-700">Add</button>
+                          <button type="button" onClick={() => { setAddingArmToClassId(null); setNewArmName(''); }} className="px-3 py-1 text-xs border border-gray-200 rounded hover:bg-gray-100">Cancel</button>
+                        </form>
+                      ) : (
+                        <button
+                          onClick={() => setAddingArmToClassId(cls.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-dashed border-gray-300 hover:border-blue-300 transition-colors w-full justify-center"
+                        >
+                          <Plus size={12} /> Add Arm
+                        </button>
                       )}
                     </div>
                   )}
@@ -471,6 +528,14 @@ export default function ClassSetupBuilder() {
               )}
             </div>
           </div>
+          {state.classes.length > 0 && (
+            <button
+              onClick={() => setShowBuilder(false)}
+              className="px-4 py-2.5 border border-gray-300 text-gray-600 hover:bg-gray-100 font-semibold rounded-lg transition text-sm"
+            >
+              Cancel
+            </button>
+          )}
           <button
             onClick={handleSaveMatrix}
             disabled={loading || uniqueBaseCount === 0}

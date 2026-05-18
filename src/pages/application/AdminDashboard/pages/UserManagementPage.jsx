@@ -148,7 +148,7 @@ const UserManagementPage = () => {
 
     if (loading) {
         return (
-            <AdminLayout>
+            <AdminLayout className={`content-center`}>
                 <div className="flex flex-col items-center justify-center">
                     <div className="relative w-20 h-20">
                         <div className="absolute inset-0 border-4 border-blue-100 rounded-full"></div>

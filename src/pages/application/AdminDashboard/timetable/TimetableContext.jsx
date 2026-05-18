@@ -1,12 +1,11 @@
 import React, { createContext, useContext, useReducer, useMemo, useCallback } from 'react';
 import { detectConflicts, getConflictedEntryIds, getWarnedEntryIds, hasBlockingConflicts } from './conflictEngine';
-import {getAcademicYears} from "./timetableAPIs.js";
 
 // Periods are now dynamic and configured per draft.
 
 export const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-// ─── Subject color palette ────────────────────────────────────────────────────
+// ─── Subject color palette ──
 const COLOR_PALETTE = [
   { bg: 'bg-blue-100',    text: 'text-blue-800',    border: 'border-blue-300',    dot: 'bg-blue-500',    dragBg: 'bg-blue-200' },
   { bg: 'bg-violet-100',  text: 'text-violet-800',  border: 'border-violet-300',  dot: 'bg-violet-500',  dragBg: 'bg-violet-200' },
@@ -33,11 +32,10 @@ export function getSubjectColor(subjectId) {
 /** Lightweight unique ID with no external dependency. */
 export const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 
-const res = await getAcademicYears();
-// ─── State ────────────────────────────────────────────────────────────────────
+// ─── State ──
 const initialState = {
-  // Academic context
-  academicYears: res.years ?? [], // e.g. [{ id: '2023-2024', name: '2023-2024' }]
+  // Academic context — populated by useGlobalTimetableData on mount
+  academicYears: [],
   selectedYear: null,
   terms: [],
   selectedTerm: null,
@@ -85,7 +83,17 @@ function timetableReducer(state, action) {
     case 'REMOVE_ACADEMIC_YEAR':
       return { ...state, academicYears: state.academicYears.filter(y => y.id !== action.id), selectedYear: state.selectedYear?.id === action.id ? null : state.selectedYear };
     case 'SELECT_YEAR':
-      return { ...state, selectedYear: action.payload, selectedTerm: null, periods: [], schedules: [], draftId: null, isPublished: false };
+      return { ...state, selectedYear: action.payload, selectedTerm: null, terms: [], periods: [], schedules: [], draftId: null, isPublished: false };
+    // Atomic init: sets years list, selected year, terms list, and selected term in one
+    // dispatch so there is never an intermediate state where year is set but term is null.
+    case 'SET_ACADEMIC_CONTEXT':
+      return {
+        ...state,
+        academicYears: action.payload.years ?? state.academicYears,
+        selectedYear:  action.payload.year  ?? null,
+        terms:         action.payload.terms ?? [],
+        selectedTerm:  action.payload.term  ?? null,
+      };
     case 'SET_TERMS':
       return { ...state, terms: action.payload };
     case 'ADD_TERM':

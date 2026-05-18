@@ -37,7 +37,7 @@ export default function PalettePanel() {
   const filteredArms = classArms.filter(a => a.toLowerCase().includes(term));
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 flex flex-col h-full shrink-0 hidden lg:flex">
+    <div className="w-64 bg-white border-r border-gray-200 flex-col h-full shrink-0 hidden lg:flex">
       {/* Header & Search */}
       <div className="p-4 border-b border-gray-100 shrink-0">
         <h2 className="font-bold text-gray-800 mb-3">Palette</h2>

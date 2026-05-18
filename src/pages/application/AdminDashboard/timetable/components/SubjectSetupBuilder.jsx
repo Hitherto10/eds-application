@@ -21,6 +21,7 @@ import {
   CATEGORY_LABELS,
   CATEGORY_STYLES,
 } from '../../services/subjectAPIs.js';
+import {useGlobalTimetableData} from "../useGlobalTimetableData.js";
 
 // ─── Category pill ─────────────────────────────────────────────────────────────
 const CategoryPill = ({ category }) => {

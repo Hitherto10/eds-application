@@ -14,16 +14,18 @@ import { useGlobalTimetableData } from '../../timetable/useGlobalTimetableData.j
  */
 function TimetableContent() {
     const { state, dispatch } = useTimetable();
-    const { initialLoad } = useGlobalTimetableData();
+    const { initialLoad, handleYearChange } = useGlobalTimetableData();
 
     if (initialLoad) {
         return (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 h-[70vh]">
+            <div className="flex-1 flex flex-col items-center justify-center p-8 h-full">
                 <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-4" />
                 <p className="text-gray-500 font-medium">Booting Academic Engine...</p>
             </div>
         );
     }
+
+    console.log("TimetableContent:", state.selectedYear, state.selectedTerm, state.selectedClass);
 
     return (
         <div className="flex flex-col h-full min-h-[calc(100vh-120px)]">
@@ -48,10 +50,34 @@ function TimetableContent() {
 
                 <div className="w-px h-6 bg-gray-200 hidden md:block" />
 
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <span className="font-semibold">{state.selectedYear?.name || 'No Year Active'}</span>
-                    <span>•</span>
-                    <span>{state.selectedTerm?.name || 'No Term Active'}</span>
+                <div className="flex flex-wrap items-center gap-3">
+                    {/* Academic year selector — change triggers sequential term reload via handleYearChange */}
+                    <select
+                        value={state.selectedYear?.id || ''}
+                        onChange={e => handleYearChange(e.target.value)}
+                        className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    >
+                        {state.academicYears.map(y => (
+                            <option key={y.id} value={y.id}>{y.name}{y.isActive ? ' (Active)' : ''}</option>
+                        ))}
+                    </select>
+
+                    <div className="w-px h-5 bg-gray-200 hidden md:block" />
+
+                    {/* Term selector — populated after year is resolved */}
+                    <select
+                        value={state.selectedTerm?.id || ''}
+                        onChange={e => {
+                            const t = state.terms.find(x => x.id === e.target.value);
+                            if (t) dispatch({ type: 'SELECT_TERM', payload: t });
+                        }}
+                        disabled={state.loading.terms || state.terms.length === 0}
+                        className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50"
+                    >
+                        {state.terms.map(t => (
+                            <option key={t.id} value={t.id}>{t.name}{t.isCurrent ? ' (Current)' : ''}</option>
+                        ))}
+                    </select>
                 </div>
 
                 {state.loading.draft && (

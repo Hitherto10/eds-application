@@ -51,8 +51,8 @@ export const Header = () => {
                 const res = await getAcademicProfile();
                 if (res.success && res.data.school) {
                     setAcademicContext({
-                        year: res.data.school.currentAcademicYear?.name || 'No Active Year',
-                        term: res.data.school.currentTerm?.name || 'No Active Term'
+                        year: res.data.currentAcademicYear?.name || 'No Active Year',
+                        term: res.data.currentTerm?.name || 'No Active Term'
                     });
                 }
             } catch (err) {

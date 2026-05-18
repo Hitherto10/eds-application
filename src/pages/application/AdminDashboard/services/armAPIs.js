@@ -24,7 +24,7 @@ import apiClient from '../../../../utils/axiosConfig.js';
  *   normalizeId maps _id → id so state always uses `id`.
  */
 
-export const ARMS_BACKEND_LIVE = false;
+export const ARMS_BACKEND_LIVE = true;
 
 const delay = (ms = 400) => new Promise(r => setTimeout(r, ms));
 

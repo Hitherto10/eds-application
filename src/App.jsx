@@ -29,6 +29,11 @@ const ClassesPage         = lazy(() => import("./pages/application/AdminDashboar
 const CalendarPage        = lazy(() => import("./pages/application/AdminDashboard/pages/config/CalendarPage.jsx"));
 const TimetablePage       = lazy(() => import("./pages/application/AdminDashboard/pages/config/TimetablePage.jsx"));
 const EventPage           = lazy(() => import("./pages/application/AdminDashboard/pages/config/EventPage.jsx"));
+const FeeOverviewPage     = lazy(() => import("./pages/application/AdminDashboard/pages/fees/FeeOverviewPage.jsx"));
+const FeeStructuresPage   = lazy(() => import("./pages/application/AdminDashboard/pages/fees/FeeStructuresPage.jsx"));
+const FeeInvoicesPage     = lazy(() => import("./pages/application/AdminDashboard/pages/fees/FeeInvoicesPage.jsx"));
+const FeePaymentsPage     = lazy(() => import("./pages/application/AdminDashboard/pages/fees/FeePaymentsPage.jsx"));
+const FeeReportsPage      = lazy(() => import("./pages/application/AdminDashboard/pages/fees/FeeReportsPage.jsx"));
 
 // Parent Pages
 const ParentDashboard    = lazy(() => import("./pages/application/ParentDashboard/ParentDashboard.jsx"));
@@ -97,6 +102,13 @@ function AppRoutes() {
                 <Route path="/dashboard/admin/users" element={<ProtectedRoute requiredRole="admin"><UserManagementPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/users/parents" element={<ProtectedRoute requiredRole="admin"><UserManagementPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/students" element={<ProtectedRoute requiredRole="admin"><Students /></ProtectedRoute>} />
+                {/* Fees sub-routes — each is its own page */}
+                <Route path="/dashboard/admin/fees" element={<ProtectedRoute requiredRole="admin"><Navigate to="/dashboard/admin/fees/overview" replace /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/fees/overview"    element={<ProtectedRoute requiredRole="admin"><FeeOverviewPage /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/fees/structures"  element={<ProtectedRoute requiredRole="admin"><FeeStructuresPage /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/fees/invoices"    element={<ProtectedRoute requiredRole="admin"><FeeInvoicesPage /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/fees/payments"    element={<ProtectedRoute requiredRole="admin"><FeePaymentsPage /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/fees/reports"     element={<ProtectedRoute requiredRole="admin"><FeeReportsPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/users/teachers" element={<ProtectedRoute requiredRole="admin"><UserManagementPage /></ProtectedRoute>} />
 
                 {/* Config sub-routes — each is its own page */}

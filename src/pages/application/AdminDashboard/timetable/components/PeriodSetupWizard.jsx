@@ -31,6 +31,7 @@ export default function PeriodSetupWizard() {
     { id: uid(), afterPeriod: 5, durationMinutes: 45, label: 'Lunch Break' },
   ]);
 
+  console.log('Rendering PeriodSetupWizard with state:', state);
   // Whether all required context is available to generate and save periods.
   const canGenerate = Boolean(state.selectedClass && state.selectedTerm);
 

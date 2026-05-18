@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useTimetable } from './TimetableContext';
-import { 
-  Plus, Edit2, Trash2, CheckCircle, AlertCircle, Calendar as CalendarIcon, 
-  Clock, Check, X, ShieldAlert, ArrowRight, Settings, ChevronLeft, ChevronRight 
+import {
+  Plus, Edit2, Trash2, CheckCircle, AlertCircle, Calendar as CalendarIcon,
+  Clock, Check, X, ShieldAlert, ArrowRight, Settings, ChevronLeft, ChevronRight, Loader2
 } from 'lucide-react';
 import {
   createAcademicYear, updateAcademicYear, deleteAcademicYear,
   createTerm, updateTerm, deleteTerm, setAcademicContext, getAcademicProfile,
-  createEvent, deleteEvent, getAcademicYears
+  createEvent, deleteEvent, getAcademicYears, setCurrentTerm
 } from './timetableAPIs';
 import {
   AlertDialog,
@@ -20,9 +20,13 @@ import {
   AlertDialogFooter
 } from '../../../../components/ui/alert-dialog';
 import {formatYear} from "../utils/formatters";
+import {useGlobalTimetableData} from "./useGlobalTimetableData.js";
 
 export default function AcademicCalendarBuilder() {
   const { state, dispatch } = useTimetable();
+  const { initialLoad } = useGlobalTimetableData();
+
+
 
   // Local state for active context (fetched from profile)
   const [activeProfile, setActiveProfile] = useState({
@@ -42,7 +46,7 @@ export default function AcademicCalendarBuilder() {
   // Forms
   const currentYearNum = new Date().getFullYear();
   const [yearForm, setYearForm] = useState({ startYear: currentYearNum, endYear: currentYearNum + 1, startDate: '', endDate: '' });
-  const [termForm, setTermForm] = useState({ name: '', startDate: '', endDate: '' });
+  const [termForm, setTermForm] = useState({ name: '', startDate: '', endDate: '', term: '' });
 
   // Calendar State
   const [selectedDateMsg, setSelectedDateMsg] = useState(null);
@@ -68,8 +72,8 @@ export default function AcademicCalendarBuilder() {
       const res = await getAcademicProfile();
       if (res.success && res.data?.school) {
         setActiveProfile({
-          currentYear: res.data.school.currentAcademicYear || null,
-          currentTerm: res.data.school.currentTerm || null,
+          currentYear: res.data.currentAcademicYear || null,
+          currentTerm: res.data.currentTerm || null,
           isLoading: false
         });
       }
@@ -135,11 +139,26 @@ export default function AcademicCalendarBuilder() {
 
   const handleCreateTerm = async () => {
     if (!selectedViewYearId) return;
+    // const payload = {
+    //   years: [
+    //     {
+    //       year: `${yearForm.startYear}-${yearForm.endYear}`,
+    //       name: `${yearForm.startYear}/${yearForm.endYear} Academic Year`,
+    //       startDate: yearForm.startDate,
+    //       endDate: yearForm.endDate,
+    //       isCurrent: false, // Temporary till Explanation is provided
+    //     }
+    //   ]
+    // };
     const payload = {
-      ...termForm,
-      academicYearId: selectedViewYearId,
-      "termNumber": 1, // Temporary till Explanation is provided
-      isCurrent: false, // Temporary till Explanation is provided
+      terms: [
+        {
+          ...termForm,
+          academicYearId: selectedViewYearId,
+          "termNumber": 1, // Temporary till Explanation is provided
+          isCurrent: false, // Temporary till Explanation is provided
+        }
+      ]
     };
     
     if (editTermId) {
@@ -173,6 +192,13 @@ export default function AcademicCalendarBuilder() {
     }
   };
 
+  const handleSetActiveTerm = async (termId) => {
+    const res = await setCurrentTerm(termId);
+    if (res.success) {
+      fetchProfile(); // Refresh profile to get updated active objects
+    }
+  };
+
   const openEditYear = (y) => {
     const [sy, ey] = y.name.split('/');
     setYearForm({ ...y, startYear: parseInt(sy, 10), endYear: parseInt(ey, 10) });
@@ -192,7 +218,9 @@ export default function AcademicCalendarBuilder() {
       : <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600"><Clock size={12} /> Inactive</span>
   );
 
-  const viewTerms = state.terms.filter(t => t.academicYearId === selectedViewYearId);
+  const viewTerms = state.terms?.filter(t => t.academicYearId === selectedViewYearId);
+
+
 
   return (
     <div className="flex flex-col gap-8 bg-gray-50/50 max-w-[1600px] mx-auto w-full ">
@@ -354,7 +382,7 @@ export default function AcademicCalendarBuilder() {
                     <ArrowRight className="text-gray-300 mb-3" size={32} />
                     <p>Select an Academic Year from the left to view its terms.</p>
                   </div>
-              ) : viewTerms.length === 0 ? (
+              ) : state.terms.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
                     <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
                       <CalendarIcon className="text-gray-400" size={32} />
@@ -366,7 +394,7 @@ export default function AcademicCalendarBuilder() {
               ) : (
                   <div className="overflow-y-auto flex-1 p-4">
                     <div className="grid grid-cols-1 gap-3">
-                      {viewTerms.map(t => {
+                      {state.terms.map(t => {
                         const isSystemActiveYear = activeProfile.currentYear?.id === selectedViewYearId;
                         const isSystemActiveTerm = activeProfile.currentTerm?.id === t.id;
 
@@ -376,8 +404,8 @@ export default function AcademicCalendarBuilder() {
                                 <div>
                                   <h4 className="font-bold text-gray-900 text-base">{t.name}</h4>
                                   <p className="text-xs text-gray-500 mt-1 flex items-center gap-3">
-                                    <span><strong className="font-medium">Start:</strong> {t.startDate || 'Not set'}</span>
-                                    <span><strong className="font-medium">End:</strong> {t.endDate || 'Not set'}</span>
+                                    <span><strong className="font-medium">Start:</strong> {formatYear(t.startDate) || 'Not set'}</span>
+                                    <span><strong className="font-medium">End:</strong> {formatYear(t.endDate) || 'Not set'}</span>
                                   </p>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -389,7 +417,7 @@ export default function AcademicCalendarBuilder() {
                                 <div>
                                   {!isSystemActiveTerm && (
                                       <button
-                                          onClick={() => handleSetActiveContext(selectedViewYearId, t.id)}
+                                          onClick={() => handleSetActiveTerm(t.id)}
                                           className="text-xs font-medium text-blue-600 hover:text-blue-800 bg-blue-50 px-2.5 py-1.5 rounded-md transition"
                                       >
                                         Set as Active Term
@@ -486,7 +514,28 @@ export default function AcademicCalendarBuilder() {
           <div className="space-y-4 py-4">
             <div>
               <label className="text-xs font-bold text-gray-700 uppercase mb-1 block">Term Name</label>
-              <input type="text" value={termForm.name} onChange={e => setTermForm({...termForm, name: e.target.value})} placeholder="e.g. First Term" className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20" />
+              <select
+                  value={termForm.name}
+                  onChange={e => {
+                    const selectedName = e.target.value;
+                    // Converts "First Term" to "first_term"
+                    const termKey = selectedName.replace(/\s+/g, '_');
+
+                    setTermForm({
+                      ...termForm,
+                      name: selectedName,
+                      term: termKey
+                    });
+                  }}
+                  className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 bg-white"
+              >
+                <option value="" disabled>Select a term</option>
+                {["First Term", "Second Term", "Third Term"].map((term) => (
+                    <option key={term} value={term}>
+                      {term}
+                    </option>
+                ))}
+              </select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>

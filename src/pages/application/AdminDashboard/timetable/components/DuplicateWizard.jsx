@@ -31,7 +31,7 @@ export default function DuplicateWizard({ open, onOpenChange }) {
     });
 
     // Automatically switch to the target class
-    dispatch({ type: 'SELECT_CLASS', payload: targetClass });
+    dispatch({ type: 'SET_TARGET_CLASS', payload: targetClass });
     onOpenChange(false);
     setTargetClassId('');
   };

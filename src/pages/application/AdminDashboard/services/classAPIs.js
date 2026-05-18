@@ -170,10 +170,11 @@ export async function deleteClasses(classIds) {
   });
 
   if (CLASSES_BACKEND_LIVE) {
-    const { data } = await apiClient.delete('/api/academic/classes', {
-      data: { classIds: ids },
-    });
-    return data;
+    const results = await Promise.all(
+      ids.map(id => apiClient.delete(`/api/academic/classes/${id}`))
+    );
+    const last = results[results.length - 1].data;
+    return { ...last, data: { deleted: results.length, errors: [] } };
   }
 
   await delay();

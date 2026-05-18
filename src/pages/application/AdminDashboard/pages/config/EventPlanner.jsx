@@ -83,8 +83,8 @@ export default function EventPlanner() {
             const res = await getAcademicProfile();
             if (res.success && res.data?.school) {
                 setActiveProfile({
-                    currentYear: res.data.school.currentAcademicYear || null,
-                    currentTerm: res.data.school.currentTerm || null,
+                    currentYear: res.data.currentAcademicYear || null,
+                    currentTerm: res.data.currentTerm || null,
                     isLoading: false
                 });
             }
@@ -319,7 +319,7 @@ export default function EventPlanner() {
                             value={selectedCalendarTermId || ''}
                             onChange={e => {
                                 setSelectedCalendarTermId(e.target.value);
-                                dispatch({ type: 'SELECT_TERM', payload: state.terms.find(t => t.id === e.target.value) });
+                                dispatch({ type: 'SET_ACTIVE_TERM', payload: state.terms.find(t => t.id === e.target.value) });
                             }}
                             className="p-1.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 shadow-sm"
                         >

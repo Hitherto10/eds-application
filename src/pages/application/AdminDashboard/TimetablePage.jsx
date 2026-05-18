@@ -160,7 +160,7 @@ function TimetableContent() {
 
   if (initialLoad) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 h-[70vh]">
+      <div className="flex-1 flex flex-col items-center justify-center p-8 h-full">
         <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-4" />
         <p className="text-gray-500 font-medium">Booting Academic Engine...</p>
       </div>

@@ -13,6 +13,10 @@ import {
     Layers,
     LayoutGrid,
     ChevronDown,
+    Wallet,
+    FileStack,
+    ReceiptText,
+    BarChart3,
 } from 'lucide-react';
 import { Header } from '../../../dashboardUtilities.jsx';
 import { useAuth } from '../../../../../contexts/AuthContext.jsx';
@@ -34,7 +38,18 @@ const navItems = [
     { name: 'Dashboard',       icon: LayoutDashboard, link: '/dashboard/admin',               children: [] },
     { name: 'User Management', icon: Users,            link: '/dashboard/admin/users',          children: [] },
     { name: 'Students',        icon: GraduationCap,   link: '/dashboard/admin/students',       children: [] },
-    { name: 'School Profile',  icon: School,          link: '/dashboard/admin/school-profile', children: [] },
+    {
+        name: 'Fees & Payments',
+        icon: Wallet,
+        link: '/dashboard/admin/fees',
+        children: [
+            { name: 'Overview',           icon: LayoutDashboard, link: '/dashboard/admin/fees/overview'    },
+            { name: 'Fee Structures',     icon: FileStack,       link: '/dashboard/admin/fees/structures'  },
+            { name: 'Invoices',           icon: ReceiptText,     link: '/dashboard/admin/fees/invoices'    },
+            { name: 'Payments & Ledger',  icon: Wallet,          link: '/dashboard/admin/fees/payments'    },
+            { name: 'Reports',            icon: BarChart3,       link: '/dashboard/admin/fees/reports'     },
+        ],
+    },
     {
         name: 'Configuration',
         icon: CalendarDays,
@@ -47,6 +62,7 @@ const navItems = [
         ],
     },
     { name: 'Events Planner',  icon: School,          link: '/dashboard/admin/events-planner', children: [] },
+    { name: 'School Profile',  icon: School,          link: '/dashboard/admin/school-profile', children: [] },
 
 ];
 
@@ -256,7 +272,7 @@ export const Sidebar = () => {
 };
 
 // ─── AdminLayout ──────────────────────────────────────────────────────────────
-const AdminLayout = ({ children }) => {
+const AdminLayout = ({ children, className }) => {
     const location  = useLocation();
     const ICON_RAIL = 72; // px — matches collapsed sidebar width
     const FULL_NAV  = 256;
@@ -270,7 +286,7 @@ const AdminLayout = ({ children }) => {
             <Sidebar />
             <div className="flex-1 flex flex-col">
                 <Header/>
-                <main className="flex-1 p-2 md:p-4 lg:p-6 items-center content-center justify-center ">
+                <main className={`flex-1 p-2 md:p-4 lg:p-6 ${className} justify-center`}>
                     {children}
                 </main>
             </div>

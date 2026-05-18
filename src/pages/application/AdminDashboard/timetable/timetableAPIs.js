@@ -98,7 +98,7 @@ export async function getAcademicProfile() {
    * ❌ Error response example:
    * { "success": false, "message": "Unauthorized" }
    */
-  console.log('📡 GET /api/school/profile (extended with academic context)');
+  // console.log('📡 GET /api/school/profile (extended with academic context)');
 
   if (TIMETABLE_BACKEND_LIVE) {
     const { data } = await apiClient.get('/api/school/profile');
@@ -192,16 +192,16 @@ export async function setAcademicContext(yearID) {
    *   "error": "INVALID_ACADEMIC_YEAR_ID"
    * }
    */
-  console.log('📡 PUT /api/school/profile/academic-context', yearID);
-  console.log('📦 Expected response:', {
-    success: true,
-    message: 'Academic context updated successfully',
-    data: { currentAcademicYear: { id: 'year-123', name: '2025/2026' }, currentTerm: { id: 'term-456', name: 'First Term' } },
-  });
+  // console.log('📡 PUT /api/school/profile/academic-context', yearID);
+  // console.log('📦 Expected response:', {
+  //   success: true,
+  //   message: 'Academic context updated successfully',
+  //   data: { currentAcademicYear: { id: 'year-123', name: '2025/2026' }, currentTerm: { id: 'term-456', name: 'First Term' } },
+  // });
 
   if (TIMETABLE_BACKEND_LIVE) {
     // const { data } = await apiClient.put('/api/school/profile/academic-context', payload);
-    const { data } = await apiClient.put(`/api/academic/calendar/years/${yearID}/current`);
+    const { data } = await apiClient.put(`/api/academic/years/${yearID}/current`);
     return data;
   }
 
@@ -220,22 +220,22 @@ export async function setAcademicContext(yearID) {
 // =============================================================================
 
 export async function getAcademicYears() {
-  console.log('📡 GET /api/admin/academic-years');
-  console.log('📦 Expected response shape:', {
-    success: true,
-    data: { academicYears: [{ id: 'string', name: '2025/2026', startDate: 'YYYY-MM-DD', endDate: 'YYYY-MM-DD', isActive: true }] },
-  });
+  // console.log('📡 GET /api/admin/academic-years');
+  // console.log('📦 Expected response shape:', {
+  //   success: true,
+  //   data: { academicYears: [{ id: 'string', name: '2025/2026', startDate: 'YYYY-MM-DD', endDate: 'YYYY-MM-DD', isActive: true }] },
+  // });
 
   if (TIMETABLE_BACKEND_LIVE) {
     const { data } = await apiClient.get('/api/academic/years');
-    console.log(data.data)
-    return data.data;
+    return data;
   }
 
   await delay();
   return { success: true, data: { academicYears: [] } };
 }
 
+//  Create Academic Year
 export async function createAcademicYear(payload) {
   // payload: { name: '2025/2026', startDate: 'YYYY-MM-DD', endDate: 'YYYY-MM-DD' }
   console.log('📡 POST /api/admin/academic-years', payload);
@@ -298,7 +298,7 @@ export async function getTerms(academicYearId) {
   });
 
   if (TIMETABLE_BACKEND_LIVE) {
-    const { data } = await apiClient.get('/api/admin/terms', { params: { academicYearId } });
+    const { data } = await apiClient.get('/api/academic/terms', { params: { academicYearId } });
     return data;
   }
 
@@ -311,7 +311,7 @@ export async function createTerm(payload) {
   console.log('📡 POST /api/admin/terms', payload);
 
   if (TIMETABLE_BACKEND_LIVE) {
-    const { data } = await apiClient.post('/api/academic/calendar/terms', payload);
+    const { data } = await apiClient.post('/api/academic/terms', payload);
     return data;
   }
 
@@ -330,6 +330,12 @@ export async function updateTerm(id, payload) {
 
   await delay();
   return { success: true, data: { term: { id, ...payload } } };
+}
+
+// /api/academic/terms/:termId/current
+export async function setCurrentTerm(id) {
+    const { data } = await apiClient.put(`/api/academic/terms/${id}/current`);
+    return data;
 }
 
 export async function deleteTerm(id) {
@@ -487,10 +493,10 @@ export async function saveTimetableDraft(payload) {
   console.log('📡 POST /api/admin/timetable/draft', payload);
   console.log('📦 Expected response:', { success: true, data: { draftId: 'string', savedAt: 'ISO8601' } });
 
-  if (TIMETABLE_BACKEND_LIVE) {
-    const { data } = await apiClient.post('/api/admin/timetable/draft', payload);
-    return data;
-  }
+  // if (TIMETABLE_BACKEND_LIVE) {
+  //   const { data } = await apiClient.post('/api/admin/timetable/draft', payload);
+  //   return data;
+  // }
 
   await delay(600);
   return { success: true, data: { draftId: `draft_${Date.now()}`, savedAt: new Date().toISOString() } };
