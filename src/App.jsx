@@ -27,6 +27,7 @@ const AdminProfilePage    = lazy(() => import("./pages/application/AdminDashboar
 const SubjectsPage        = lazy(() => import("./pages/application/AdminDashboard/pages/config/SubjectsPage.jsx"));
 const ClassesPage         = lazy(() => import("./pages/application/AdminDashboard/pages/config/ClassesPage.jsx"));
 const CalendarPage        = lazy(() => import("./pages/application/AdminDashboard/pages/config/CalendarPage.jsx"));
+const TimetableLibraryPage = lazy(() => import("./pages/application/AdminDashboard/pages/config/TimetableLibraryPage.jsx"));
 const TimetablePage       = lazy(() => import("./pages/application/AdminDashboard/pages/config/TimetablePage.jsx"));
 const EventPage           = lazy(() => import("./pages/application/AdminDashboard/pages/config/EventPage.jsx"));
 const FeeOverviewPage     = lazy(() => import("./pages/application/AdminDashboard/pages/fees/FeeOverviewPage.jsx"));
@@ -116,6 +117,7 @@ function AppRoutes() {
                 <Route path="/dashboard/admin/config/subjects"  element={<ProtectedRoute requiredRole="admin"><SubjectsPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/config/classes"   element={<ProtectedRoute requiredRole="admin"><ClassesPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/config/calendar"  element={<ProtectedRoute requiredRole="admin"><CalendarPage /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/config/timetable-library" element={<ProtectedRoute requiredRole="admin"><TimetableLibraryPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/config/timetable" element={<ProtectedRoute requiredRole="admin"><TimetablePage /></ProtectedRoute>} />
 
                 {/* Parent Protected Routes */}

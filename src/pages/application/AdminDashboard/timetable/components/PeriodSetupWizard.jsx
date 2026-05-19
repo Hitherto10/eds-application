@@ -110,14 +110,29 @@ export default function PeriodSetupWizard() {
     try {
       // 1. Update local state immediately so the grid appears
       dispatch({ type: 'SET_PERIODS', payload: generatedPeriods });
+      
+      // 2. Save the period configuration metadata for API calls
+      const periodConfigMetadata = {
+        periodConfigId: `pc_${uid()}`,
+        schoolStart: startTime,
+        periodDuration: periodDuration,
+        totalPeriods: totalPeriods,
+        breaks: breaks.map(b => ({
+          breakAfter: b.afterPeriod,
+          breakDuration: b.durationMinutes,
+          label: b.label,
+        })),
+      };
+      dispatch({ type: 'SET_PERIOD_CONFIG', payload: periodConfigMetadata });
 
-      // 2. Persist the new structure as a fresh draft
+      // 3. Persist the new structure as a fresh draft
       const payload = {
         classId: state.selectedClass.id,
         termId: state.selectedTerm.id,
         academicYearId: state.selectedYear?.id,
         armId: state.selectedArm?.id ?? null,
         periods: generatedPeriods,
+        periodConfig: periodConfigMetadata,
         schedules: [],
       };
 
@@ -138,7 +153,7 @@ export default function PeriodSetupWizard() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
       <div className="flex-1 flex items-center justify-center p-4 overflow-y-auto">
-        <div className="bg-white max-w-4xl w-full p-8 rounded-2xl">
+        <div className=" max-w-4xl w-full p-8 rounded-2xl">
 
           {/* Header */}
           <div className="text-center mb-8">

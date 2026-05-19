@@ -38,11 +38,16 @@ export default function PublishScheduler({ open, onOpenChange }) {
 
       const armId = state.selectedArm?.id ?? null;
 
+      // Build periods array with only the configuration metadata
+      const periodPayload = state.periodConfig ? [state.periodConfig] : [];
+
       // 1. Backend validation (fail-safe)
       const checkRes = await checkConflicts({
-        classId: state.selectedClass.id,
+        academicYearId: state.selectedYear.id,
         termId: state.selectedTerm.id,
+        classId: state.selectedClass.id,
         armId,
+        periods: periodPayload,
         schedules: state.schedules,
       });
 
@@ -56,6 +61,7 @@ export default function PublishScheduler({ open, onOpenChange }) {
         termId: state.selectedTerm.id,
         classId: state.selectedClass.id,
         armId,
+        periods: periodPayload,
         schedules: state.schedules,
       };
 

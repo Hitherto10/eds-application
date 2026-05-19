@@ -239,6 +239,9 @@ function timetableReducer(state, action) {
     // ── Periods config ────────────────────────────────────────────────────────
     case 'SET_PERIODS':
       return { ...state, periods: action.payload };
+    
+    case 'SET_PERIOD_CONFIG':
+      return { ...state, periodConfig: action.payload };
 
     // ── Schedule entries ──────────────────────────────────────────────────────
     case 'SET_DRAFT':

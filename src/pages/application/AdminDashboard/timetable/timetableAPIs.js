@@ -25,18 +25,7 @@ function stub(label, payload, mockData) {
   return mockData;
 }
 
-// =============================================================================
-// SCHOOL ACADEMIC PROFILE
-// GET  /api/school/profile  (extended with academic context fields)
-// PUT  /api/school/profile/academic-context
-//
-// BACKEND DEVELOPER NOTES:
-//   The GET /api/school/profile response must be extended to include the fields
-//   below. These are additive — existing consumers of the endpoint are unaffected.
-//   The PUT endpoint is a NEW dedicated endpoint for updating academic context
-//   so we do not collide with the existing updateSchool() used for school info.
-// =============================================================================
-
+// Academic Profile
 export async function getAcademicProfile() {
   /**
    * 📡 GET /api/school/profile
@@ -213,12 +202,7 @@ export async function setAcademicContext(yearID) {
   };
 }
 
-// =============================================================================
-// ACADEMIC YEARS
-// POST /api/admin/academic-years
-// GET  /api/admin/academic-years
-// =============================================================================
-
+// Academic Years and Terms Config
 export async function getAcademicYears() {
   // console.log('📡 GET /api/admin/academic-years');
   // console.log('📦 Expected response shape:', {
@@ -235,7 +219,6 @@ export async function getAcademicYears() {
   return { success: true, data: { academicYears: [] } };
 }
 
-//  Create Academic Year
 export async function createAcademicYear(payload) {
   // payload: { name: '2025/2026', startDate: 'YYYY-MM-DD', endDate: 'YYYY-MM-DD' }
   console.log('📡 POST /api/admin/academic-years', payload);
@@ -284,12 +267,6 @@ export async function deleteAcademicYear(id) {
   return { success: true };
 }
 
-// =============================================================================
-// TERMS
-// GET  /api/admin/terms?academicYearId=
-// POST /api/admin/terms
-// =============================================================================
-
 export async function getTerms(academicYearId) {
   console.log('📡 GET /api/admin/terms', { params: { academicYearId } });
   console.log('📦 Expected response:', {
@@ -332,7 +309,6 @@ export async function updateTerm(id, payload) {
   return { success: true, data: { term: { id, ...payload } } };
 }
 
-// /api/academic/terms/:termId/current
 export async function setCurrentTerm(id) {
     const { data } = await apiClient.put(`/api/academic/terms/${id}/current`);
     return data;
@@ -351,13 +327,8 @@ export async function deleteTerm(id) {
   return { success: true };
 }
 
-// =============================================================================
-// EVENTS (Formerly Holidays)
-// GET  /api/admin/events?termId=
-// POST /api/admin/events
-// DELETE /api/admin/events/:id
-// =============================================================================
 
+// School Events
 export async function getEvents(termId) {
   console.log('📡 GET /api/admin/events', { params: { termId } });
 
@@ -409,14 +380,6 @@ export async function deleteEvent(eventId) {
   return { success: true };
 }
 
-// =============================================================================
-// EVENT NOTIFICATIONS
-// PUT  /api/admin/events/:eventId/notifications
-// GET  /api/admin/events/:eventId/notifications
-// POST /api/admin/events/:eventId/notify
-// GET  /api/admin/notifications/logs
-// =============================================================================
-
 export async function updateEventNotificationSettings(eventId, payload) {
   console.log(`📡 PUT /api/admin/events/${eventId}/notifications`, payload);
   if (TIMETABLE_BACKEND_LIVE) {
@@ -457,12 +420,8 @@ export async function getNotificationLogs(eventId, status) {
   return { success: true, data: { total: 0, failed: 0, logs: [] } };
 }
 
-// =============================================================================
-// TIMETABLE DRAFT
-// GET  /api/admin/timetable/draft?classId=&termId=
-// POST /api/admin/timetable/draft
-// =============================================================================
 
+// Timetable Matters
 export async function getTimetableDraft(classId, termId, armId = null) {
   /**
    * 📡 GET /api/admin/timetable/draft
@@ -490,11 +449,6 @@ export async function getTimetableDraft(classId, termId, armId = null) {
    *   }
    * }
    *
-   * BACKEND NOTE:
-   *   The composite key for a draft is (classId, termId, armId).
-   *   When armId is null/absent the draft covers the whole class (no arm).
-   *   Timetables for different arms of the same class are stored as separate
-   *   draft records and never merged.
    */
   const params = { classId, termId, ...(armId ? { armId } : {}) };
   console.log('📡 GET /api/admin/timetable/draft', { params });
@@ -562,21 +516,51 @@ export async function deleteTimetableDraft(classId, termId, armId = null) {
   return { success: true };
 }
 
-// =============================================================================
-// CONFLICT CHECK
-// POST /api/admin/timetable/check-conflicts
-// =============================================================================
-
 export async function checkConflicts(payload) {
   /**
    * 📡 POST /api/admin/timetable/check-conflicts
    *
    * 📤 Request body:
    * {
-   *   "classId":   "string",
-   *   "termId":    "string",
-   *   "armId":     "string | null",   // null = whole-class timetable
-   *   "schedules": [ ScheduleEntry ]
+   *   "academicYearId": "uuid",
+   *   "termId":         "uuid",
+   *   "classId":        "uuid",
+   *   "armId":          "uuid | null",   // null = whole-class timetable
+   *   "periods": [
+   *     {
+   *       "periodConfigId": "uuid",
+   *       "schoolStart":    "HH:mm",
+   *       "periodDuration": 45,
+   *       "totalPeriods":   8,
+   *       "breaks": [
+   *         {
+   *           "breakAfter":    1,
+   *           "breakDuration": 30,
+   *           "label":         "Morning Break"
+   *         }
+   *       ]
+   *     }
+   *   ],
+   *   "schedules": [
+   *     {
+   *       "id": "string",
+   *       "classId": "uuid",
+   *       "className": "SS 2",
+   *       "armId": "uuid",
+   *       "armName": "A",
+   *       "dayOfWeek": "Monday",
+   *       "periodId": "string",
+   *       "periodNumber": 1,
+   *       "startTime": "HH:mm",
+   *       "endTime": "HH:mm",
+   *       "subjectId": "uuid",
+   *       "subjectName": "Mathematics",
+   *       "teacherId": "uuid",
+   *       "teacherName": "Teacher Name",
+   *       "roomId": "uuid | null",
+   *       "roomName": "string | null"
+   *     }
+   *   ]
    * }
    *
    * 📦 Expected response:
@@ -596,9 +580,10 @@ export async function checkConflicts(payload) {
    * }
    *
    * BACKEND NOTE:
-   *   The server should also cross-check this arm's schedule against OTHER arms
-   *   of the same class (and other classes) to catch teacher/room conflicts that
-   *   the frontend engine cannot see (it only holds one draft at a time).
+   *   - periods is an array with ONE configuration object (the current period setup for the class)
+   *   - Use periodDuration + schoolStart + totalPeriods + breaks to calculate actual period times
+   *   - Cross-check this arm's schedule against OTHER arms of the same class (and other classes) 
+   *     to catch teacher/room conflicts that the frontend engine cannot see
    */
   console.log('📡 POST /api/admin/timetable/check-conflicts', payload);
 
@@ -611,31 +596,49 @@ export async function checkConflicts(payload) {
   return { success: true, data: { hasConflicts: false, conflicts: [] } };
 }
 
-// =============================================================================
-// PUBLISH TIMETABLE
-// POST /api/admin/timetable/publish
-// GET  /api/admin/timetable/published?classId=&termId=
-// =============================================================================
-
 export async function publishTimetable(payload) {
   /**
    * 📡 POST /api/admin/timetable/publish
    *
    * 📤 Request body:
    * {
-   *   "academicYearId": "string",
-   *   "termId":         "string",
-   *   "classId":        "string",
-   *   "armId":          "string | null",   // null = whole-class timetable
-   *   "periods":        [ PeriodConfig ],
-   *   "schedules":      [
+   *   "academicYearId": "uuid",
+   *   "termId":         "uuid",
+   *   "classId":        "uuid",
+   *   "armId":          "uuid | null",   // null = whole-class timetable
+   *   "periods": [
    *     {
-   *       classId, className, armId, armName,
-   *       dayOfWeek, periodId, periodNumber,
-   *       startTime, endTime,
-   *       subjectId, subjectName,
-   *       teacherId, teacherName,
-   *       roomId, roomName
+   *       "periodConfigId": "uuid",
+   *       "schoolStart":    "HH:mm",
+   *       "periodDuration": 45,
+   *       "totalPeriods":   8,
+   *       "breaks": [
+   *         {
+   *           "breakAfter":    1,
+   *           "breakDuration": 30,
+   *           "label":         "Morning Break"
+   *         }
+   *       ]
+   *     }
+   *   ],
+   *   "schedules": [
+   *     {
+   *       "id": "string",
+   *       "classId": "uuid",
+   *       "className": "SS 2",
+   *       "armId": "uuid",
+   *       "armName": "A",
+   *       "dayOfWeek": "Monday",
+   *       "periodId": "string",
+   *       "periodNumber": 1,
+   *       "startTime": "HH:mm",
+   *       "endTime": "HH:mm",
+   *       "subjectId": "uuid",
+   *       "subjectName": "Mathematics",
+   *       "teacherId": "uuid",
+   *       "teacherName": "Teacher Name",
+   *       "roomId": "uuid | null",
+   *       "roomName": "string | null"
    *     }
    *   ]
    * }
@@ -651,6 +654,10 @@ export async function publishTimetable(payload) {
    *     "schedules":          [ ScheduleEntry with backend-generated scheduleIds ]
    *   }
    * }
+   *
+   * BACKEND NOTE:
+   *   - periods is an array with ONE configuration object (the period setup used to create this timetable)
+   *   - Store both the config and schedules for audit trail and future regeneration
    */
   console.log('📡 POST /api/admin/timetable/publish', payload);
   console.log('📦 Expected response:', {
