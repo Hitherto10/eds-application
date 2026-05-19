@@ -52,6 +52,8 @@ const navItems = [
             { name: 'Reports',            icon: BarChart3,       link: '/dashboard/admin/fees/reports'     },
         ],
     },
+    { name: 'Timetable Library', icon: LayoutGrid,  link: '/dashboard/admin/config/timetable-library' },
+    { name: 'Events Planner',  icon: School,          link: '/dashboard/admin/events-planner', children: [] },
     {
         name: 'Configuration',
         icon: CalendarDays,
@@ -60,11 +62,9 @@ const navItems = [
             { name: 'Subject Setup',     icon: BookOpen,    link: '/dashboard/admin/config/subjects'  },
             { name: 'Class Setup',       icon: Layers,      link: '/dashboard/admin/config/classes'   },
             { name: 'Calendar Settings', icon: CalendarDays,link: '/dashboard/admin/config/calendar'  },
-            { name: 'Timetable Library', icon: LayoutGrid,  link: '/dashboard/admin/config/timetable-library' },
             { name: 'Timetable Builder', icon: LayoutGrid,  link: '/dashboard/admin/config/timetable' },
         ],
     },
-    { name: 'Events Planner',  icon: School,          link: '/dashboard/admin/events-planner', children: [] },
     { name: 'School Profile',  icon: School,          link: '/dashboard/admin/school-profile', children: [] },
 
 ];
