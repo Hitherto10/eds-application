@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useTimetable, uid } from '../TimetableContext';
 import { saveTimetableDraft } from '../timetableAPIs';
-import { Clock, Plus, Trash2, Settings2, Loader2, ArrowRight, AlertCircle } from 'lucide-react';
+import { Clock, Plus, Trash2, Settings2, Loader2, ArrowRight, AlertCircle, BookOpen, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * PeriodSetupWizard
@@ -11,15 +12,12 @@ import { Clock, Plus, Trash2, Settings2, Loader2, ArrowRight, AlertCircle } from
  * (before any class is selected) — it gracefully handles that case by
  * disabling the Generate button and surfacing a clear instruction.
  *
- * FIX: Previously the wizard was only rendered when BOTH selectedClass and
- * selectedTerm were already truthy (guard was in TimetableBuilder). This
- * caused the builder to show the empty grid on first load instead of the
- * wizard. The guard has been removed from TimetableBuilder and moved here
- * where it makes semantic sense: as a disabled-button state with a helpful
- * callout, not a hard render block.
+ * ADDITION: Detects if a published timetable already exists. If so, prevents
+ * new grid generation and offers a direct link to view it in the Library.
  */
-export default function PeriodSetupWizard() {
+export default function PeriodSetupWizard({ onContinue }) {
   const { state, dispatch } = useTimetable();
+  const navigate = useNavigate();
 
   const [startTime, setStartTime] = useState('08:00');
   const [periodDuration, setPeriodDuration] = useState(45);
@@ -43,6 +41,20 @@ export default function PeriodSetupWizard() {
     state.selectedTerm &&
     (!classHasArms || state.selectedArm)
   );
+
+  // ── Published Check ────────────────────────────────────────────────────────
+  // If the state says it's published, we shouldn't show the wizard for creation.
+  const isPublished = state.isPublished;
+
+  const handleGoToLibrary = () => {
+    if (!state.selectedClass || !state.selectedTerm) return;
+    
+    let url = `/dashboard/admin/config/timetable-library?classId=${state.selectedClass.id}&termId=${state.selectedTerm.id}`;
+    if (state.selectedArm) {
+      url += `&armId=${state.selectedArm.id}`;
+    }
+    navigate(url);
+  };
 
   const addBreak = () => {
     setBreaks([...breaks, { id: uid(), afterPeriod: 1, durationMinutes: 30, label: 'Break' }]);
@@ -167,180 +179,213 @@ export default function PeriodSetupWizard() {
             </p>
           </div>
 
-          {/* Callout: prompt user to select a class/term if not yet done */}
-          {!canGenerate && (
-              <div className="flex items-start gap-3 p-4 mb-6 bg-amber-50 border border-amber-200 rounded-xl">
-                <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                <div className="text-sm text-amber-800">
-                  {!state.selectedClass || !state.selectedTerm ? (
-                    <>
-                      <p className="font-semibold mb-0.5">Select a class and term to continue</p>
-                      <p className="opacity-80">
-                        Use the <span className="font-semibold">Target Class</span> selector in the toolbar above, and ensure an academic year and term are active.
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="font-semibold mb-0.5">Select an arm / stream to continue</p>
-                      <p className="opacity-80">
-                        <span className="font-semibold">{state.selectedClass.name}</span> has multiple streams. Use the <span className="font-semibold">Target Arm</span> selector in the toolbar above to choose which stream this timetable is for.
-                      </p>
-                    </>
-                  )}
+          {/* Published Timetable Alert */}
+          {isPublished && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-8 mb-8 text-center animate-in zoom-in-95 duration-300">
+                <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <BookOpen size={32} />
                 </div>
-              </div>
+                <h3 className="text-xl font-bold text-emerald-900 mb-2">Timetable Already Published</h3>
+                <p className="text-emerald-700 mb-8 max-w-md mx-auto">
+                    A published timetable already exists for <span className="font-bold">{state.selectedClass?.name}{state.selectedArm ? ` — ${state.selectedArm.name}` : ''}</span> for this term. 
+                    You can view it in the library or continue to the grid if you wish to edit it (which will convert it back to a draft).
+                </p>
+                
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                    <button
+                        onClick={handleGoToLibrary}
+                        className="w-full sm:w-auto px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-200"
+                    >
+                        View in Library <ExternalLink size={18} />
+                    </button>
+                    <button
+                        onClick={onContinue}
+                        className="w-full sm:w-auto px-6 py-3 bg-white text-emerald-700 border border-emerald-200 font-bold rounded-xl hover:bg-emerald-100 transition-all"
+                    >
+                        Continue to Editor
+                    </button>
+                </div>
+            </div>
           )}
 
-          <div className="space-y-8">
-            {/* General Period Settings */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                  School Starts At
-                </label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                  <input
-                      type="time"
-                      value={startTime}
-                      onChange={e => setStartTime(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none"
-                  />
+          {!isPublished && (
+            <>
+              {/* Callout: prompt user to select a class/term if not yet done */}
+              {!canGenerate && (
+                  <div className="flex items-start gap-3 p-4 mb-6 bg-amber-50 border border-amber-200 rounded-xl">
+                    <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                    <div className="text-sm text-amber-800">
+                      {!state.selectedClass || !state.selectedTerm ? (
+                        <>
+                          <p className="font-semibold mb-0.5">Select a class and term to continue</p>
+                          <p className="opacity-80">
+                            Use the <span className="font-semibold">Target Class</span> selector in the toolbar above, and ensure an academic year and term are active.
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-semibold mb-0.5">Select an arm / stream to continue</p>
+                          <p className="opacity-80">
+                            <span className="font-semibold">{state.selectedClass.name}</span> has multiple streams. Use the <span className="font-semibold">Target Arm</span> selector in the toolbar above to choose which stream this timetable is for.
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+              )}
+
+              <div className="space-y-8">
+                {/* General Period Settings */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      School Starts At
+                    </label>
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                      <input
+                          type="time"
+                          value={startTime}
+                          onChange={e => setStartTime(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      Period Duration
+                    </label>
+                    <div className="relative">
+                      <input
+                          type="number"
+                          min="5"
+                          max="180"
+                          value={periodDuration}
+                          onChange={e => setPeriodDuration(Number(e.target.value))}
+                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none text-right pr-12"
+                      />
+                      <span className="absolute right-3 top-2.5 text-xs font-bold text-gray-400">MINS</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      Total Periods
+                    </label>
+                    <div className="relative">
+                      <input
+                          type="number"
+                          min="1"
+                          max="25"
+                          value={totalPeriods}
+                          onChange={e => setTotalPeriods(Number(e.target.value))}
+                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none text-right pr-16"
+                      />
+                      <span className="absolute right-3 top-2.5 text-xs font-bold text-gray-400">PERIODS</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                  Period Duration
-                </label>
-                <div className="relative">
-                  <input
-                      type="number"
-                      min="5"
-                      max="180"
-                      value={periodDuration}
-                      onChange={e => setPeriodDuration(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none text-right pr-12"
-                  />
-                  <span className="absolute right-3 top-2.5 text-xs font-bold text-gray-400">MINS</span>
+                <div className="w-full h-px bg-gray-100" />
+
+                {/* Breaks Configuration */}
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Breaks &amp; Lunches
+                    </label>
+                    <button
+                        onClick={addBreak}
+                        className="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors"
+                    >
+                      <Plus size={14} /> Add Break
+                    </button>
+                  </div>
+
+                  {breaks.length === 0 ? (
+                      <div className="p-4 bg-gray-50 border border-gray-200 border-dashed rounded-lg text-center text-sm text-gray-500">
+                        No breaks configured. Periods will run back-to-back.
+                      </div>
+                  ) : (
+                      <div className="space-y-3">
+                        {breaks.map(b => (
+                            <div
+                                key={b.id}
+                                className="flex flex-wrap md:flex-nowrap items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg"
+                            >
+                              <span className="text-sm font-semibold text-gray-600 whitespace-nowrap">
+                                Break occurs after
+                              </span>
+
+                              <select
+                                  value={b.afterPeriod}
+                                  onChange={e => updateBreak(b.id, 'afterPeriod', Number(e.target.value))}
+                                  className="bg-white border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                              >
+                                {Array.from({ length: totalPeriods }).map((_, i) => (
+                                    <option key={i + 1} value={i + 1}>
+                                      Period {i + 1}
+                                    </option>
+                                ))}
+                              </select>
+
+                              <span className="text-sm font-semibold text-gray-600 whitespace-nowrap">for</span>
+
+                              <div className="relative">
+                                <input
+                                    type="number"
+                                    value={b.durationMinutes}
+                                    onChange={e => updateBreak(b.id, 'durationMinutes', Number(e.target.value))}
+                                    className="bg-white border border-gray-300 rounded pl-2 pr-10 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-24 text-right"
+                                />
+                                <span className="absolute right-2 top-1.5 text-[10px] font-bold text-gray-400">MINS</span>
+                              </div>
+
+                              <span className="text-sm font-semibold text-gray-600 whitespace-nowrap flex-1 text-right">
+                                Label:
+                              </span>
+
+                              <input
+                                  type="text"
+                                  value={b.label}
+                                  onChange={e => updateBreak(b.id, 'label', e.target.value)}
+                                  className="bg-white border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-32"
+                              />
+
+                              <button
+                                  onClick={() => removeBreak(b.id)}
+                                  className="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors ml-auto"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                        ))}
+                      </div>
+                  )}
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                  Total Periods
-                </label>
-                <div className="relative">
-                  <input
-                      type="number"
-                      min="1"
-                      max="25"
-                      value={totalPeriods}
-                      onChange={e => setTotalPeriods(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none text-right pr-16"
-                  />
-                  <span className="absolute right-3 top-2.5 text-xs font-bold text-gray-400">PERIODS</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="w-full h-px bg-gray-100" />
-
-            {/* Breaks Configuration */}
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">
-                  Breaks &amp; Lunches
-                </label>
+                {/* Generate Action */}
                 <button
-                    onClick={addBreak}
-                    className="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors"
+                    onClick={handleGenerate}
+                    disabled={saving || !canGenerate}
+                    className="w-3/5 mx-auto rounded-xs py-3.5 bg-brand cursor-pointer text-white font-bold outline-none focus:ring-4 focus:ring-blue-500/30 transition-all flex justify-center items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Plus size={14} /> Add Break
+                  {saving ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" /> Generating Grid...
+                      </>
+                  ) : !canGenerate ? (
+                      <>Select a class &amp; term above to generate</>
+                  ) : (
+                      <>
+                        Generate Working Grid <ArrowRight className="w-5 h-5" />
+                      </>
+                  )}
                 </button>
               </div>
-
-              {breaks.length === 0 ? (
-                  <div className="p-4 bg-gray-50 border border-gray-200 border-dashed rounded-lg text-center text-sm text-gray-500">
-                    No breaks configured. Periods will run back-to-back.
-                  </div>
-              ) : (
-                  <div className="space-y-3">
-                    {breaks.map(b => (
-                        <div
-                            key={b.id}
-                            className="flex flex-wrap md:flex-nowrap items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg"
-                        >
-                          <span className="text-sm font-semibold text-gray-600 whitespace-nowrap">
-                            Break occurs after
-                          </span>
-
-                          <select
-                              value={b.afterPeriod}
-                              onChange={e => updateBreak(b.id, 'afterPeriod', Number(e.target.value))}
-                              className="bg-white border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                          >
-                            {Array.from({ length: totalPeriods }).map((_, i) => (
-                                <option key={i + 1} value={i + 1}>
-                                  Period {i + 1}
-                                </option>
-                            ))}
-                          </select>
-
-                          <span className="text-sm font-semibold text-gray-600 whitespace-nowrap">for</span>
-
-                          <div className="relative">
-                            <input
-                                type="number"
-                                value={b.durationMinutes}
-                                onChange={e => updateBreak(b.id, 'durationMinutes', Number(e.target.value))}
-                                className="bg-white border border-gray-300 rounded pl-2 pr-10 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-24 text-right"
-                            />
-                            <span className="absolute right-2 top-1.5 text-[10px] font-bold text-gray-400">MINS</span>
-                          </div>
-
-                          <span className="text-sm font-semibold text-gray-600 whitespace-nowrap flex-1 text-right">
-                            Label:
-                          </span>
-
-                          <input
-                              type="text"
-                              value={b.label}
-                              onChange={e => updateBreak(b.id, 'label', e.target.value)}
-                              className="bg-white border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-32"
-                          />
-
-                          <button
-                              onClick={() => removeBreak(b.id)}
-                              className="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors ml-auto"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                    ))}
-                  </div>
-              )}
-            </div>
-
-            {/* Generate Action */}
-            <button
-                onClick={handleGenerate}
-                disabled={saving || !canGenerate}
-                className="w-3/5 mx-auto rounded-xs py-3.5 bg-brand cursor-pointer text-white font-bold outline-none focus:ring-4 focus:ring-blue-500/30 transition-all flex justify-center items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {saving ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" /> Generating Grid...
-                  </>
-              ) : !canGenerate ? (
-                  <>Select a class &amp; term above to generate</>
-              ) : (
-                  <>
-                    Generate Working Grid <ArrowRight className="w-5 h-5" />
-                  </>
-              )}
-            </button>
-          </div>
+            </>
+          )}
         </div>
       </div>
   );

@@ -19,6 +19,8 @@ import {
     BarChart3,
     ChevronLeft,
     ChevronRight,
+    CalendarCheck2,
+    CalendarClock,
 } from 'lucide-react';
 import { Header } from '../../../dashboardUtilities.jsx';
 import { useAuth } from '../../../../../contexts/AuthContext.jsx';
@@ -52,8 +54,8 @@ const navItems = [
             { name: 'Reports',            icon: BarChart3,       link: '/dashboard/admin/fees/reports'     },
         ],
     },
-    { name: 'Timetable Library', icon: LayoutGrid,  link: '/dashboard/admin/config/timetable-library' },
-    { name: 'Events Planner',  icon: School,          link: '/dashboard/admin/events-planner', children: [] },
+    { name: 'Timetable Library', icon: CalendarCheck2,  link: '/dashboard/admin/config/timetable-library' },
+    { name: 'Events Planner',  icon: CalendarClock,          link: '/dashboard/admin/events-planner', children: [] },
     {
         name: 'Configuration',
         icon: CalendarDays,

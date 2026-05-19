@@ -147,17 +147,20 @@ export default function TimetableBuilder() {
 
   // ── Rendering decision ───────────────────────────────────────────────────────
   //
-  // Show the Period Setup Wizard whenever no periods are configured.
-  // This is the correct entry point for the builder — it is always the first
-  // thing the user sees. The wizard itself disables "Generate" until a class
-  // and term are selected, so no unsafe API calls are made prematurely.
+  // Show the Period Setup Wizard whenever no periods are configured OR if a
+  // timetable is already published (so we can show the "Already Published" notice).
   //
-  // Previously the condition was:
-  //   state.periods.length === 0 && state.selectedClass && state.selectedTerm
-  // That made the wizard unreachable on first load (selectedClass is null),
-  // causing the grid's "No class selected" placeholder to appear instead.
+  // If the user chooses to "Continue to Editor" from the published notice,
+  // we could potentially clear the isPublished flag or handle it via local state.
+  // For now, we prioritize the redirect to Library as requested.
 
-  const showWizard = state.periods.length === 0;
+  const [overrideShowGrid, setOverrideShowGrid] = useState(false);
+  const showWizard = (state.periods.length === 0 || state.isPublished) && !overrideShowGrid;
+
+  // Reset override when selection changes
+  useEffect(() => {
+    setOverrideShowGrid(false);
+  }, [state.selectedClass, state.selectedArm, state.selectedTerm]);
 
   return (
       <DndContext
@@ -168,7 +171,7 @@ export default function TimetableBuilder() {
       >
         <div className="flex h-full w-full overflow-hidden ">
           {showWizard ? (
-              <PeriodSetupWizard />
+              <PeriodSetupWizard onContinue={() => setOverrideShowGrid(true)} />
           ) : (
               <>
                 <PalettePanel />

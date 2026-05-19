@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Loader2, LayoutGrid, CheckCircle2, CalendarDays, Plus, Filter, Search, ChevronRight, BookOpen, User, Clock, MapPin, AlertCircle } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Loader2, LayoutGrid, CheckCircle2, CalendarDays, Plus, Filter, Search, ChevronRight, BookOpen, User, Clock, MapPin, AlertCircle, ExternalLink } from 'lucide-react';
 import AdminLayout from "../../components/layout/AdminLayout.jsx";
 import { getPublishedTimetable, getAcademicProfile, getTerms } from '../../timetable/timetableAPIs.js';
 import { getSchoolClasses } from '../../services/classAPIs.js';
@@ -19,7 +19,14 @@ const addMinutesToTime = (timeStr, minsToAdd) => {
 
 function TimetableLibrary() {
     const navigate = useNavigate();
+    const location = useLocation();
     
+    // Parse query params for pre-selection
+    const queryParams = new URLSearchParams(location.search);
+    const preClassId = queryParams.get('classId');
+    const preTermId = queryParams.get('termId');
+    const preArmId = queryParams.get('armId');
+
     // Selection state
     const [selectedClass, setSelectedClass] = useState(null);
     const [selectedTerm, setSelectedTerm] = useState(null);
@@ -45,22 +52,36 @@ function TimetableLibrary() {
                     getSchoolClasses()
                 ]);
 
-                console.log("Terms response:", profileRes);
-
-
+                let loadedTerms = [];
                 if (profileRes.success && profileRes.data?.currentAcademicYear?.id) {
                     const termsRes = await getTerms(profileRes.data.currentAcademicYear.id);
                     if (termsRes.success) {
-                        setTerms(termsRes.data.terms || []);
-                        // Auto-select current term if available
-                        const current = termsRes.data.terms?.find(t => t.isCurrent);
-                        if (current) setSelectedTerm(current);
+                        loadedTerms = termsRes.data.terms || [];
+                        setTerms(loadedTerms);
                     }
                 }
 
+                let loadedClasses = [];
                 if (classesRes.success) {
-                    setClasses(classesRes.data.classes || []);
+                    loadedClasses = classesRes.data.classes || [];
+                    setClasses(loadedClasses);
                 }
+
+                // Apply pre-selection from query params if available
+                if (preClassId) {
+                    const foundClass = loadedClasses.find(c => c.id === preClassId);
+                    if (foundClass) setSelectedClass(foundClass);
+                }
+                
+                if (preTermId) {
+                    const foundTerm = loadedTerms.find(t => t.id === preTermId);
+                    if (foundTerm) setSelectedTerm(foundTerm);
+                } else {
+                    // Auto-select current term if no pre-selection
+                    const current = loadedTerms.find(t => t.isCurrent);
+                    if (current) setSelectedTerm(current);
+                }
+
             } catch (err) {
                 console.error("Failed to load initial library data:", err);
                 setError("Failed to load school configuration. Please try again.");
@@ -69,7 +90,7 @@ function TimetableLibrary() {
             }
         }
         fetchInitialData();
-    }, []);
+    }, [preClassId, preTermId]);
 
     // Fetch arms when class changes
     useEffect(() => {
@@ -84,8 +105,16 @@ function TimetableLibrary() {
             try {
                 const res = await getClassArms(selectedClass.id);
                 if (res.success) {
-                    setArms(res.data.arms || []);
-                    setSelectedArm(null); // Reset arm selection
+                    const loadedArms = res.data.arms || [];
+                    setArms(loadedArms);
+                    
+                    // Handle pre-selected arm
+                    if (preArmId) {
+                        const foundArm = loadedArms.find(a => a.id === preArmId);
+                        if (foundArm) setSelectedArm(foundArm);
+                    } else {
+                        setSelectedArm(null);
+                    }
                 }
             } catch (err) {
                 console.error("Failed to fetch arms:", err);
@@ -94,12 +123,10 @@ function TimetableLibrary() {
             }
         }
         fetchArms();
-    }, [selectedClass]);
+    }, [selectedClass, preArmId]);
 
     // Fetch timetable when parameters are set
     useEffect(() => {
-        // Arm is optional, but if class has arms, we might want to wait? 
-        // For now, let's fetch if we have class and term.
         if (!selectedClass || !selectedTerm) {
             setTimetable(null);
             return;
@@ -194,12 +221,6 @@ function TimetableLibrary() {
                     </h1>
                     <p className="text-gray-500 text-sm mt-1">Search and view published school timetables.</p>
                 </div>
-                <button
-                    onClick={() => navigate('/dashboard/admin/config/timetable')}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-blue-700 flex items-center gap-2 transition-colors shadow-sm"
-                >
-                    <Plus size={16} /> Go to Builder
-                </button>
             </div>
 
             {/* Selection Bar */}
@@ -411,4 +432,3 @@ export default function TimetableLibraryPage() {
         </AdminLayout>
     );
 }
-
