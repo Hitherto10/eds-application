@@ -27,14 +27,12 @@ export default function PalettePanel() {
   const filteredSubjects = state.subjects.filter(s => s.name.toLowerCase().includes(term));
   const filteredTeachers = state.teachers.filter(t => t.name.toLowerCase().includes(term));
   
-  // Extract arms that belong to the baseLevel of the currently selected class
-  const classArms = Array.from(new Set(
-    state.classes
-      .filter(c => state.selectedClass && c.baseLevel === state.selectedClass.baseLevel && c.arm)
-      .map(c => c.arm)
-  ));
-  
-  const filteredArms = classArms.filter(a => a.toLowerCase().includes(term));
+  // Extract arms that belong to the currently selected class
+  const classArms = state.selectedClass
+    ? state.arms.filter(arm => arm.classId === state.selectedClass.id)
+    : [];
+
+  const filteredArms = classArms.filter(a => a.name.toLowerCase().includes(term));
 
   return (
     <div className="w-64 bg-white border-r border-gray-200 flex-col h-full shrink-0 hidden lg:flex">
@@ -96,25 +94,25 @@ export default function PalettePanel() {
           )}
         </div>
 
-        {/* Arms Section */}
-        <div>
-          <button onClick={() => toggle('arms')} className="flex items-center justify-between w-full p-1 text-sm font-semibold text-gray-600 hover:text-gray-900 group">
-            <span className="flex items-center gap-2"><Layers className="w-4 h-4" /> Arms/Streams ({filteredArms.length})</span>
-            {openSections.arms ? <ChevronDown className="w-4 h-4 opacity-50" /> : <ChevronRight className="w-4 h-4 opacity-50" />}
-          </button>
-          
-          {openSections.arms && (
-            <div className="mt-2 space-y-1.5 pl-1">
-               {filteredArms.length === 0 ? (
-                <p className="text-xs text-gray-400 p-2 text-center bg-gray-50 rounded">No arms found for {state.selectedClass?.baseLevel}.</p>
-              ) : (
-                filteredArms.map(arm => (
-                  <PaletteItem key={arm} id={`base_arm_${arm}`} type="ARM" payload={{ name: arm }} />
-                ))
-              )}
-            </div>
-          )}
-        </div>
+        {/* Arms Section  (HIDDEN BECAUSE THE ARMS IS AUTOMATIC)*/}
+        {/*<div>*/}
+        {/*  <button onClick={() => toggle('arms')} className="flex items-center justify-between w-full p-1 text-sm font-semibold text-gray-600 hover:text-gray-900 group">*/}
+        {/*    <span className="flex items-center gap-2"><Layers className="w-4 h-4" /> Arms/Streams ({filteredArms.length})</span>*/}
+        {/*    {openSections.arms ? <ChevronDown className="w-4 h-4 opacity-50" /> : <ChevronRight className="w-4 h-4 opacity-50" />}*/}
+        {/*  </button>*/}
+        {/*  */}
+        {/*  {openSections.arms && (*/}
+        {/*    <div className="mt-2 space-y-1.5 pl-1">*/}
+        {/*       {filteredArms.length === 0 ? (*/}
+        {/*        <p className="text-xs text-gray-400 p-2 text-center bg-gray-50 rounded">No arms found for {state.selectedClass?.name}.</p>*/}
+        {/*      ) : (*/}
+        {/*        filteredArms.map(arm => (*/}
+        {/*          <PaletteItem key={arm.id} id={`base_arm_${arm.id}`} type="ARM" payload={arm} />*/}
+        {/*        ))*/}
+        {/*      )}*/}
+        {/*    </div>*/}
+        {/*  )}*/}
+        {/*</div>*/}
 
       </div>
     </div>
@@ -124,10 +122,17 @@ export default function PalettePanel() {
 // ─── Draggable Item Component ──────────────────────────────────────────────────
 function PaletteItem({ id, type, payload }) {
   const { state } = useTimetable();
+  // Dragging is disabled when: published, no class, or class has arms but none selected yet.
+  const classArms = state.selectedClass
+    ? state.arms.filter(a => a.classId === state.selectedClass.id)
+    : [];
+  const needsArm = classArms.length > 0 && !state.selectedArm;
+  const isDragDisabled = state.isPublished || !state.selectedClass || needsArm;
+
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id,
     data: { type, payload },
-    disabled: state.isPublished || !state.selectedClass,
+    disabled: isDragDisabled,
   });
 
   const name = payload.name;
@@ -145,13 +150,13 @@ function PaletteItem({ id, type, payload }) {
     Icon = Users;
   }
 
-  const disabledClass = (state.isPublished || !state.selectedClass) ? 'opacity-50 cursor-not-allowed grayscale' : 'cursor-grab active:cursor-grabbing hover:shadow-sm hover:-translate-y-px transition-all';
+  const disabledClass = isDragDisabled ? 'opacity-50 cursor-not-allowed grayscale' : 'cursor-grab active:cursor-grabbing hover:shadow-sm hover:-translate-y-px transition-all';
 
   return (
     <div
       ref={setNodeRef}
-      {...(state.isPublished || !state.selectedClass ? {} : listeners)}
-      {...(state.isPublished || !state.selectedClass ? {} : attributes)}
+      {...(isDragDisabled ? {} : listeners)}
+      {...(isDragDisabled ? {} : attributes)}
       className={`relative p-2 rounded-lg border text-xs font-semibold flex items-center gap-2 select-none ${baseStyle} ${disabledClass} ${isDragging ? 'opacity-30' : ''}`}
     >
       <Icon size={12} className="opacity-70" />

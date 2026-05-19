@@ -463,24 +463,44 @@ export async function getNotificationLogs(eventId, status) {
 // POST /api/admin/timetable/draft
 // =============================================================================
 
-export async function getTimetableDraft(classId, termId) {
-  console.log('📡 GET /api/admin/timetable/draft', { params: { classId, termId } });
-  console.log('📦 Expected response:', {
-    success: true,
-    data: {
-      draft: {
-        id: 'string | null',
-        classId,
-        termId,
-        periods: [/* PeriodConfig */],
-        schedules: [/* ScheduleEntry[] */],
-        updatedAt: 'ISO8601',
-      },
-    },
-  });
+export async function getTimetableDraft(classId, termId, armId = null) {
+  /**
+   * 📡 GET /api/admin/timetable/draft
+   *
+   * 📤 Query params:
+   * {
+   *   classId: string,           // required
+   *   termId:  string,           // required
+   *   armId:   string | null     // optional — omit or null when class has no arms
+   * }
+   *
+   * 📦 Expected response:
+   * {
+   *   "success": true,
+   *   "data": {
+   *     "draft": {
+   *       "id": "string | null",
+   *       "classId": "string",
+   *       "termId": "string",
+   *       "armId": "string | null",
+   *       "periods": [ PeriodConfig ],
+   *       "schedules": [ ScheduleEntry ],
+   *       "updatedAt": "ISO8601"
+   *     }
+   *   }
+   * }
+   *
+   * BACKEND NOTE:
+   *   The composite key for a draft is (classId, termId, armId).
+   *   When armId is null/absent the draft covers the whole class (no arm).
+   *   Timetables for different arms of the same class are stored as separate
+   *   draft records and never merged.
+   */
+  const params = { classId, termId, ...(armId ? { armId } : {}) };
+  console.log('📡 GET /api/admin/timetable/draft', { params });
 
   if (TIMETABLE_BACKEND_LIVE) {
-    const { data } = await apiClient.get('/api/admin/timetable/draft', { params: { classId, termId } });
+    const { data } = await apiClient.get('/api/admin/timetable/draft', { params });
     return data;
   }
 
@@ -489,9 +509,30 @@ export async function getTimetableDraft(classId, termId) {
 }
 
 export async function saveTimetableDraft(payload) {
-  // payload: { classId, termId, academicYearId, periods: PeriodConfig[], schedules: ScheduleEntry[] }
+  /**
+   * 📡 POST /api/admin/timetable/draft
+   *
+   * 📤 Request body:
+   * {
+   *   "classId":        "string",           // required
+   *   "termId":         "string",           // required
+   *   "academicYearId": "string",           // required
+   *   "armId":          "string | null",    // null = whole-class timetable
+   *   "periods":        [ PeriodConfig ],
+   *   "schedules":      [ ScheduleEntry ]   // each entry also carries armId
+   * }
+   *
+   * 📦 Expected response:
+   * {
+   *   "success": true,
+   *   "data": { "draftId": "string", "savedAt": "ISO8601" }
+   * }
+   *
+   * BACKEND NOTE:
+   *   Upsert on composite key (classId, termId, armId).
+   *   armId = null and armId = "some-id" are treated as distinct drafts.
+   */
   console.log('📡 POST /api/admin/timetable/draft', payload);
-  console.log('📦 Expected response:', { success: true, data: { draftId: 'string', savedAt: 'ISO8601' } });
 
   // if (TIMETABLE_BACKEND_LIVE) {
   //   const { data } = await apiClient.post('/api/admin/timetable/draft', payload);
@@ -502,11 +543,18 @@ export async function saveTimetableDraft(payload) {
   return { success: true, data: { draftId: `draft_${Date.now()}`, savedAt: new Date().toISOString() } };
 }
 
-export async function deleteTimetableDraft(classId, termId) {
-  console.log('📡 DELETE /api/admin/timetable/draft', { params: { classId, termId } });
+export async function deleteTimetableDraft(classId, termId, armId = null) {
+  /**
+   * 📡 DELETE /api/admin/timetable/draft
+   *
+   * 📤 Query params: { classId, termId, armId? }
+   * Deletes the draft whose composite key matches (classId, termId, armId).
+   */
+  const params = { classId, termId, ...(armId ? { armId } : {}) };
+  console.log('📡 DELETE /api/admin/timetable/draft', { params });
 
   if (TIMETABLE_BACKEND_LIVE) {
-    const { data } = await apiClient.delete('/api/admin/timetable/draft', { params: { classId, termId } });
+    const { data } = await apiClient.delete('/api/admin/timetable/draft', { params });
     return data;
   }
 
@@ -520,20 +568,39 @@ export async function deleteTimetableDraft(classId, termId) {
 // =============================================================================
 
 export async function checkConflicts(payload) {
-  // payload: { classId, termId, schedules: ScheduleEntry[] }
+  /**
+   * 📡 POST /api/admin/timetable/check-conflicts
+   *
+   * 📤 Request body:
+   * {
+   *   "classId":   "string",
+   *   "termId":    "string",
+   *   "armId":     "string | null",   // null = whole-class timetable
+   *   "schedules": [ ScheduleEntry ]
+   * }
+   *
+   * 📦 Expected response:
+   * {
+   *   "success": true,
+   *   "data": {
+   *     "hasConflicts": false,
+   *     "conflicts": [
+   *       {
+   *         "type":     "TEACHER_DOUBLE_BOOKING | ROOM_CONFLICT | PERIOD_DUPLICATION | SUBJECT_OVERLOAD",
+   *         "severity": "error | warning",
+   *         "message":  "string",
+   *         "slots":    [{ "day": "string", "periodId": "string" }]
+   *       }
+   *     ]
+   *   }
+   * }
+   *
+   * BACKEND NOTE:
+   *   The server should also cross-check this arm's schedule against OTHER arms
+   *   of the same class (and other classes) to catch teacher/room conflicts that
+   *   the frontend engine cannot see (it only holds one draft at a time).
+   */
   console.log('📡 POST /api/admin/timetable/check-conflicts', payload);
-  console.log('📦 Expected response:', {
-    success: true,
-    data: {
-      hasConflicts: false,
-      conflicts: [{
-        type: 'TEACHER_DOUBLE_BOOKING | ROOM_CONFLICT | PERIOD_DUPLICATION | SUBJECT_OVERLOAD',
-        severity: 'error | warning',
-        message: 'string',
-        slots: [{ day: 'string', periodId: 'string' }],
-      }],
-    },
-  });
 
   if (TIMETABLE_BACKEND_LIVE) {
     const { data } = await apiClient.post('/api/admin/timetable/check-conflicts', payload);
@@ -552,19 +619,37 @@ export async function checkConflicts(payload) {
 
 export async function publishTimetable(payload) {
   /**
-   * payload shape:
+   * 📡 POST /api/admin/timetable/publish
+   *
+   * 📤 Request body:
    * {
-   *   academicYearId: string,
-   *   termId: string,
-   *   classId: string,
-   *   periods: [...],
-   *   schedules: [
+   *   "academicYearId": "string",
+   *   "termId":         "string",
+   *   "classId":        "string",
+   *   "armId":          "string | null",   // null = whole-class timetable
+   *   "periods":        [ PeriodConfig ],
+   *   "schedules":      [
    *     {
-   *       classId, className, dayOfWeek, periodId, periodNumber,
-   *       startTime, endTime, subjectId, subjectName,
-   *       teacherId, teacherName, roomId, roomName
+   *       classId, className, armId, armName,
+   *       dayOfWeek, periodId, periodNumber,
+   *       startTime, endTime,
+   *       subjectId, subjectName,
+   *       teacherId, teacherName,
+   *       roomId, roomName
    *     }
    *   ]
+   * }
+   *
+   * 📦 Expected response:
+   * {
+   *   "success": true,
+   *   "data": {
+   *     "published":          true,
+   *     "publishedAt":        "ISO8601",
+   *     "timetableId":        "string",
+   *     "conflictsResolved":  true,
+   *     "schedules":          [ ScheduleEntry with backend-generated scheduleIds ]
+   *   }
    * }
    */
   console.log('📡 POST /api/admin/timetable/publish', payload);
@@ -596,11 +681,33 @@ export async function publishTimetable(payload) {
   };
 }
 
-export async function getPublishedTimetable(classId, termId) {
-  console.log('📡 GET /api/admin/timetable/published', { params: { classId, termId } });
+export async function getPublishedTimetable(classId, termId, armId = null) {
+  /**
+   * 📡 GET /api/admin/timetable/published
+   *
+   * 📤 Query params: { classId, termId, armId? }
+   *
+   * 📦 Expected response:
+   * {
+   *   "success": true,
+   *   "data": {
+   *     "timetable": {
+   *       "id":          "string",
+   *       "classId":     "string",
+   *       "termId":      "string",
+   *       "armId":       "string | null",
+   *       "publishedAt": "ISO8601",
+   *       "periods":     [ PeriodConfig ],
+   *       "schedules":   [ ScheduleEntry ]
+   *     } | null
+   *   }
+   * }
+   */
+  const params = { classId, termId, ...(armId ? { armId } : {}) };
+  console.log('📡 GET /api/admin/timetable/published', { params });
 
   if (TIMETABLE_BACKEND_LIVE) {
-    const { data } = await apiClient.get('/api/admin/timetable/published', { params: { classId, termId } });
+    const { data } = await apiClient.get('/api/admin/timetable/published', { params });
     return data;
   }
 

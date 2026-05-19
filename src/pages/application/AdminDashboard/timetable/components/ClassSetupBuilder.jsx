@@ -271,8 +271,8 @@ export default function ClassSetupBuilder() {
       <>
         <div className="flex-1 bg-white p-6 rounded-xl border border-gray-200 flex flex-col relative h-full">
           {/* Header */}
-          <div className="flex flex-wrap items-center justify-between mb-6">
-            <div>
+          <div className="flex flex-wrap md:flex-nowrap items-center justify-between mb-6">
+            <div className={`w-full`}>
               <h2 className="text-lg font-bold text-gray-800">
                 School Class Structure ({state.classes.length})
               </h2>
@@ -281,25 +281,25 @@ export default function ClassSetupBuilder() {
               </p>
             </div>
 
-            <div className="flex items-center gap-4 mt-2 sm:mt-0">
+            <div className="grid grid-cols-1 w-full md:grid-cols-2 items-center gap-4 pt-5 sm:mt-0">
               {success && (
                 <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded flex items-center gap-1">
                   <CheckCircle2 size={14} /> Saved
                 </span>
               )}
-              <div className="relative">
+              <div className="relative w-full justify-center">
                 <Search className="absolute left-3 top-2.5 h-4 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search classes…"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="pl-9 pr-4 py-2  border w-full border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
               <button
                 onClick={enterBuilderMode}
-                className="px-4 py-2 bg-gray-900 hover:bg-black text-white text-sm font-semibold rounded-lg flex items-center gap-2 transition"
+                className="px-4 py-2 w-full border bg-brand cursor-pointer text-white text-sm font-semibold rounded-lg flex items-center content-center justify-center gap-2 transition"
               >
                 <Link size={16} /> Edit Structure
               </button>

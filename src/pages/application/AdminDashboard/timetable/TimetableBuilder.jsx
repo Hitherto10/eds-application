@@ -39,8 +39,11 @@ export default function TimetableBuilder() {
   const saveTimeoutRef = useRef(null);
 
   useEffect(() => {
-    // Only auto-save when we have a valid selection and we are in draft mode
+    // Only auto-save when we have a valid selection and we are in draft mode.
+    // When the class has arms, arm must also be selected before saving.
+    const classArms = state.arms.filter(a => a.classId === state.selectedClass?.id);
     if (!state.selectedClass || !state.selectedTerm || state.isPublished) return;
+    if (classArms.length > 0 && !state.selectedArm) return;
     // Nothing to save yet if the grid hasn't been configured
     if (state.periods.length === 0) return;
 
@@ -53,6 +56,7 @@ export default function TimetableBuilder() {
           classId: state.selectedClass.id,
           termId: state.selectedTerm.id,
           academicYearId: state.selectedYear.id,
+          armId: state.selectedArm?.id ?? null,
           schedules: state.schedules,
         };
         const res = await saveTimetableDraft(payload);
@@ -90,6 +94,8 @@ export default function TimetableBuilder() {
         id: uid(),
         classId: state.selectedClass.id,
         className: state.selectedClass.name,
+        armId: state.selectedArm?.id ?? null,
+        armName: state.selectedArm?.name ?? null,
         dayOfWeek: dropData.day,
         periodId: dropData.periodId,
         periodNumber: dropData.periodNumber,
@@ -99,8 +105,6 @@ export default function TimetableBuilder() {
         subjectName: subject.name,
         teacherId: null,
         teacherName: null,
-        armId: null,
-        armName: null,
       };
       dispatch({ type: 'ADD_SCHEDULE_ENTRY', payload: newEntry });
       dispatch({ type: 'SELECT_ENTRY', id: newEntry.id });
@@ -162,7 +166,7 @@ export default function TimetableBuilder() {
           onDragCancel={handleDragCancel}
           collisionDetection={pointerWithin}
       >
-        <div className="flex h-full w-full bg-slate-100/50 rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+        <div className="flex h-full w-full overflow-hidden ">
           {showWizard ? (
               <PeriodSetupWizard />
           ) : (

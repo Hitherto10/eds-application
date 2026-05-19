@@ -25,18 +25,25 @@ function TimetableContent() {
         );
     }
 
-    console.log("TimetableContent:", state.selectedYear, state.selectedTerm, state.selectedClass);
+    console.log("TimetableContent:", state.selectedYear, state.selectedTerm, state.selectedClass, state.selectedArm);
+
+    // Arms for the currently selected class (empty = class has no arms → whole-class timetable)
+    const classArms = state.selectedClass
+        ? state.arms.filter(a => a.classId === state.selectedClass.id)
+        : [];
 
     return (
         <div className="flex flex-col h-full min-h-[calc(100vh-120px)]">
-            {/* Class / Term context bar */}
-            <div className="flex flex-wrap shadow-sm items-center gap-4 p-3 bg-white border border-gray-200 rounded-lg mb-4 shrink-0 overflow-visible z-10">
+            {/* Class / Arm / Term context bar */}
+            <div className="flex flex-wrap  items-center gap-4 p-3 bg-white border border-gray-200 rounded-xs mb-4 shrink-0 overflow-visible z-10">
+
+                {/* Target Class */}
                 <div className="flex items-center gap-3 w-full md:w-auto">
                     <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Target Class</span>
                     <select
                         value={state.selectedClass?.id || ''}
                         onChange={e => {
-                            const c = state.classes.find(x => x.id === e.target.value);
+                            const c = state.classes.find(x => x.id === e.target.value) ?? null;
                             dispatch({ type: 'SELECT_CLASS', payload: c });
                         }}
                         className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
@@ -47,6 +54,29 @@ function TimetableContent() {
                         ))}
                     </select>
                 </div>
+
+                {/* Target Arm — only shown when the selected class has arms */}
+                {classArms.length > 0 && (
+                    <>
+                        <div className="w-px h-6 bg-gray-200 hidden md:block" />
+                        <div className="flex items-center gap-3 w-full md:w-auto">
+                            <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Target Arm</span>
+                            <select
+                                value={state.selectedArm?.id || ''}
+                                onChange={e => {
+                                    const arm = classArms.find(a => a.id === e.target.value) ?? null;
+                                    dispatch({ type: 'SELECT_ARM', payload: arm });
+                                }}
+                                className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            >
+                                <option value="">-- Choose Arm / Stream --</option>
+                                {classArms.map(a => (
+                                    <option key={a.id} value={a.id}>{a.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </>
+                )}
 
                 <div className="w-px h-6 bg-gray-200 hidden md:block" />
 

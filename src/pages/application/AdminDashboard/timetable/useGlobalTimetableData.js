@@ -189,17 +189,30 @@ export function useGlobalTimetableData() {
         }).catch(err => console.error('[Timetable] getEvents failed:', err));
     }, [selectedTermId, dispatch]);
 
-    // ── Reactive: reload timetable draft when class OR term changes ───────────
+    // ── Reactive: reload timetable draft when class, arm, OR term changes ────
+    // selectedArmId may be null — that is valid and means "whole class" draft.
+    // We only skip loading if class or term is missing; arm being null is fine.
     const selectedClassId = state.selectedClass?.id;
+    const selectedArmId = state.selectedArm?.id ?? null;
+
+    // Tracks whether the class has arms — used to decide if arm selection is required.
+    const classHasArms = Boolean(
+        selectedClassId && state.arms.some(a => a.classId === selectedClassId)
+    );
+
     useEffect(() => {
+        // Require class + term. Also require an arm to be explicitly chosen
+        // when the class has arms (null arm = still choosing → don't load yet).
         if (!selectedClassId || !selectedTermId) return;
+        if (classHasArms && selectedArmId === null) return;
+
         let cancelled = false;
 
         async function loadDraft() {
             dispatch({ type: 'SET_LOADING', payload: { draft: true } });
-            console.log('[Timetable] loadDraft: classId =', selectedClassId, '| termId =', selectedTermId);
+            console.log('[Timetable] loadDraft: classId =', selectedClassId, '| termId =', selectedTermId, '| armId =', selectedArmId);
             try {
-                const pubRes = await getPublishedTimetable(selectedClassId, selectedTermId);
+                const pubRes = await getPublishedTimetable(selectedClassId, selectedTermId, selectedArmId);
                 if (cancelled) return;
 
                 if (pubRes?.success && pubRes.data?.timetable) {
@@ -214,7 +227,7 @@ export function useGlobalTimetableData() {
                     return;
                 }
 
-                const draftRes = await getTimetableDraft(selectedClassId, selectedTermId);
+                const draftRes = await getTimetableDraft(selectedClassId, selectedTermId, selectedArmId);
                 if (cancelled) return;
 
                 if (draftRes?.success && draftRes.data?.draft) {
@@ -241,7 +254,7 @@ export function useGlobalTimetableData() {
 
         loadDraft();
         return () => { cancelled = true; };
-    }, [selectedClassId, selectedTermId, dispatch]);
+    }, [selectedClassId, selectedArmId, selectedTermId, classHasArms, dispatch]);
 
     return { initialLoad, handleYearChange };
 }

@@ -36,10 +36,13 @@ export default function PublishScheduler({ open, onOpenChange }) {
       setPublishing(true);
       setError(null);
 
+      const armId = state.selectedArm?.id ?? null;
+
       // 1. Backend validation (fail-safe)
       const checkRes = await checkConflicts({
         classId: state.selectedClass.id,
         termId: state.selectedTerm.id,
+        armId,
         schedules: state.schedules,
       });
 
@@ -52,6 +55,7 @@ export default function PublishScheduler({ open, onOpenChange }) {
         academicYearId: state.selectedYear.id,
         termId: state.selectedTerm.id,
         classId: state.selectedClass.id,
+        armId,
         schedules: state.schedules,
       };
 

@@ -15,6 +15,8 @@ import './dark-mode.css'
 import { getTheme, toggleTheme } from "../../utils/theme.js";
 import { getAcademicProfile } from "./AdminDashboard/timetable/timetableAPIs.js";
 
+let cachedAcademicContext = null;
+
 export const Header = () => {
     const { user, logout } = useAuth();
     const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
@@ -25,7 +27,9 @@ export const Header = () => {
         ? `${user.firstName} ${user.lastName ?? ''}`
         : (user?.fullName ?? 'User');
 
-    const [academicContext, setAcademicContext] = useState({ year: 'Loading...', term: '...' });
+    const [academicContext, setAcademicContext] = useState(() => {
+        return cachedAcademicContext || { year: 'Loading...', term: '...' };
+    });
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -46,27 +50,32 @@ export const Header = () => {
     }, [dropdownRef]);
 
     useEffect(() => {
+        if (cachedAcademicContext) {
+            return;
+        }
         const fetchContext = async () => {
             try {
                 const res = await getAcademicProfile();
                 if (res.success && res.data.school) {
-                    setAcademicContext({
+                    const ctx = {
                         year: res.data.currentAcademicYear?.name || 'No Active Year',
                         term: res.data.currentTerm?.name || 'No Active Term'
-                    });
+                    };
+                    cachedAcademicContext = ctx;
+                    setAcademicContext(ctx);
                 }
             } catch (err) {
                 console.error('Failed to fetch academic context:', err);
                 setAcademicContext({ year: 'Setup Needed', term: 'Setup Needed' });
             }
         };
-        // Avoid fetching on every render, maybe just once per mount
         fetchContext();
     }, []);
 
 
 
     const handleLogout = async () => {
+        cachedAcademicContext = null;
         await logout();
     };
 

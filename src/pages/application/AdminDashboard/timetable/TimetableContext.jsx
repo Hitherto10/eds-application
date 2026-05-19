@@ -51,7 +51,10 @@ const initialState = {
 
   // Builder
   selectedClass: null,   // { id, name }
-  periods: [],           // Configured via Wizard
+  selectedArm: null,     // { id, classId, name } | null — null means whole class (no arm)
+  periods: [],           // Computed PeriodConfig[] — generated from periodConfig
+  periodConfig: null,    // Raw wizard inputs: { id, schoolStart, periodDuration, totalPeriods, breaks[] }
+  savedPeriodConfigs: [], // School-wide reusable configs fetched on init
   schedules: [],         // ScheduleEntry[]
   draftId: null,
   isDraft: true,
@@ -223,8 +226,15 @@ function timetableReducer(state, action) {
     }
 
     // ── Class selection ───────────────────────────────────────────────────────
+    // Changing class resets arm, periods, schedules and draft state.
     case 'SELECT_CLASS':
-      return { ...state, selectedClass: action.payload, periods: [], schedules: [], draftId: null, selectedEntryId: null, isPublished: false };
+      return { ...state, selectedClass: action.payload, selectedArm: null, periods: [], schedules: [], draftId: null, selectedEntryId: null, isPublished: false };
+
+    // ── Arm selection ─────────────────────────────────────────────────────────
+    // Changing arm resets draft state so the new arm's timetable loads fresh.
+    // Passing null means "whole class" (class has no arms).
+    case 'SELECT_ARM':
+      return { ...state, selectedArm: action.payload, periods: [], schedules: [], draftId: null, selectedEntryId: null, isPublished: false };
 
     // ── Periods config ────────────────────────────────────────────────────────
     case 'SET_PERIODS':
@@ -268,16 +278,19 @@ function timetableReducer(state, action) {
     case 'CLEAR_PERIODS_AND_SCHEDULES':
       return { ...state, periods: [], schedules: [], selectedEntryId: null, draftId: null, isPublished: false, lastSavedAt: null };
 
-    // ── Copy from another class (bulk) ────────────────────────────────────────
+    // ── Copy from another class/arm (bulk) ───────────────────────────────────
     case 'PASTE_SCHEDULES': {
-      // Restamp classId/className to the current class, regenerate IDs
-      const { targetClass, entries } = action;
+      // Restamp classId/className/armId/armName to the current target, regenerate IDs.
+      // Teacher assignments are not copied — they are arm/class specific.
+      const { targetClass, targetArm, entries } = action;
       const stampedEntries = entries.map(e => ({
         ...e,
         id: uid(),
         classId: targetClass.id,
         className: targetClass.name,
-        teacherId: null,    // teacher assignments are class-specific
+        armId: targetArm?.id ?? null,
+        armName: targetArm?.name ?? null,
+        teacherId: null,
         teacherName: null,
       }));
       return { ...state, schedules: stampedEntries };

@@ -21,6 +21,8 @@
  * @property {string}      id
  * @property {string}      classId
  * @property {string}      className
+ * @property {string|null} armId       — null when the whole class shares one timetable
+ * @property {string|null} armName
  * @property {string}      dayOfWeek
  * @property {string}      periodId
  * @property {number}      periodNumber
@@ -53,35 +55,36 @@ export function detectConflicts(schedules) {
   const conflicts = [];
 
   // ── 1. Teacher double-booking ────────────────────────────────────────────
-  // Same teacher assigned to two different classes at the exact same slot.
+  // Same teacher in two different class+arm groups at the exact same slot.
+  // armKey ensures "Grade 10A" and "Grade 10B" are treated as different groups.
   const byTeacherSlot = groupBy(
     schedules.filter(s => s.teacherId),
     s => `${s.teacherId}__${s.dayOfWeek}__${s.periodId}`
   );
 
   for (const [key, entries] of Object.entries(byTeacherSlot)) {
-    const uniqueClasses = new Set(entries.map(e => e.classId));
-    if (uniqueClasses.size > 1) {
+    const uniqueGroups = new Set(entries.map(e => `${e.classId}__${e.armId ?? ''}`));
+    if (uniqueGroups.size > 1) {
       conflicts.push({
         id: `conflict_teacher_${key}`,
         type: 'TEACHER_DOUBLE_BOOKING',
         severity: 'error',
-        message: `${entries[0].teacherName} is double-booked: assigned to ${[...uniqueClasses].length} classes at the same time on ${entries[0].dayOfWeek} Period ${entries[0].periodNumber}.`,
+        message: `${entries[0].teacherName} is double-booked: assigned to ${uniqueGroups.size} groups at the same time on ${entries[0].dayOfWeek} Period ${entries[0].periodNumber}.`,
         affectedEntryIds: entries.map(e => e.id),
       });
     }
   }
 
   // ── 2. Room conflict ──────────────────────────────────────────────────────
-  // Same room used by two different classes at the same slot.
+  // Same room used by two different class+arm groups at the same slot.
   const byRoomSlot = groupBy(
     schedules.filter(s => s.roomId),
     s => `${s.roomId}__${s.dayOfWeek}__${s.periodId}`
   );
 
   for (const [key, entries] of Object.entries(byRoomSlot)) {
-    const uniqueClasses = new Set(entries.map(e => e.classId));
-    if (uniqueClasses.size > 1) {
+    const uniqueGroups = new Set(entries.map(e => `${e.classId}__${e.armId ?? ''}`));
+    if (uniqueGroups.size > 1) {
       conflicts.push({
         id: `conflict_room_${key}`,
         type: 'ROOM_CONFLICT',
@@ -92,37 +95,45 @@ export function detectConflicts(schedules) {
     }
   }
 
-  // ── 3. Period duplication (same class, same slot, two subjects) ───────────
-  const byClassSlot = groupBy(
+  // ── 3. Period duplication (same class+arm, same slot, two subjects) ───────
+  // armId is included so arms of the same class can legitimately have
+  // different subjects in the same period without triggering a conflict.
+  const byClassArmSlot = groupBy(
     schedules,
-    s => `${s.classId}__${s.dayOfWeek}__${s.periodId}`
+    s => `${s.classId}__${s.armId ?? ''}__${s.dayOfWeek}__${s.periodId}`
   );
 
-  for (const [key, entries] of Object.entries(byClassSlot)) {
+  for (const [key, entries] of Object.entries(byClassArmSlot)) {
     if (entries.length > 1) {
+      const label = entries[0].armName
+        ? `${entries[0].className} (${entries[0].armName})`
+        : entries[0].className;
       conflicts.push({
         id: `conflict_dup_${key}`,
         type: 'PERIOD_DUPLICATION',
         severity: 'error',
-        message: `${entries[0].className}: ${entries.length} subjects assigned to the same period on ${entries[0].dayOfWeek} Period ${entries[0].periodNumber}.`,
+        message: `${label}: ${entries.length} subjects assigned to the same period on ${entries[0].dayOfWeek} Period ${entries[0].periodNumber}.`,
         affectedEntryIds: entries.map(e => e.id),
       });
     }
   }
 
-  // ── 4. Subject overload (same subject > 2 times on same day) ─────────────
-  const byClassDaySubject = groupBy(
+  // ── 4. Subject overload (same subject > 2 times on same day, per arm) ─────
+  const byClassArmDaySubject = groupBy(
     schedules,
-    s => `${s.classId}__${s.dayOfWeek}__${s.subjectId}`
+    s => `${s.classId}__${s.armId ?? ''}__${s.dayOfWeek}__${s.subjectId}`
   );
 
-  for (const [key, entries] of Object.entries(byClassDaySubject)) {
+  for (const [key, entries] of Object.entries(byClassArmDaySubject)) {
     if (entries.length > 2) {
+      const label = entries[0].armName
+        ? `${entries[0].className} (${entries[0].armName})`
+        : entries[0].className;
       conflicts.push({
         id: `conflict_overload_${key}`,
         type: 'SUBJECT_OVERLOAD',
         severity: 'warning',
-        message: `${entries[0].subjectName} appears ${entries.length} times on ${entries[0].dayOfWeek} for ${entries[0].className}. Consider redistributing across the week.`,
+        message: `${entries[0].subjectName} appears ${entries.length} times on ${entries[0].dayOfWeek} for ${label}. Consider redistributing across the week.`,
         affectedEntryIds: entries.map(e => e.id),
       });
     }

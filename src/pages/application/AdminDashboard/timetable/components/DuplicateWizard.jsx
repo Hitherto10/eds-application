@@ -27,7 +27,8 @@ export default function DuplicateWizard({ open, onOpenChange }) {
     dispatch({
       type: 'PASTE_SCHEDULES',
       targetClass,
-      entries: state.schedules, // These get restamped and new IDs generated in the reducer
+      targetArm: null, // DuplicateWizard copies to a whole class; arm must be chosen after
+      entries: state.schedules,
     });
 
     // Automatically switch to the target class

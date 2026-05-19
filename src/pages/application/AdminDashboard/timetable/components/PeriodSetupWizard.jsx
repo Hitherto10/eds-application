@@ -31,9 +31,18 @@ export default function PeriodSetupWizard() {
     { id: uid(), afterPeriod: 5, durationMinutes: 45, label: 'Lunch Break' },
   ]);
 
-  console.log('Rendering PeriodSetupWizard with state:', state);
-  // Whether all required context is available to generate and save periods.
-  const canGenerate = Boolean(state.selectedClass && state.selectedTerm);
+  // Arms belonging to the currently selected class (empty = whole-class timetable)
+  const classArms = state.selectedClass
+    ? state.arms.filter(a => a.classId === state.selectedClass.id)
+    : [];
+  const classHasArms = classArms.length > 0;
+
+  // Generate is blocked until class, term, and (when class has arms) arm are all chosen.
+  const canGenerate = Boolean(
+    state.selectedClass &&
+    state.selectedTerm &&
+    (!classHasArms || state.selectedArm)
+  );
 
   const addBreak = () => {
     setBreaks([...breaks, { id: uid(), afterPeriod: 1, durationMinutes: 30, label: 'Break' }]);
@@ -107,6 +116,7 @@ export default function PeriodSetupWizard() {
         classId: state.selectedClass.id,
         termId: state.selectedTerm.id,
         academicYearId: state.selectedYear?.id,
+        armId: state.selectedArm?.id ?? null,
         periods: generatedPeriods,
         schedules: [],
       };
@@ -128,13 +138,15 @@ export default function PeriodSetupWizard() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
       <div className="flex-1 flex items-center justify-center p-4 overflow-y-auto">
-        <div className="bg-white max-w-2xl w-full p-8 rounded-2xl shadow-sm border border-gray-200">
+        <div className="bg-white max-w-4xl w-full p-8 rounded-2xl">
 
           {/* Header */}
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900">Period Configuration Wizard</h2>
+            <h2 className="text-2xl font-semibold text-gray-900">Period Configuration Wizard</h2>
             <p className="text-gray-500 mt-2">
-              {state.selectedClass
+              {state.selectedClass && state.selectedArm
+              ? <>Let's structure the timetable grid for <span className="font-bold text-gray-700">{state.selectedClass.name} — {state.selectedArm.name}</span> before adding subjects.</>
+              : state.selectedClass
                   ? <>Let's structure the timetable grid for <span className="font-bold text-gray-700">{state.selectedClass.name}</span> before adding subjects.</>
                   : 'Configure the daily period structure for your school timetable.'}
             </p>
@@ -145,10 +157,21 @@ export default function PeriodSetupWizard() {
               <div className="flex items-start gap-3 p-4 mb-6 bg-amber-50 border border-amber-200 rounded-xl">
                 <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                 <div className="text-sm text-amber-800">
-                  <p className="font-semibold mb-0.5">Select a class and term to continue</p>
-                  <p className="opacity-80">
-                    Use the <span className="font-semibold">Target Class</span> selector in the toolbar above, and ensure an academic year and term are active. Once both are set, you can generate the period grid.
-                  </p>
+                  {!state.selectedClass || !state.selectedTerm ? (
+                    <>
+                      <p className="font-semibold mb-0.5">Select a class and term to continue</p>
+                      <p className="opacity-80">
+                        Use the <span className="font-semibold">Target Class</span> selector in the toolbar above, and ensure an academic year and term are active.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-semibold mb-0.5">Select an arm / stream to continue</p>
+                      <p className="opacity-80">
+                        <span className="font-semibold">{state.selectedClass.name}</span> has multiple streams. Use the <span className="font-semibold">Target Arm</span> selector in the toolbar above to choose which stream this timetable is for.
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
           )}
@@ -233,9 +256,9 @@ export default function PeriodSetupWizard() {
                             key={b.id}
                             className="flex flex-wrap md:flex-nowrap items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg"
                         >
-                    <span className="text-sm font-semibold text-gray-600 whitespace-nowrap">
-                      Break occurs after
-                    </span>
+                          <span className="text-sm font-semibold text-gray-600 whitespace-nowrap">
+                            Break occurs after
+                          </span>
 
                           <select
                               value={b.afterPeriod}
@@ -262,8 +285,8 @@ export default function PeriodSetupWizard() {
                           </div>
 
                           <span className="text-sm font-semibold text-gray-600 whitespace-nowrap flex-1 text-right">
-                      Label:
-                    </span>
+                            Label:
+                          </span>
 
                           <input
                               type="text"
@@ -288,7 +311,7 @@ export default function PeriodSetupWizard() {
             <button
                 onClick={handleGenerate}
                 disabled={saving || !canGenerate}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl outline-none focus:ring-4 focus:ring-blue-500/30 transition-all flex justify-center items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-3/5 mx-auto rounded-xs py-3.5 bg-brand cursor-pointer text-white font-bold outline-none focus:ring-4 focus:ring-blue-500/30 transition-all flex justify-center items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? (
                   <>
