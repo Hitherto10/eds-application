@@ -89,22 +89,7 @@ export function autoGenerateCode(name = '', currentCodes = []) {
 // Returns all school-wide subjects.
 // =============================================================================
 export async function getSchoolSubjects() {
-  console.log('📡 GET /api/academic/subjects');
-  console.log('📦 Expected response:', {
-    success: true,
-    data: {
-      subjects: [
-        {
-          _id: 'string',
-          name: 'Mathematics',
-          code: 'MTH',
-          category: 'core | elective | optional | religious',
-          description: 'string (optional)',
-        },
-      ],
-      total: 10,
-    },
-  });
+
 
   if (SUBJECTS_BACKEND_LIVE) {
     const { data } = await apiClient.get('/api/academic/subjects');
@@ -132,16 +117,6 @@ export async function getSchoolSubjects() {
 //   { success, message, data: { subjects: [...], total, errors: [] } }
 // =============================================================================
 export async function bulkCreateSubjects(payload) {
-  console.log('📡 POST /api/academic/subjects (bulk)', payload);
-  console.log('📦 Expected response:', {
-    success: true,
-    message: '4 subject(s) created successfully',
-    data: {
-      subjects: [{ _id: 'string', name: 'Mathematics', code: 'MTH', category: 'core' }],
-      total: 4,
-      errors: [],
-    },
-  });
 
   if (SUBJECTS_BACKEND_LIVE) {
     const { data } = await apiClient.post('/api/academic/subjects', payload);
@@ -175,7 +150,6 @@ export async function bulkCreateSubjects(payload) {
 // Response: { success, data: { subject: {...} } }
 // =============================================================================
 export async function createSubject(payload) {
-  console.log('📡 POST /api/academic/subjects (single)', payload);
 
   const res = await bulkCreateSubjects({ subjects: [payload] });
 
@@ -194,12 +168,6 @@ export async function createSubject(payload) {
 // Response: { success, message, data: { updated subject } }
 // =============================================================================
 export async function updateSubject(subjectId, payload) {
-  console.log(`📡 PUT /api/academic/subjects/${subjectId}`, payload);
-  console.log('📦 Expected response:', {
-    success: true,
-    message: 'Subject updated successfully',
-    data: { _id: subjectId, ...payload },
-  });
 
   if (SUBJECTS_BACKEND_LIVE) {
     const { data } = await apiClient.put(`/api/academic/subjects/${subjectId}`, payload);
@@ -224,12 +192,6 @@ export async function updateSubject(subjectId, payload) {
 // =============================================================================
 export async function deleteSubjects(subjectIds) {
   const ids = Array.isArray(subjectIds) ? subjectIds : [subjectIds];
-  console.log('📡 DELETE /api/academic/subjects', { subjectIds: ids });
-  console.log('📦 Expected response:', {
-    success: true,
-    message: `${ids.length} subject(s) deleted successfully`,
-    data: { deleted: ids.length, errors: [] },
-  });
 
   if (SUBJECTS_BACKEND_LIVE) {
     const { data } = await apiClient.delete('/api/academic/subjects', {

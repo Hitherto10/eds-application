@@ -20,7 +20,7 @@ import {
     ChevronLeft,
     ChevronRight,
     CalendarCheck2,
-    CalendarClock,
+    CalendarClock, Settings,
 } from 'lucide-react';
 import { Header } from '../../../dashboardUtilities.jsx';
 import { useAuth } from '../../../../../contexts/AuthContext.jsx';
@@ -40,8 +40,16 @@ import {
 // ─── Nav definition ───────────────────────────────────────────────────────────
 const navItems = [
     { name: 'Dashboard',       icon: LayoutDashboard, link: '/dashboard/admin',               children: [] },
-    { name: 'User Management', icon: Users,            link: '/dashboard/admin/users',          children: [] },
-    { name: 'Students',        icon: GraduationCap,   link: '/dashboard/admin/students',       children: [] },
+    {
+        name: 'User Management',
+        icon: Users,
+        link: '/dashboard/admin/users',
+        children: [
+            { name: 'Teachers', icon: Users, link: '/dashboard/admin/users/teachers' },
+            { name: 'Parents',  icon: Users, link: '/dashboard/admin/users/parents' },
+            { name: 'Students', icon: GraduationCap, link: '/dashboard/admin/users/students' },
+        ]
+    },
     {
         name: 'Fees & Payments',
         icon: Wallet,
@@ -58,7 +66,7 @@ const navItems = [
     { name: 'Events Planner',  icon: CalendarClock,          link: '/dashboard/admin/events-planner', children: [] },
     {
         name: 'Configuration',
-        icon: CalendarDays,
+        icon: Settings,
         link: '/dashboard/admin/config',
         children: [
             { name: 'Subject Setup',     icon: BookOpen,    link: '/dashboard/admin/config/subjects'  },

@@ -52,18 +52,6 @@ const normalizeList = (list) =>
 //   { success, message, data: { arms: [...], total, errors: [] } }
 // =============================================================================
 export async function createArms(payload) {
-  console.log('📡 POST /api/academic/arms', payload);
-  console.log('📦 Expected response:', {
-    success: true,
-    message: '3 arm(s) created successfully',
-    data: {
-      arms: [
-        { _id: 'string', classId: 'string', name: 'A', subjects: [], isActive: true },
-      ],
-      total: 3,
-      errors: [],
-    },
-  });
 
   if (ARMS_BACKEND_LIVE) {
     const { data } = await apiClient.post('/api/academic/arms', payload);
@@ -96,16 +84,6 @@ export async function createArms(payload) {
 // Returns all arms (sections) belonging to the given class.
 // =============================================================================
 export async function getClassArms(classId) {
-  console.log(`📡 GET /api/academic/classes/${classId}/arms`);
-  console.log('📦 Expected response:', {
-    success: true,
-    data: {
-      arms: [
-        { _id: 'string', classId, name: 'A', subjects: [], isActive: true },
-      ],
-      total: 3,
-    },
-  });
 
   if (ARMS_BACKEND_LIVE) {
     const { data } = await apiClient.get(`/api/academic/classes/${classId}/arms`);
@@ -124,12 +102,6 @@ export async function getClassArms(classId) {
 // Response: { success, message, data: { updated arm } }
 // =============================================================================
 export async function updateArm(armId, payload) {
-  console.log(`📡 PUT /api/academic/arms/${armId}`, payload);
-  console.log('📦 Expected response:', {
-    success: true,
-    message: 'Arm updated successfully',
-    data: { _id: armId, ...payload },
-  });
 
   if (ARMS_BACKEND_LIVE) {
     const { data } = await apiClient.put(`/api/academic/arms/${armId}`, payload);
@@ -154,12 +126,6 @@ export async function updateArm(armId, payload) {
 // =============================================================================
 export async function deleteArms(armIds) {
   const ids = Array.isArray(armIds) ? armIds : [armIds];
-  console.log('📡 DELETE /api/academic/arms', { armIds: ids });
-  console.log('📦 Expected response:', {
-    success: true,
-    message: `${ids.length} arm(s) deleted successfully`,
-    data: { deleted: ids.length, errors: [] },
-  });
 
   if (ARMS_BACKEND_LIVE) {
     const { data } = await apiClient.delete('/api/academic/arms', {
@@ -185,14 +151,6 @@ export async function deleteArms(armIds) {
 // Returns subjects currently assigned to this arm.
 // -----------------------------------------------------------------------------
 export async function getArmSubjects(armId) {
-  console.log(`📡 GET /api/academic/arms/${armId}/subjects`);
-  console.log('📦 Expected response:', {
-    success: true,
-    data: {
-      subjects: [{ _id: 'string', name: 'Mathematics', code: 'MTH', category: 'core' }],
-      total: 5,
-    },
-  });
 
   if (ARMS_BACKEND_LIVE) {
     const { data } = await apiClient.get(`/api/academic/arms/${armId}/subjects`);
@@ -213,15 +171,6 @@ export async function getArmSubjects(armId) {
 // -----------------------------------------------------------------------------
 export async function addSubjectsToArm(armId, subjectIds) {
   const ids = Array.isArray(subjectIds) ? subjectIds : [subjectIds];
-  console.log(`📡 POST /api/academic/arms/${armId}/subjects`, { subjectIds: ids });
-  console.log('📦 Expected response:', {
-    success: true,
-    message: `${ids.length} subject(s) added to arm`,
-    data: {
-      added: ids.map((id) => ({ subjectId: id, subjectName: '' })),
-      errors: [],
-    },
-  });
 
   if (ARMS_BACKEND_LIVE) {
     const { data } = await apiClient.post(`/api/academic/arms/${armId}/subjects`, {
@@ -250,12 +199,6 @@ export async function addSubjectsToArm(armId, subjectIds) {
 // -----------------------------------------------------------------------------
 export async function replaceArmSubjects(armId, subjectIds) {
   const ids = Array.isArray(subjectIds) ? subjectIds : [subjectIds];
-  console.log(`📡 POST /api/academic/arms/${armId}/subjects/replace`, { subjectIds: ids });
-  console.log('📦 Expected response:', {
-    success: true,
-    message: 'Arm subjects replaced successfully',
-    data: { armId, armName: '', subjects: ids, errors: [] },
-  });
 
   if (ARMS_BACKEND_LIVE) {
     const { data } = await apiClient.post(
@@ -284,21 +227,7 @@ export async function replaceArmSubjects(armId, subjectIds) {
 // -----------------------------------------------------------------------------
 export async function copySubjectsToArms(sourceArmId, targetArmIds) {
   const ids = Array.isArray(targetArmIds) ? targetArmIds : [targetArmIds];
-  console.log(
-    `📡 POST /api/academic/arms/${sourceArmId}/subjects/copy`,
-    { targetArmIds: ids }
-  );
-  console.log('📦 Expected response:', {
-    success: true,
-    message: `Copied subjects to ${ids.length} arms`,
-    data: {
-      sourceArmId,
-      sourceArmName: '',
-      subjectsCopied: 0,
-      results: ids.map((id) => ({ targetArmId: id, armName: '', subjectsCount: 0 })),
-      errors: [],
-    },
-  });
+
 
   if (ARMS_BACKEND_LIVE) {
     const { data } = await apiClient.post(

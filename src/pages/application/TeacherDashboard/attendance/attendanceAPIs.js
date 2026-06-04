@@ -28,6 +28,8 @@ const PERIOD_SLOTS = [
   { periodNumber: 8, start: '16:00', end: '16:45' },
 ];
 
+export const TIMETABLE_BACKEND_LIVE = true;
+
 // ─── Simple stable ID helpers ─────────────────────────────────────────────────
 function classId(className)  { return `cls_${String(className).replace(/\s+/g, '_').toLowerCase()}`; }
 function subjectId(subjectName) { return `sub_${String(subjectName).replace(/\s+/g, '_').toLowerCase()}`; }

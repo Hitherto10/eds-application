@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getStatusBadgeStyle } from '../../utils/styleHelpers.js';
-import { UserCircle2, X, Search, Plus } from 'lucide-react';
+import { UserCircle2, X, Search, Plus, Loader2 } from 'lucide-react';
 import Input from './Input.jsx';
 import {
     assignClasses,
@@ -21,7 +21,9 @@ import {
     unlinkStudentToParent,
 } from '../../../../auth/authAPIs.js';
 import { formatStatus, getInitials } from '../../utils/formatters.js';
-import { availableSubjects } from '../../../../../utils/imports.jsx';
+import { getSchoolClasses } from '../../services/classAPIs.js';
+import { getClassArms } from '../../services/armAPIs.js';
+import { getSchoolSubjects } from '../../services/subjectAPIs.js';
 
 // Reusable Student Selector Component
 const StudentSelector = ({ selectedStudentIds, onStudentToggle }) => {
@@ -220,7 +222,7 @@ export const AssignClassesModal = ({ onClose, showToast, teacher, schoolId }) =>
     const [selectedClasses, setSelectedClasses] = useState([]);
     const [registryStyle, setRegistryStyle] = useState('');
     const [placementValue, setPlacementValue] = useState('');
-    const [section, setSection] = useState('');
+    // ...existing code... (removed deprecated `section` state)
 
     const classOptions = [
         "Primary 1", "Primary 2", "Primary 3", "Primary 4", "Primary 5", "Primary 6",
@@ -612,245 +614,196 @@ export const StatusChangeModal = ({ onClose, showToast, user, schoolId }) => {
 };
 
 export const InviteTeacherModal = ({ onClose, showToast }) => {
-    const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', message: '' });
-    const [subjects, setSubjects] = useState([]);
-
-    const handleInviteTeacher = async () => {
-        const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-
-        // Validation Checks
-        if (!teacherFormData?.firstName) {
-            showToast("Please input first name");
-            return;
-        }
-
-        if (!teacherFormData?.lastName) {
-            showToast("Please input last name");
-            return;
-        }
-
-        if (!teacherFormData?.subjects || teacherFormData.subjects.length === 0) {
-            showToast("Please add at least 1 subject");
-            return;
-        }
-        if (!teacherFormData?.message) {
-            showToast("Please input an invitation message");
-            return;
-        }
-
-        if (!teacherFormData?.email || !emailPattern.test(teacherFormData.email)) {
-            showToast("Please provide a valid email address.");
-            return;
-        }
-
-        const payload = {
-            email: teacherFormData.email.trim().toLowerCase(),
-            firstName: teacherFormData.firstName.trim(),
-            lastName: teacherFormData.lastName.trim(),
-            subjects: subjects.map(subj => subj.trim()),
-            message: teacherFormData.message.trim(),
-        };
-
-        try {
-            await inviteTeacher(payload);
-            showToast('Teacher invited successfully', 'success');
-            onClose();
-
-        } catch (err) {
-            const message = err?.message || err?.error || 'Registration failed';
-            showToast(message, 'error');
-        }
-    };
-    const [inputValue, setInputValue] = useState('');
-    const [showDropdown, setShowDropdown] = useState(false);
-    const [filteredSubjects, setFilteredSubjects] = useState([]);
-    const inputRef = useRef(null);
+    // ── teacher form fields ───────────────────────────────────────────────────
     const [teacherFormData, setTeacherFormData] = useState({
         firstName: '',
         lastName: '',
         email: '',
-        subjects: [''],
         message: '',
     });
-    // Filter subjects based on input
-    useEffect(() => {
-        if (inputValue.trim()) {
-            const filtered = availableSubjects.filter(subject =>
-                subject.toLowerCase().includes(inputValue.toLowerCase()) &&
-                !subjects.includes(subject)
-            );
-            setFilteredSubjects(filtered);
-        } else {
-            setFilteredSubjects(availableSubjects.filter(s => !subjects.includes(s)));
-        }
-    }, [inputValue, subjects]);
 
-    const handleAddSubject = (subject) => {
-        if (subject.trim() && !subjects.includes(subject)) {
-            setSubjects([...subjects, subject]);
+    // ── subjects sourced from the school's configured subject list ────────────
+    const [schoolSubjects, setSchoolSubjects]   = useState([]);  // [{id, name, code, ...}]
+    const [selectedSubjects, setSelectedSubjects] = useState([]); // [subject names]
+    const [loadingSubjects, setLoadingSubjects] = useState(true);
+
+    // ── search / dropdown state ───────────────────────────────────────────────
+    const [inputValue, setInputValue]   = useState('');
+    const [showDropdown, setShowDropdown] = useState(false);
+    const inputRef = useRef(null);
+
+    // ── fetch configured subjects on mount ────────────────────────────────────
+    useEffect(() => {
+        const fetchSubjects = async () => {
+            try {
+                setLoadingSubjects(true);
+                const res = await getSchoolSubjects();
+                setSchoolSubjects(res.data?.subjects ?? []);
+            } catch (err) {
+                console.error('[InviteTeacherModal] Failed to load subjects:', err);
+                showToast('Could not load school subjects.', 'error');
+            } finally {
+                setLoadingSubjects(false);
+            }
+        };
+        fetchSubjects();
+    }, []);
+
+    // ── filtered dropdown options ─────────────────────────────────────────────
+    const filteredSubjects = schoolSubjects.filter(s =>
+        !selectedSubjects.includes(s.name) &&
+        s.name.toLowerCase().includes(inputValue.toLowerCase())
+    );
+
+    // ── subject selection helpers ─────────────────────────────────────────────
+    const handleAddSubject = (subjectName) => {
+        if (subjectName.trim() && !selectedSubjects.includes(subjectName)) {
+            setSelectedSubjects(prev => [...prev, subjectName]);
             setInputValue('');
             setShowDropdown(false);
             inputRef.current?.focus();
         }
-
     };
 
-    const handleRemoveSubject = (subjectToRemove) => {
-        setSubjects(subjects.filter(subject => subject !== subjectToRemove));
-    };
+    const handleRemoveSubject = (name) =>
+        setSelectedSubjects(prev => prev.filter(s => s !== name));
 
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            handleAddSubject(inputValue);
+    const handleKeyDown = (e) => { if (e.key === 'Enter') e.preventDefault(); };
+
+    // ── submit ────────────────────────────────────────────────────────────────
+    const handleInviteTeacher = async () => {
+        const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!teacherFormData.firstName)  { showToast('Please input first name');                      return; }
+        if (!teacherFormData.lastName)   { showToast('Please input last name');                       return; }
+        if (selectedSubjects.length === 0) { showToast('Please add at least 1 subject');              return; }
+        if (!teacherFormData.message)    { showToast('Please input an invitation message');           return; }
+        if (!teacherFormData.email || !emailPattern.test(teacherFormData.email)) {
+            showToast('Please provide a valid email address.');
+            return;
+        }
+        const payload = {
+            email:     teacherFormData.email.trim().toLowerCase(),
+            firstName: teacherFormData.firstName.trim(),
+            lastName:  teacherFormData.lastName.trim(),
+            subjects:  selectedSubjects,
+            message:   teacherFormData.message.trim(),
+        };
+        try {
+            await inviteTeacher(payload);
+            showToast('Teacher invited successfully', 'success');
+            onClose();
+        } catch (err) {
+            showToast(err?.message || 'Registration failed', 'error');
         }
     };
 
-    const handleInputFocus = () => {
-        setShowDropdown(true);
-    };
-
-    const handleInputBlur = () => {
-        // Delay closing dropdown to allow dropdown click to register
-        setTimeout(() => setShowDropdown(false), 200);
-    };
-
-
-
-    const [studentFormData, setStudentFormData] = useState({
-        firstName: "",
-        lastName: "",
-        email: "",
-//   "teacherIds": ["694fe6e4f6a5eff53cd7f8eb"],
-        class: "",
-        section: "",
-        rollNumber: "",
-        grade: "",
-        dateOfBirth: "",
-        gender: "",
-        address: "",
-        phone: ""
-    });
-
-    // Subject input logic... (simplified)
     return (
         <Modal title="Invite Teacher" onClose={onClose} onSubmit={handleInviteTeacher}>
-            {/* Form */}
-            <div className="space-y-5">
-                {/* Names */}
-                <div className="grid grid-cols-2 gap-4">
-                    <Input
-                        label="First Name"
-                        value={teacherFormData.firstName}
-                        onChange={(e) => setTeacherFormData({...teacherFormData, firstName: e.target.value})}
-                        placeholder="e.g. John"
-                        required
-                    />
-                    <Input
-                        label="Last Name"
-                        value={teacherFormData.lastName}
-                        onChange={(e) => setTeacherFormData({...teacherFormData, lastName: e.target.value})}
-                        placeholder="e.g. Doe"
-                        required
-                    />
+            {loadingSubjects ? (
+                // ── Loading skeleton while subjects are fetched ───────────────
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                    <Loader2 size={28} className="animate-spin text-blue-500" />
+                    <p className="text-sm text-gray-400">Loading school subjects…</p>
                 </div>
+            ) : (
+                <div className="space-y-5">
+                    {/* Names */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <Input
+                            label="First Name"
+                            value={teacherFormData.firstName}
+                            onChange={(e) => setTeacherFormData({ ...teacherFormData, firstName: e.target.value })}
+                            placeholder="e.g. John"
+                            required
+                        />
+                        <Input
+                            label="Last Name"
+                            value={teacherFormData.lastName}
+                            onChange={(e) => setTeacherFormData({ ...teacherFormData, lastName: e.target.value })}
+                            placeholder="e.g. Doe"
+                            required
+                        />
+                    </div>
 
-                <Input
-                    label="Email Address"
-                    type="email"
-                    value={teacherFormData.email}
-                    onChange={(e) => setTeacherFormData({...teacherFormData, email: e.target.value})}
-                    placeholder="teacher@school.com"
-                />
+                    <Input
+                        label="Email Address"
+                        type="email"
+                        value={teacherFormData.email}
+                        onChange={(e) => setTeacherFormData({ ...teacherFormData, email: e.target.value })}
+                        placeholder="teacher@school.com"
+                    />
 
-                {/* Subjects */}
-                <div>
+                    {/* Subjects — from school configuration only */}
                     <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">
-                            Subjects
-                        </label>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Subjects</label>
 
-                        {/* Selected Subjects */}
-                        <div className="flex flex-wrap gap-2 mb-3">
-                            {subjects.map((subject) => (
-                                <div
-                                    key={subject}
-                                    className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-700 text-sm px-3 py-1 rounded-lg"
-                                >
-                                    <span>{subject}</span>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleRemoveSubject(subject)}
-                                        className="hover:text-blue-900 transition-colors"
-                                        aria-label={`Remove ${subject}`}
-                                    >
-                                        <X size={16} />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Input and Dropdown Container */}
-                        <div className="relative">
-                            <input
-                                ref={inputRef}
-                                type="text"
-                                placeholder="Add subject and press Enter"
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                onFocus={handleInputFocus}
-                                onBlur={handleInputBlur}
-                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                            />
-
-                            {/* Dropdown List */}
-                            {showDropdown && filteredSubjects.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-sm z-10">
-                                    {filteredSubjects.map((subject) => (
-                                        <button
-                                            key={subject}
-                                            type="button"
-                                            onClick={() => {
-                                                handleAddSubject(subject);
-
-                                                if (inputRef.current) {
-                                                    inputRef.current.blur();
-                                                }
-                                            }}
-                                            className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0 text-gray-700"
-                                        >
-                                            {subject}
+                        {/* Selected subject pills */}
+                        {selectedSubjects.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-3">
+                                {selectedSubjects.map(name => (
+                                    <div key={name} className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-700 text-sm px-3 py-1 rounded-lg">
+                                        <span>{name}</span>
+                                        <button type="button" onClick={() => handleRemoveSubject(name)} className="hover:text-blue-900 transition-colors" aria-label={`Remove ${name}`}>
+                                            <X size={14} />
                                         </button>
-                                    ))}
-                                </div>
-                            )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
 
-                            {/* No results message */}
-                            {showDropdown && inputValue.trim() && filteredSubjects.length === 0 && (
-                                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-sm z-10 p-3">
-                                    <p className="text-xs text-gray-500">
-                                        No matching subjects. Press Enter to add "{inputValue}"
-                                    </p>
-                                </div>
-                            )}
-                        </div>
+                        {schoolSubjects.length === 0 ? (
+                            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                                No subjects have been configured for this school yet. Please add subjects in the school configuration first.
+                            </p>
+                        ) : (
+                            <div className="relative">
+                                <input
+                                    ref={inputRef}
+                                    type="text"
+                                    placeholder="Search and select a subject…"
+                                    value={inputValue}
+                                    onChange={(e) => { setInputValue(e.target.value); setShowDropdown(true); }}
+                                    onKeyDown={handleKeyDown}
+                                    onFocus={() => setShowDropdown(true)}
+                                    onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                />
+                                {showDropdown && filteredSubjects.length > 0 && (
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-md z-10 max-h-48 overflow-y-auto">
+                                        {filteredSubjects.map(s => (
+                                            <button
+                                                key={s.id}
+                                                type="button"
+                                                onClick={() => { handleAddSubject(s.name); inputRef.current?.blur(); }}
+                                                className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0 text-gray-700 flex items-center justify-between"
+                                            >
+                                                <span>{s.name}</span>
+                                                {s.code && <span className="text-[10px] text-gray-400 uppercase">{s.code}</span>}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                                {showDropdown && inputValue.trim() && filteredSubjects.length === 0 && (
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-sm z-10 p-3">
+                                        <p className="text-xs text-gray-500">No matching subjects found. Only configured school subjects can be assigned.</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Invitation Message */}
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Invitation Message</label>
+                        <textarea
+                            value={teacherFormData.message}
+                            onChange={(e) => setTeacherFormData({ ...teacherFormData, message: e.target.value })}
+                            placeholder="Write a brief invitation message..."
+                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] resize-none"
+                        />
                     </div>
                 </div>
-
-                {/* Invitation Message */}
-                <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">
-                        Invitation Message
-                    </label>
-                    <textarea
-                        value={teacherFormData.message}
-                        onChange={(e) => setTeacherFormData({...teacherFormData, message: e.target.value})}
-                        placeholder="Write a brief invitation message..."
-                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] resize-none"
-                    />
-                </div>
-            </div>
+            )}
         </Modal>
     );
 };
@@ -1073,201 +1026,212 @@ export const InviteParentModal = ({ onClose, showToast }) => {
     );
 };
 
-// TODO: add the option for users to see teachers and theur subjects so they add to the student
 export const CreateStudentModal = ({ onClose, showToast }) => {
-    const [registryStyle, setRegistryStyle] = useState(''); // 'class' or 'grade'
+    // ── form fields ───────────────────────────────────────────────────────────
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
         email: '',
         phone: '',
-        class: '', // Holds the specific Grade or Class selected
-        section: '',
-        // rollNumber: '',
+        class: '',       // classId of the selected class
+        className: '',   // display name kept for payload
+        armId: '',       // selected arm/section id
+        armName: '',     // arm name for display
         dateOfBirth: '',
         gender: '',
-        address: ''
+        address: '',
     });
 
-    const classOptions = [
-        "Primary 1", "Primary 2", "Primary 3", "Primary 4", "Primary 5", "Primary 6",
-        "JSS1", "JSS2", "JSS3", "SS1", "SS2", "SS3"
-    ];
+    // ── backend data ──────────────────────────────────────────────────────────
+    const [classes, setClasses]     = useState([]);  // [{id, name}]
+    const [arms, setArms]           = useState([]);  // [{id, name, classId}]
+    const [loadingInit, setLoadingInit] = useState(true); // initial classes fetch
+    const [loadingArms, setLoadingArms] = useState(false); // arms fetch per class
 
-    const gradeOptions = Array.from({ length: 12 }, (_, i) => `Grade ${i + 1}`);
+    // ── fetch classes on mount ────────────────────────────────────────────────
+    useEffect(() => {
+        const fetchClasses = async () => {
+            try {
+                setLoadingInit(true);
+                const res = await getSchoolClasses();
+                setClasses(res.data?.classes ?? []);
+            } catch (err) {
+                console.error('[CreateStudentModal] Failed to load classes:', err);
+                showToast('Could not load school classes.', 'error');
+            } finally {
+                setLoadingInit(false);
+            }
+        };
+        fetchClasses();
+    }, []);
 
+    // ── fetch arms when a class is selected ───────────────────────────────────
+    const handleClassChange = async (classId) => {
+        const cls = classes.find(c => c.id === classId);
+        setFormData(prev => ({ ...prev, class: classId, className: cls?.name ?? '', armId: '', armName: '' }));
+        setArms([]);
+        if (!classId) return;
+        try {
+            setLoadingArms(true);
+            const res = await getClassArms(classId);
+            setArms(res.data?.arms ?? []);
+        } catch (err) {
+            console.error('[CreateStudentModal] Failed to load arms:', err);
+            showToast('Could not load class arms.', 'error');
+        } finally {
+            setLoadingArms(false);
+        }
+    };
+
+    // ── submit ────────────────────────────────────────────────────────────────
     const handleCreate = async () => {
-        // Strict validation for all fields
-        const requiredFields = [
-            'firstName', 'lastName', 'email', 'phone',
-            'class',
-            // 'rollNumber',
-            'dateOfBirth',
-            'gender', 'address'
-        ];
-
-        // Section is only mandatory if using Class Style
-        if (registryStyle === 'class') requiredFields.push('section');
+        const requiredFields = ['firstName', 'lastName', 'email', 'phone', 'class', 'dateOfBirth', 'gender', 'address'];
+        // Arm (section) is required only when the class has configured arms
+        if (arms.length > 0) requiredFields.push('armId');
 
         const isFormIncomplete = requiredFields.some(field => !formData[field]?.trim());
-
-        if (!registryStyle || isFormIncomplete) {
-            showToast("All registry fields are mandatory.", 'error');
+        if (isFormIncomplete) {
+            showToast('All fields are required.', 'error');
             return;
         }
-
         try {
-            await createStudent({
-                ...formData,
-                registryStyle // Including the style used for the school's records
-            });
-            showToast("Student profile successfully initialized.", "success");
+            // Build payload using backend-expected keys. The backend requires classId and armId
+            // (or null) rather than repeating display names. Only include the selected ids;
+            // if none selected, send null values as requested.
+            const payload = {
+                firstName:   (formData.firstName || '').trim(),
+                lastName:    (formData.lastName || '').trim(),
+                email:       (formData.email || '').trim(),
+                phone:       (formData.phone || '').trim(),
+                classId:     formData.class ? formData.class : null,
+                armId:       formData.armId ? formData.armId : null,
+                dateOfBirth: formData.dateOfBirth,
+                gender:      formData.gender,
+                address:     (formData.address || '').trim(),
+            };
+
+            await createStudent(payload);
+            showToast('Student profile successfully initialized.', 'success');
             onClose();
         } catch (error) {
-            showToast(error.message || "Registry Error: Submission failed.", "error");
+            showToast(error.message || 'Registry Error: Submission failed.', 'error');
         }
     };
 
     return (
         <Modal title="Initialize Student Record" onClose={onClose} onSubmit={handleCreate}>
-            <div className="space-y-8 py-4">
+            {loadingInit ? (
+                // ── Loading skeleton while classes are fetched ───────────────
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                    <Loader2 size={28} className="animate-spin text-blue-500" />
+                    <p className="text-sm text-gray-400">Loading school configuration…</p>
+                </div>
+            ) : (
+                <div className="space-y-8 py-4">
 
-                {/* Section 1: Personal Identification */}
-                <div className="space-y-4">
-                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] border-b border-slate-50 pb-2">
-                        Personal Identification
-                    </h3>
+                    {/* Section 1: Personal Identification */}
+                    <div className="space-y-4">
+                        <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] border-b border-slate-50 pb-2">
+                            Personal Identification
+                        </h3>
+                        <div className="grid grid-cols-2 gap-6">
+                            <Input label="First Name" type="text" value={formData.firstName}
+                                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} />
+                            <Input label="Last Name" type="text" value={formData.lastName}
+                                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} />
+                        </div>
+                    </div>
+
+                    {/* Section 2: Contact */}
                     <div className="grid grid-cols-2 gap-6">
-                        <div className="space-y-1.5">
-                            <Input
-                                label="First Name"
-                                type="name"
-                                value={formData.firstName}
-                                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                            />
-                        </div>
-                        <div className="space-y-1.5">
-                            <Input
-                                label="Last Name"
-                                type="name"
-                                value={formData.lastName}
-                                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                            />
-                        </div>
+                        <Input label="Communication Email" type="email" value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                        <Input label="Contact Number" type="tel" value={formData.phone}
+                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
                     </div>
-                </div>
 
-                {/* Section 2: Contact & Bio-Data */}
-                <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-1.5">
-                        <Input
-                            label="Communication Email"
-                            type="email"
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        />
-                    </div>
-                    <div className="space-y-1.5">
-                        <Input
-                            label="Contact Number"
-                            type="email"
-                            value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        />
-                    </div>
-                </div>
-
-                {/* Section 4: Bio Data */}
-                <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-1.5">
-                        <Input
-                            label="Date of Birth"
-                            type="date"
-                            value={formData.dateOfBirth}
-                            onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-                        />
-                    </div>
-                    <div className="space-y-1.5">
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Gender</label>
-                        <select
-                            value={formData.gender}
-                            onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="">Select Gender</option>
-                            <option value="male">Male</option>
-                            <option value="female">Female</option>
-                        </select>
-                    </div>
-                </div>
-
-                {/* Section 3: Academic Placement (Dynamic Logic) */}
-                <div className="space-y-4">
-                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] border-b border-slate-50 pb-2">
-                        Academic Placement
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* 1. Choose Style */}
+                    {/* Section 3: Bio Data */}
+                    <div className="grid grid-cols-2 gap-6">
+                        <Input label="Date of Birth" type="date" value={formData.dateOfBirth}
+                            onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })} />
                         <div className="space-y-1.5">
-                            <label className="block text-xs font-medium text-gray-500 mb-1">Registry Style</label>
-                            <select
-                                value={registryStyle}
-                                onChange={(e) => {
-                                    setRegistryStyle(e.target.value);
-                                    setFormData({ ...formData, class: '', section: '' });
-                                }}
-                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="">Select Style</option>
-                                <option value="class">Class (Primary 1 - SS3)</option>
-                                <option value="grade">Grade (Grade 1 - Grade 12)</option>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Gender</label>
+                            <select value={formData.gender}
+                                onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Select Gender</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
                             </select>
                         </div>
+                    </div>
 
-                        {/* 2. Choose Level (Depends on Style) */}
-                        <div className={`space-y-1.5 ${registryStyle === 'grade' ? 'col-span-1' : ''}`}>
-                            <label className="block text-xs font-medium text-gray-500 mb-1">
-                                {registryStyle === 'grade' ? 'Level' : 'Class'}
-                            </label>
-                            <select
-                                disabled={!registryStyle}
-                                value={formData.class}
-                                onChange={(e) => setFormData({ ...formData, class: e.target.value })}
-                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="">Select Level</option>
-                                {registryStyle === 'class' && classOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                {registryStyle === 'grade' && gradeOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                            </select>
-                        </div>
+                    {/* Section 4: Academic Placement — classes & arms from backend */}
+                    <div className="space-y-4">
+                        <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] border-b border-slate-50 pb-2">
+                            Academic Placement
+                        </h3>
 
-                        {/* 3. Section (Only for Class Style) */}
-                        {registryStyle === 'class' && (
-                            <div className="space-y-1.5">
-                                <label className="block text-xs font-medium text-gray-500 mb-1">Section</label>
-                                <input
-                                    value={formData.section}
-                                    onChange={(e) => setFormData({ ...formData, section: e.target.value })}
-                                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="e.g. A"
-                                />
+                        {classes.length === 0 ? (
+                            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                                No classes have been configured for this school yet. Please set them up in the school configuration first.
+                            </p>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Class selector */}
+                                <div className="space-y-1.5">
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Class</label>
+                                    <select
+                                        value={formData.class}
+                                        onChange={(e) => handleClassChange(e.target.value)}
+                                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="">Select class…</option>
+                                        {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
+                                </div>
 
+                                {/* Arm selector — appears once a class is chosen */}
+                                {formData.class && (
+                                    <div className="space-y-1.5">
+                                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                                            Arm / Section
+                                            {loadingArms && <Loader2 size={12} className="inline ml-2 animate-spin text-blue-400" />}
+                                        </label>
+                                        {loadingArms ? (
+                                            <div className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-400">Loading arms…</div>
+                                        ) : arms.length === 0 ? (
+                                            <div className="w-full px-3 py-2 text-sm border border-dashed border-gray-200 rounded-lg text-gray-400 italic">
+                                                No arms configured for this class
+                                            </div>
+                                        ) : (
+                                            <select
+                                                value={formData.armId}
+                                                onChange={(e) => {
+                                                    const arm = arms.find(a => a.id === e.target.value);
+                                                    setFormData(prev => ({ ...prev, armId: e.target.value, armName: arm?.name ?? '' }));
+                                                }}
+                                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                <option value="">Select arm…</option>
+                                                {arms.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                                            </select>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
-                </div>
 
-
-                <div className="space-y-1.5">
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Full Residential Address</label>
-                    <textarea
-                        rows={2}
-                        value={formData.address}
-                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    {/* Address */}
+                    <div className="space-y-1.5">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Full Residential Address</label>
+                        <textarea rows={2} value={formData.address}
+                            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
                 </div>
-            </div>
+            )}
         </Modal>
     );
 };

@@ -16,6 +16,9 @@ import apiClient from '../../../../utils/axiosConfig.js';
  *  │                        PAYMENT_FAILED                                    │
  *  │  • Modular layers    — Config · Billing · Payment · Ledger ·             │
  *  │                        Reconciliation · Reporting                       │
+ *  │  • 2-phase lifecycle — draft → published (no intermediate review or      │
+ *  │                        locked states; publish is visible to parents      │
+ *  │                        and students immediately)                         │
  *  └──────────────────────────────────────────────────────────────────────────┘
  *
  *  MONEY: all amounts are stored & transmitted in KOBO (integer). Never floats.
@@ -59,12 +62,19 @@ export const FEE_TYPES = [
   { id: 'miscellaneous', label: 'Miscellaneous',   optional: true  },
 ];
 
-/** Fee structure lifecycle (draft → review → published → locked). */
+/**
+ * Fee structure lifecycle — 2 phases only: draft → published.
+ *
+ * • draft     — created, editable, not visible to parents/students.
+ * • published — visible on parent and student dashboards; no further edits allowed.
+ *
+ * A published structure can be reverted to draft by an admin if corrections are needed
+ * (revert_draft action on the transition endpoint), but this is not surfaced in the UI
+ * to prevent accidental changes after parents have seen the fee structure.
+ */
 export const STRUCTURE_STATUS = {
-  draft:     { label: 'Draft',     style: 'bg-gray-100 text-gray-600 border border-gray-200',     next: 'review'    },
-  review:    { label: 'In Review', style: 'bg-amber-50 text-amber-700 border border-amber-200',   next: 'published' },
-  published: { label: 'Published', style: 'bg-green-50 text-green-700 border border-green-200',    next: 'locked'    },
-  locked:    { label: 'Locked',    style: 'bg-blue-50 text-blue-700 border border-blue-200',       next: null        },
+  draft:     { label: 'Draft',     style: 'bg-gray-100 text-gray-600 border border-gray-200',     next: 'published' },
+  published: { label: 'Published', style: 'bg-green-50 text-green-700 border border-green-200',    next: null        },
 };
 
 /** Invoice (bill) lifecycle. */
@@ -253,8 +263,11 @@ export async function createFeeStructure(payload) {
 
 /**
  * PUT /api/fees/structures/:id
- * Editable only while status ∈ {draft, review}. Locked/published → 409.
+ * Editable only while status = 'draft'. Attempting to edit a published structure
+ * should be rejected by the backend with a 409 Conflict response.
  * Each successful edit increments `version` (version control).
+ *
+ * Backend rule: reject (409) if status is 'published'.
  */
 export async function updateFeeStructure(structureId, payload) {
   console.log(`📡 PUT /api/fees/structures/${structureId}`, payload);
@@ -321,15 +334,29 @@ export async function cloneFeeStructure(structureId, payload) {
 
 /**
  * POST /api/fees/structures/:id/transition
- * Drives the lifecycle: draft → review → published → locked.
- * Payload: { action: 'submit_review' | 'publish' | 'lock' | 'revert_draft' }
+ * Drives the 2-phase lifecycle: draft → published.
  *
- * On 'publish' the backend MUST emit FEE_STRUCTURE_PUBLISHED and lock further
- * structural edits. 'lock' freezes everything (audit integrity).
+ * Supported actions:
+ * • 'publish'       — moves draft → published. Backend MUST:
+ *                     1. Emit FEE_STRUCTURE_PUBLISHED.
+ *                     2. Prevent further structural edits.
+ *                     3. Optionally auto-generate invoices server-side via the
+ *                        FEE_STRUCTURE_PUBLISHED event handler (the frontend
+ *                        also calls generateInvoicesForClass immediately after
+ *                        this endpoint returns, so idempotency is essential).
+ *                     Parents and students see the fee structure on their
+ *                     dashboards as soon as this transitions to 'published'.
+ * • 'revert_draft'  — emergency revert published → draft (admin-only; use with
+ *                     care; not exposed in the UI to avoid confusion after
+ *                     parents have already seen it).
+ *
+ * Payload: { action: 'publish' | 'revert_draft' }
+ * Response: { success, message, data: { feeStructure: { id, status } } }
  */
 export async function transitionFeeStructure(structureId, action) {
   console.log(`📡 POST /api/fees/structures/${structureId}/transition`, { action });
-  console.log('📦 Emits: FEE_STRUCTURE_PUBLISHED (on publish).');
+  console.log('📦 Valid actions: publish | revert_draft');
+  console.log('📦 Emits: FEE_STRUCTURE_PUBLISHED when action = "publish".');
 
   if (FEE_BACKEND_LIVE) {
     const { data } = await apiClient.post(`/api/fees/structures/${structureId}/transition`, { action });
@@ -338,12 +365,23 @@ export async function transitionFeeStructure(structureId, action) {
   }
 
   await delay(500);
-  const map = { submit_review: 'review', publish: 'published', lock: 'locked', revert_draft: 'draft' };
-  const nextStatus = map[action] || 'draft';
+  // Only two valid transitions in the 2-phase lifecycle.
+  const actionToStatus = { publish: 'published', revert_draft: 'draft' };
+  const nextStatus = actionToStatus[action];
+
+  if (!nextStatus) {
+    return {
+      success: false,
+      message: `Unknown transition action "${action}". Valid actions: publish, revert_draft.`,
+    };
+  }
+
   return {
     success: true,
-    message: `Fee structure moved to "${nextStatus}"`,
-    data: { feeStructure: { id: structureId, status: nextStatus, isLocked: nextStatus === 'locked' } },
+    message: action === 'publish'
+      ? 'Fee structure published — parents and students can now see it on their dashboards.'
+      : 'Fee structure reverted to draft.',
+    data: { feeStructure: { id: structureId, status: nextStatus } },
   };
 }
 
@@ -438,9 +476,15 @@ export async function createInvoices(payload) {
 }
 
 /**
- * POST /api/fees/invoices/generate   (ROBUST EXTENSION)
- * One-shot bill generation for an entire class/arm from a published structure.
- * Backend resolves the student roster server-side (no need to send 500 IDs).
+ * POST /api/fees/invoices/generate
+ * Bulk invoice generation for an entire class from a published fee structure.
+ * Backend resolves the student roster server-side — no need to send individual IDs.
+ *
+ * This is called AUTOMATICALLY by the frontend immediately after a fee structure
+ * is published (see FeeStructuresTab → handleConfirmPublish). It is also safe to
+ * call from the FEE_STRUCTURE_PUBLISHED backend event handler for server-side
+ * generation. The endpoint MUST be idempotent — students already billed should
+ * be skipped rather than double-billed.
  *
  * Payload: { feeStructureId, classId, armId?, includeOptional?: string[] }
  * Response: { success, message, data: { generated, skipped, invoices:[] } }

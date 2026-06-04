@@ -1,8 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useFee } from '../FeeContext.jsx';
 import {
-  generateInvoicesForClass,
-  getInvoices,
   voidInvoice,
   formatNaira,
   INVOICE_STATUS,
@@ -11,7 +9,6 @@ import RecordPaymentModal from './RecordPaymentModal.jsx';
 import StudentLedgerModal from './StudentLedgerModal.jsx';
 import {
   Search,
-  Zap,
   Loader2,
   ReceiptText,
   Wallet,
@@ -20,56 +17,20 @@ import {
 } from 'lucide-react';
 
 const SummaryCard = ({ label, value, tone }) => (
-  <div className={`flex-1 min-w-[160px] p-4 rounded-xl border ${tone}`}>
+  <div className={`flex-1 min-w-40 p-4 rounded-xl border ${tone}`}>
     <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{label}</p>
     <p className="text-xl font-black text-gray-900 mt-1">{value}</p>
   </div>
 );
 
 export default function FeeInvoicesTab({ showToast }) {
-  const { state, dispatch, billableStructures } = useFee();
+  const { state, dispatch } = useFee();
 
-  const [genStructureId, setGenStructureId] = useState('');
-  const [generating, setGenerating]         = useState(false);
-  const [statusFilter, setStatusFilter]     = useState('all');
-  const [classFilter, setClassFilter]       = useState('all');
-  const [search, setSearch]                 = useState('');
-  const [payInvoice, setPayInvoice]         = useState(null);
-  const [ledgerStudent, setLedgerStudent]   = useState(null);
-
-  const handleGenerate = async () => {
-    if (!genStructureId) return showToast('Select a published structure', 'error');
-    const structure = billableStructures.find(s => s.id === genStructureId);
-    setGenerating(true);
-    try {
-      const res = await generateInvoicesForClass({
-        feeStructureId: genStructureId,
-        classId: structure?.classId,
-      });
-      if (res.success) {
-        // Refresh invoice list from source of truth
-        const scope = {
-          academicYearId: state.selectedYear?.id,
-          ...(state.selectedTerm ? { termId: state.selectedTerm.id } : {}),
-        };
-        const list = await getInvoices(scope);
-        if (list.success) {
-          dispatch({
-            type: 'SET_INVOICES',
-            payload: { invoices: list.data.invoices, summary: list.data.summary },
-          });
-        }
-        showToast(
-          `Generated ${res.data.generated} invoice(s)` +
-          (res.data.skipped ? `, ${res.data.skipped} skipped (already billed)` : '')
-        );
-      }
-    } catch (e) {
-      showToast(e.message || 'Generation failed', 'error');
-    } finally {
-      setGenerating(false);
-    }
-  };
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [classFilter, setClassFilter]   = useState('all');
+  const [search, setSearch]             = useState('');
+  const [payInvoice, setPayInvoice]     = useState(null);
+  const [ledgerStudent, setLedgerStudent] = useState(null);
 
   const handleVoid = async (inv) => {
     const reason = prompt(`Reason for voiding invoice for ${inv.studentName || inv.studentId}?`);
@@ -101,48 +62,14 @@ export default function FeeInvoicesTab({ showToast }) {
 
   return (
     <div className="space-y-5">
-      {/* Generate panel */}
-      <div className="bg-white border border-gray-200 rounded-xl p-5">
-        <h3 className="text-sm font-bold text-gray-800 mb-1">Generate Invoices</h3>
-        <p className="text-xs text-gray-500 mb-4">
-          Bulk-bill an entire class from a <strong>published</strong> fee structure. Idempotent —
-          students already billed are skipped.
-        </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <select
-            value={genStructureId}
-            onChange={e => setGenStructureId(e.target.value)}
-            className="flex-1 min-w-[240px] px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 outline-none"
-          >
-            <option value="">Select published structure…</option>
-            {billableStructures.map(s => (
-              <option key={s.id} value={s.id}>
-                {s.name} — {s.className} ({formatNaira(s.totalAmount)})
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={handleGenerate}
-            disabled={generating || !genStructureId}
-            className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-          >
-            {generating ? <Loader2 size={15} className="animate-spin" /> : <Zap size={15} />}
-            Generate
-          </button>
-        </div>
-        {billableStructures.length === 0 && (
-          <p className="text-xs text-amber-600 mt-3">
-            No published structures yet — publish one in the “Fee Structures” tab first.
-          </p>
-        )}
-      </div>
 
       {/* Summary */}
       <div className="flex flex-wrap gap-3">
-        <SummaryCard label="Total Billed"      value={formatNaira(sm.totalBilled)}      tone="bg-blue-50/50 border-blue-100" />
-        <SummaryCard label="Total Collected"   value={formatNaira(sm.totalPaid)}        tone="bg-green-50/50 border-green-100" />
-        <SummaryCard label="Total Outstanding" value={formatNaira(sm.totalOutstanding)} tone="bg-amber-50/50 border-amber-100" />
+        <SummaryCard label="Total Billed"      value={formatNaira(sm.totalBilled)}      tone="bg-[#E9F2FC] " />
+        <SummaryCard label="Total Collected"   value={formatNaira(sm.totalPaid)}        tone="bg-[#FBFADE]  " />
+        <SummaryCard label="Total Outstanding" value={formatNaira(sm.totalOutstanding)} tone="bg-[#EAFBF0] " />
       </div>
+
 
       {/* List */}
       <div className="bg-white border border-gray-200 rounded-xl">
@@ -183,7 +110,9 @@ export default function FeeInvoicesTab({ showToast }) {
           <div className="text-center py-16">
             <ReceiptText size={36} className="mx-auto text-gray-200 mb-3" />
             <p className="text-sm font-semibold text-gray-500">No invoices yet</p>
-            <p className="text-xs text-gray-400 mt-1">Generate invoices from a published structure above.</p>
+            <p className="text-xs text-gray-400 mt-1">
+              Invoices are generated automatically when you publish a fee structure.
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">

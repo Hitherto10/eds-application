@@ -20,8 +20,9 @@ const RegisterSchool       = lazy(() => import("./pages/auth/RegisterSchool.jsx"
 
 // Admin Pages
 const DashboardPage       = lazy(() => import("./pages/application/AdminDashboard/pages/DashboardPage.jsx"));
-const UserManagementPage  = lazy(() => import("./pages/application/AdminDashboard/pages/UserManagementPage.jsx"));
-const Students            = lazy(() => import("./pages/application/AdminDashboard/pages/StudentManagement.jsx"));
+const TeacherManagement   = lazy(() => import("./pages/application/AdminDashboard/pages/TeacherManagement.jsx"));
+const ParentManagement    = lazy(() => import("./pages/application/AdminDashboard/pages/ParentManagement.jsx"));
+const StudentManagement   = lazy(() => import("./pages/application/AdminDashboard/pages/StudentManagement.jsx"));
 const SchoolProfilePage   = lazy(() => import("./pages/application/AdminDashboard/pages/SchoolProfilePage.jsx"));
 const AdminProfilePage    = lazy(() => import("./pages/application/AdminDashboard/pages/AdminProfilePage.jsx"));
 const SubjectsPage        = lazy(() => import("./pages/application/AdminDashboard/pages/config/SubjectsPage.jsx"));
@@ -100,9 +101,13 @@ function AppRoutes() {
                 <Route path="/dashboard/admin/profile" element={<ProtectedRoute requiredRole="admin"><AdminProfilePage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/events-planner" element={<ProtectedRoute requiredRole="admin"><EventPage />
                 </ProtectedRoute>} />
-                <Route path="/dashboard/admin/users" element={<ProtectedRoute requiredRole="admin"><UserManagementPage /></ProtectedRoute>} />
-                <Route path="/dashboard/admin/users/parents" element={<ProtectedRoute requiredRole="admin"><UserManagementPage /></ProtectedRoute>} />
-                <Route path="/dashboard/admin/students" element={<ProtectedRoute requiredRole="admin"><Students /></ProtectedRoute>} />
+                
+                {/* Users sub-routes */}
+                <Route path="/dashboard/admin/users" element={<ProtectedRoute requiredRole="admin"><Navigate to="/dashboard/admin/users/teachers" replace /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/users/teachers" element={<ProtectedRoute requiredRole="admin"><TeacherManagement /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/users/parents" element={<ProtectedRoute requiredRole="admin"><ParentManagement /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/users/students" element={<ProtectedRoute requiredRole="admin"><StudentManagement /></ProtectedRoute>} />
+                
                 {/* Fees sub-routes — each is its own page */}
                 <Route path="/dashboard/admin/fees" element={<ProtectedRoute requiredRole="admin"><Navigate to="/dashboard/admin/fees/overview" replace /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/fees/overview"    element={<ProtectedRoute requiredRole="admin"><FeeOverviewPage /></ProtectedRoute>} />
@@ -110,7 +115,6 @@ function AppRoutes() {
                 <Route path="/dashboard/admin/fees/invoices"    element={<ProtectedRoute requiredRole="admin"><FeeInvoicesPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/fees/payments"    element={<ProtectedRoute requiredRole="admin"><FeePaymentsPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/fees/reports"     element={<ProtectedRoute requiredRole="admin"><FeeReportsPage /></ProtectedRoute>} />
-                <Route path="/dashboard/admin/users/teachers" element={<ProtectedRoute requiredRole="admin"><UserManagementPage /></ProtectedRoute>} />
 
                 {/* Config sub-routes — each is its own page */}
                 <Route path="/dashboard/admin/config" element={<ProtectedRoute requiredRole="admin"><Navigate to="/dashboard/admin/config/subjects" replace /></ProtectedRoute>} />
@@ -132,6 +136,9 @@ function AppRoutes() {
                 <Route path="/dashboard/teacher/students/:class/:subject" element={<ProtectedRoute requiredRole="teacher"><ClassStudents /></ProtectedRoute>} />
                 <Route path="/dashboard/teacher/attendance" element={<ProtectedRoute requiredRole="teacher"><AttendancePage /></ProtectedRoute>} />
                 <Route path="/dashboard/teacher/attendance/register/:scheduleId" element={<ProtectedRoute requiredRole="teacher"><AttendanceRegisterPage /></ProtectedRoute>} />
+
+                <Route path="*" element={<Navigate to="/" />} />
+
             </Routes>
 
             <PWAUpdateBanner />

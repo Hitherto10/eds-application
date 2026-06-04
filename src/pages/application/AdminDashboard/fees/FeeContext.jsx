@@ -127,9 +127,9 @@ export function FeeProvider({ children }) {
     });
   }, [state.feeStructures, state.selectedYear, state.selectedTerm]);
 
-  // Derived: only published/locked structures can generate invoices
+  // Derived: only published structures can generate invoices (2-phase lifecycle: draft → published)
   const billableStructures = useMemo(
-    () => state.feeStructures.filter(s => s.status === 'published' || s.status === 'locked'),
+    () => state.feeStructures.filter(s => s.status === 'published'),
     [state.feeStructures]
   );
 

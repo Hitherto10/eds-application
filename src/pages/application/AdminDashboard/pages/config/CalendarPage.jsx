@@ -1,8 +1,9 @@
 import React from 'react';
 import AdminLayout from '../../components/layout/AdminLayout.jsx';
 import { TimetableProvider } from '../../timetable/TimetableContext.jsx';
-import AcademicCalendarBuilder from '../../timetable/AcademicCalendarBuilder.jsx';
 import { useGlobalTimetableData } from '../../timetable/useGlobalTimetableData.js';
+import EventPlanner from './EventPlanner.jsx';
+import AcademicCalendarBuilder from "../../timetable/AcademicCalendarBuilder.jsx";
 
 function CalendarContent() {
     const { initialLoad } = useGlobalTimetableData();
@@ -20,7 +21,7 @@ function CalendarContent() {
     }
 
     return (
-        <div className="flex flex-col h-full min-h-[calc(100vh-120px)]">
+        <div className="flex flex-col h-full overflow-hidden">
             <AcademicCalendarBuilder />
         </div>
     );

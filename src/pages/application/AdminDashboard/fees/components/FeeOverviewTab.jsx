@@ -15,10 +15,10 @@ const StatCard = ({ title, value, sub, icon: Icon, tone }) => (
   <div className={`p-5 rounded-xl border ${tone.border} ${tone.bg} flex flex-col gap-3`}>
     <div className="flex items-center justify-between">
       <span className="text-xs font-bold uppercase tracking-wider text-gray-500">{title}</span>
-      <Icon size={18} className={tone.icon} />
+      {/*<Icon size={18} className={tone.icon} />*/}
     </div>
     <div>
-      <p className="text-2xl font-black text-gray-900">{value}</p>
+      <p className="text-2xl font-semibold text-gray-900">{value}</p>
       {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
     </div>
   </div>
@@ -38,7 +38,7 @@ export default function FeeOverviewTab() {
         <Wallet size={36} className="mx-auto text-gray-200 mb-3" />
         <p className="text-sm font-semibold text-gray-500">No analytics yet</p>
         <p className="text-xs text-gray-400 mt-1">
-          Publish a fee structure and generate invoices to populate finance analytics.
+          Publish a fee structure to automatically generate invoices and populate finance analytics.
         </p>
       </div>
     );
@@ -49,25 +49,25 @@ export default function FeeOverviewTab() {
       title: 'Total Expected', value: formatNaira(a.totalExpected),
       sub: `${a.studentsBilled || 0} students billed`,
       icon: Target,
-      tone: { bg: 'bg-blue-50/50', border: 'border-blue-100', icon: 'text-blue-500' },
+      tone: { bg: 'bg-[#E9F2FC]', border: ' ', icon: 'text-blue-500' },
     },
     {
       title: 'Total Collected', value: formatNaira(a.totalCollected),
       sub: `${a.studentsFullyPaid || 0} fully paid`,
       icon: Wallet,
-      tone: { bg: 'bg-green-50/50', border: 'border-green-100', icon: 'text-green-500' },
+      tone: { bg: 'bg-[#FBFADE]', border: ' ', icon: 'text-green-500' },
     },
     {
       title: 'Outstanding', value: formatNaira(a.totalPending),
       sub: `${a.studentsOwing || 0} students owing`,
       icon: AlertTriangle,
-      tone: { bg: 'bg-amber-50/50', border: 'border-amber-100', icon: 'text-amber-500' },
+      tone: { bg: 'bg-[#EAFBF0]', border: ' ', icon: 'text-amber-500' },
     },
     {
       title: 'Collection Rate', value: `${(a.collectionRate || 0).toFixed(1)}%`,
       sub: 'of total expected',
       icon: TrendingUp,
-      tone: { bg: 'bg-violet-50/50', border: 'border-violet-100', icon: 'text-violet-500' },
+      tone: { bg: 'bg-[#F5F1FD]', border: ' ', icon: 'text-violet-500' },
     },
   ];
 

@@ -6,6 +6,8 @@ import {
   deleteFeeStructure,
   transitionFeeStructure,
   cloneFeeStructure,
+  generateInvoicesForClass,
+  getInvoices,
   formatNaira,
   toKobo,
   sumItems,
@@ -17,10 +19,8 @@ import {
   Trash2,
   Pencil,
   Copy,
-  Lock,
-  Send,
   CheckCircle2,
-  Undo2,
+  AlertTriangle,
   X,
   Loader2,
   FileStack,
@@ -321,21 +321,80 @@ function StructureBuilder({ initial, onClose, onSaved, showToast }) {
 // ─── Main tab ─────────────────────────────────────────────────────────────────
 export default function FeeStructuresTab({ showToast }) {
   const { state, dispatch, scopedStructures } = useFee();
-  const [builder, setBuilder] = useState(null); // null | {} | structure
+  const [builder, setBuilder] = useState(null);              // null | {} | structure
+  const [publishConfirm, setPublishConfirm] = useState(null); // null | structure
+  // Tracks which step of the publish sequence we are in:
+  // false | 'publishing' | 'generating'
+  const [publishStep, setPublishStep] = useState(false);
 
   const handleSaved = (structure, isEdit) => {
     dispatch({ type: isEdit ? 'UPDATE_STRUCTURE' : 'ADD_STRUCTURE', payload: structure, id: structure.id });
   };
 
-  const handleTransition = async (s, action) => {
+  // ── Publish flow ────────────────────────────────────────────────────────────
+  // Step 1: open confirmation dialog.
+  const handlePublishRequest = (s) => setPublishConfirm(s);
+
+  // Step 2: transition → auto-generate invoices → refresh invoice list.
+  const handleConfirmPublish = async () => {
+    if (!publishConfirm) return;
+
     try {
-      const res = await transitionFeeStructure(s.id, action);
-      if (res.success) {
-        dispatch({ type: 'UPDATE_STRUCTURE', payload: { id: s.id, ...res.data.feeStructure } });
-        showToast(res.message);
+      // ── 2a. Transition the structure to 'published' ────────────────────────
+      setPublishStep('publishing');
+      console.log('[FeeStructuresTab] Publishing structure:', publishConfirm.id);
+      const transRes = await transitionFeeStructure(publishConfirm.id, 'publish');
+
+      if (!transRes.success) {
+        showToast(transRes.message || 'Publish failed', 'error');
+        return;
       }
+
+      // Update the structure card to 'published' immediately so the UI reflects it.
+      dispatch({
+        type: 'UPDATE_STRUCTURE',
+        payload: { id: publishConfirm.id, ...transRes.data.feeStructure },
+      });
+
+      // ── 2b. Auto-generate invoices for the class ───────────────────────────
+      setPublishStep('generating');
+      console.log('[FeeStructuresTab] Auto-generating invoices for class:', publishConfirm.classId);
+      const genRes = await generateInvoicesForClass({
+        feeStructureId: publishConfirm.id,
+        classId: publishConfirm.classId,
+      });
+
+      // ── 2c. Refresh the invoice list in the store ──────────────────────────
+      console.log('[FeeStructuresTab] Refreshing invoice list after publish.');
+      const scope = {
+        academicYearId: state.selectedYear?.id,
+        ...(state.selectedTerm ? { termId: state.selectedTerm.id } : {}),
+      };
+      const invRes = await getInvoices(scope);
+      if (invRes.success) {
+        dispatch({
+          type: 'SET_INVOICES',
+          payload: { invoices: invRes.data.invoices, summary: invRes.data.summary },
+        });
+      }
+
+      // ── 2d. Show combined success toast ───────────────────────────────────
+      const invoiceCount = genRes.data?.generated ?? 0;
+      const skipped      = genRes.data?.skipped ?? 0;
+      const className    = publishConfirm.className || 'the class';
+      showToast(
+        invoiceCount > 0
+          ? `Published & ${invoiceCount} invoice${invoiceCount !== 1 ? 's' : ''} generated for ${className}` +
+            (skipped ? ` (${skipped} already billed, skipped)` : '')
+          : `Fee structure published for ${className}`
+      );
+      setPublishConfirm(null);
+
     } catch (e) {
-      showToast(e.message || 'Transition failed', 'error');
+      console.error('[FeeStructuresTab] Publish + invoice generation failed:', e);
+      showToast(e.message || 'Publish failed', 'error');
+    } finally {
+      setPublishStep(false);
     }
   };
 
@@ -371,19 +430,6 @@ export default function FeeStructuresTab({ showToast }) {
     }
   };
 
-  const transitionBtn = (s) => {
-    switch (s.status) {
-      case 'draft':
-        return { label: 'Submit for Review', icon: Send, action: 'submit_review' };
-      case 'review':
-        return { label: 'Publish', icon: CheckCircle2, action: 'publish' };
-      case 'published':
-        return { label: 'Lock', icon: Lock, action: 'lock' };
-      default:
-        return null;
-    }
-  };
-
   return (
     <div className="bg-white border border-gray-200 rounded-xl">
       {/* Toolbar */}
@@ -393,7 +439,8 @@ export default function FeeStructuresTab({ showToast }) {
             Fee Structures ({scopedStructures.length})
           </h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            {state.selectedYear?.name} {state.selectedTerm ? `· ${state.selectedTerm.name}` : ''} — draft → review → publish → lock
+            {state.selectedYear?.name} {state.selectedTerm ? `· ${state.selectedTerm.name}` : ''}
+            {' '}— Create as draft, then publish when ready
           </p>
         </div>
         <button
@@ -414,8 +461,8 @@ export default function FeeStructuresTab({ showToast }) {
           </div>
         ) : (
           scopedStructures.map(s => {
-            const tb = transitionBtn(s);
-            const editable = s.status === 'draft' || s.status === 'review';
+            // Only draft structures can be edited or deleted.
+            const isDraft = s.status === 'draft';
             return (
               <div key={s.id} className="border border-gray-200 rounded-xl p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -436,31 +483,23 @@ export default function FeeStructuresTab({ showToast }) {
                   </div>
 
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    {tb && (
+                    {/* Publish button — only visible on draft structures */}
+                    {isDraft && (
                       <button
-                        onClick={() => handleTransition(s, tb.action)}
+                        onClick={() => handlePublishRequest(s)}
                         className="px-3 py-1.5 text-xs font-semibold bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 flex items-center gap-1"
                       >
-                        <tb.icon size={12} /> {tb.label}
-                      </button>
-                    )}
-                    {s.status !== 'draft' && s.status !== 'locked' && (
-                      <button
-                        onClick={() => handleTransition(s, 'revert_draft')}
-                        className="px-2.5 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-100 rounded-lg flex items-center gap-1"
-                        title="Revert to draft"
-                      >
-                        <Undo2 size={12} />
+                        <CheckCircle2 size={12} /> Publish
                       </button>
                     )}
                     <button
                       onClick={() => handleClone(s)}
                       className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-                      title="Clone"
+                      title="Clone as new draft"
                     >
                       <Copy size={14} />
                     </button>
-                    {editable && (
+                    {isDraft && (
                       <button
                         onClick={() => setBuilder(s)}
                         className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
@@ -469,7 +508,7 @@ export default function FeeStructuresTab({ showToast }) {
                         <Pencil size={14} />
                       </button>
                     )}
-                    {s.status === 'draft' && (
+                    {isDraft && (
                       <button
                         onClick={() => handleDelete(s)}
                         className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg"
@@ -501,6 +540,7 @@ export default function FeeStructuresTab({ showToast }) {
         )}
       </div>
 
+      {/* Structure builder modal */}
       {builder && (
         <StructureBuilder
           initial={builder.id ? builder : null}
@@ -508,6 +548,54 @@ export default function FeeStructuresTab({ showToast }) {
           onSaved={handleSaved}
           showToast={showToast}
         />
+      )}
+
+      {/* Publish confirmation modal */}
+      {publishConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/40" onClick={() => !publishStep && setPublishConfirm(null)} />
+          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl p-6">
+            {/* Icon */}
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-amber-50 border border-amber-200 mx-auto mb-4">
+              <AlertTriangle size={22} className="text-amber-500" />
+            </div>
+
+            <h3 className="text-base font-bold text-gray-900 text-center mb-1">Publish Fee Structure?</h3>
+            <p className="text-sm text-gray-600 text-center mb-1">
+              You are about to publish:
+            </p>
+            <p className="text-sm font-semibold text-gray-800 text-center mb-4">
+              &ldquo;{publishConfirm.name}&rdquo;
+            </p>
+
+            {/* Warning callout */}
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-5">
+              <p className="text-xs font-semibold text-amber-800 leading-relaxed">
+                ⚠️&nbsp; Once published, <span className="underline">parents and students will be able to see this fee structure on their dashboards immediately</span>. This action cannot be undone from the portal.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setPublishConfirm(null)}
+                disabled={!!publishStep}
+                className="flex-1 px-4 py-2.5 text-sm border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmPublish}
+                disabled={!!publishStep}
+                className="flex-1 px-4 py-2.5 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {publishStep && <Loader2 size={14} className="animate-spin" />}
+                {publishStep === 'publishing' && 'Publishing…'}
+                {publishStep === 'generating' && 'Generating invoices…'}
+                {!publishStep && 'Yes, Publish'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

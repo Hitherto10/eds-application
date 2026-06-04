@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTimetable } from '../TimetableContext';
-import { createClasses, deleteClasses } from '../../services/classAPIs';
+import {createClasses, deleteClasses, getSchoolClasses} from '../../services/classAPIs';
 import { createArms, deleteArms, updateArm } from '../../services/armAPIs';
 import { registryStyles } from '../../../../../utils/imports';
 import ArmSubjectsModal from './ArmSubjectsModal';
@@ -28,30 +28,32 @@ const badge = (count, label) => (
   </span>
 );
 
+console.log(await getSchoolClasses())
+
 // =============================================================================
 export default function ClassSetupBuilder() {
   const { state, dispatch } = useTimetable();
-  const [loading, setLoading]   = useState(false);
-  const [success, setSuccess]   = useState(false);
-  const [search,  setSearch]    = useState('');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [search, setSearch] = useState('');
 
   // Matrix builder state
-  const [baseLevels,     setBaseLevels]     = useState([]);
-  const [streams,        setStreams]        = useState([]);
-  const [matrix,         setMatrix]         = useState({});
+  const [baseLevels, setBaseLevels] = useState([]);
+  const [streams, setStreams] = useState([]);
+  const [matrix, setMatrix] = useState({});
   const [newStreamInput, setNewStreamInput] = useState('');
-  const [newBaseInput,   setNewBaseInput]   = useState('');
+  const [newBaseInput, setNewBaseInput] = useState('');
 
   // Builder toggle (when existing data is present)
   const [showBuilder, setShowBuilder] = useState(false);
 
   // Active-view state
-  const [expandedClassId,    setExpandedClassId]    = useState(null);
-  const [editingArmId,       setEditingArmId]       = useState(null);
-  const [editArmName,        setEditArmName]         = useState('');
+  const [expandedClassId, setExpandedClassId] = useState(null);
+  const [editingArmId, setEditingArmId] = useState(null);
+  const [editArmName, setEditArmName] = useState('');
   const [addingArmToClassId, setAddingArmToClassId] = useState(null);
-  const [newArmName,         setNewArmName]          = useState('');
-  const [armSubjectsTarget,  setArmSubjectsTarget]  = useState(null); // { arm, classArms }
+  const [newArmName, setNewArmName] = useState('');
+  const [armSubjectsTarget, setArmSubjectsTarget] = useState(null); // { arm, classArms }
 
   // ─── 1. Base Levels ──────────────────────────────────────────────────────────
   const loadRegistryStyle = (styleId) => {
@@ -122,7 +124,7 @@ export default function ClassSetupBuilder() {
   };
 
   const uniqueBaseCount = baseLevels.length;
-  const totalArmCount   = getGeneratedClasses().filter(c => c.arm !== null).length;
+  const totalArmCount = getGeneratedClasses().filter(c => c.arm !== null).length;
 
   // ─── 5. Two-phase Save ────────────────────────────────────────────────────────
   /**
@@ -257,7 +259,8 @@ export default function ClassSetupBuilder() {
 
   // ─── Derived data ─────────────────────────────────────────────────────────────
   const hasExistingData = state.classes.length > 0 && !showBuilder;
-  const armsForClass    = (classId) => state.arms.filter(a => a.classId === classId);
+  const armsForClass = (classId) => state.arms.filter(a => a.classId === classId);
+
 
   // ─────────────────────────────────────────────────────────────────────────────
   // ACTIVE DATA VIEW (classes already saved)
@@ -309,7 +312,7 @@ export default function ClassSetupBuilder() {
           {/* Class list */}
           <div className="flex-1 overflow-y-auto space-y-3">
             {filtered.map(cls => {
-              const arms       = armsForClass(cls.id);
+              const arms = armsForClass(cls.id);
               const isExpanded = expandedClassId === cls.id;
 
               return (
@@ -368,87 +371,87 @@ export default function ClassSetupBuilder() {
                         </p>
                       )}
                       {arms.length > 0 && arms.map(arm => {
-                          const subjectCount =
-                            (state.armSubjects[arm.id] || []).length;
+                        const subjectCount =
+                          (state.armSubjects[arm.id] || []).length;
 
-                          return (
-                            <div
-                              key={arm.id}
-                              className="flex items-center gap-3 bg-white border border-gray-200 rounded-lg px-3 py-2 group"
-                            >
-                              {/* Arm indicator */}
-                              <div className="w-6 h-6 rounded bg-indigo-50 flex items-center justify-center shrink-0">
-                                <Users size={11} className="text-indigo-500" />
-                              </div>
-
-                              {/* Arm name / inline edit */}
-                              {editingArmId === arm.id ? (
-                                <form
-                                  onSubmit={commitEditArm}
-                                  className="flex-1 flex gap-2"
-                                >
-                                  <input
-                                    autoFocus
-                                    value={editArmName}
-                                    onChange={e => setEditArmName(e.target.value)}
-                                    className="flex-1 px-2 py-1 text-sm border border-blue-300 rounded outline-none focus:ring-2 focus:ring-blue-500/20"
-                                  />
-                                  <button
-                                    type="submit"
-                                    className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-                                  >
-                                    Save
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setEditingArmId(null)}
-                                    className="px-2 py-1 text-xs border border-gray-200 rounded hover:bg-gray-50"
-                                  >
-                                    Cancel
-                                  </button>
-                                </form>
-                              ) : (
-                                <>
-                                  <span className="flex-1 text-sm font-semibold text-gray-800">
-                                    {arm.name}
-                                  </span>
-
-                                  {/* Subject count */}
-                                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                    {subjectCount} subject{subjectCount !== 1 ? 's' : ''}
-                                  </span>
-
-                                  {/* Manage subjects */}
-                                  <button
-                                    onClick={() => openArmSubjects(arm)}
-                                    className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition-colors"
-                                  >
-                                    <BookOpen size={11} />
-                                    Subjects
-                                  </button>
-
-                                  {/* Edit arm name */}
-                                  <button
-                                    onClick={() => startEditArm(arm)}
-                                    className="p-1 text-gray-300 hover:text-gray-600 rounded opacity-0 group-hover:opacity-100 transition-all"
-                                    title="Rename arm"
-                                  >
-                                    <Pencil size={12} />
-                                  </button>
-
-                                  {/* Delete arm */}
-                                  <button
-                                    onClick={() => handleDeleteArm(arm)}
-                                    className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-all"
-                                    title="Delete arm"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
-                                </>
-                              )}
+                        return (
+                          <div
+                            key={arm.id}
+                            className="flex items-center gap-3 bg-white border border-gray-200 rounded-lg px-3 py-2 group"
+                          >
+                            {/* Arm indicator */}
+                            <div className="w-6 h-6 rounded bg-indigo-50 flex items-center justify-center shrink-0">
+                              <Users size={11} className="text-indigo-500" />
                             </div>
-                          );
-                        })}
+
+                            {/* Arm name / inline edit */}
+                            {editingArmId === arm.id ? (
+                              <form
+                                onSubmit={commitEditArm}
+                                className="flex-1 flex gap-2"
+                              >
+                                <input
+                                  autoFocus
+                                  value={editArmName}
+                                  onChange={e => setEditArmName(e.target.value)}
+                                  className="flex-1 px-2 py-1 text-sm border border-blue-300 rounded outline-none focus:ring-2 focus:ring-blue-500/20"
+                                />
+                                <button
+                                  type="submit"
+                                  className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingArmId(null)}
+                                  className="px-2 py-1 text-xs border border-gray-200 rounded hover:bg-gray-50"
+                                >
+                                  Cancel
+                                </button>
+                              </form>
+                            ) : (
+                              <>
+                                <span className="flex-1 text-sm font-semibold text-gray-800">
+                                  {arm.name}
+                                </span>
+
+                                {/* Subject count */}
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                  {subjectCount} subject{subjectCount !== 1 ? 's' : ''}
+                                </span>
+
+                                {/* Manage subjects */}
+                                <button
+                                  onClick={() => openArmSubjects(arm)}
+                                  className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition-colors"
+                                >
+                                  <BookOpen size={11} />
+                                  Subjects
+                                </button>
+
+                                {/* Edit arm name */}
+                                <button
+                                  onClick={() => startEditArm(arm)}
+                                  className="p-1 text-gray-300 hover:text-gray-600 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                  title="Rename arm"
+                                >
+                                  <Pencil size={12} />
+                                </button>
+
+                                {/* Delete arm */}
+                                <button
+                                  onClick={() => handleDeleteArm(arm)}
+                                  className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                  title="Delete arm"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
                       {addingArmToClassId === cls.id ? (
                         <form onSubmit={(e) => handleAddArm(e, cls)} className="flex gap-2 pt-1">
                           <input
@@ -494,11 +497,6 @@ export default function ClassSetupBuilder() {
       </>
     );
   }
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // BUILDER MATRIX VIEW (no classes yet)
-  // ─────────────────────────────────────────────────────────────────────────────
-  const generatedCount = getGeneratedClasses().length;
 
   return (
     <div className="flex-1 bg-gray-50 flex flex-col relative h-full overflow-hidden">
@@ -721,11 +719,10 @@ export default function ClassSetupBuilder() {
                             <td key={st} className="p-3 border-b border-gray-100 text-center">
                               <button
                                 onClick={() => toggleMatrixMapping(lv, st)}
-                                className={`w-6 h-6 mx-auto rounded flex items-center justify-center border transition-all ${
-                                  isMapped
+                                className={`w-6 h-6 mx-auto rounded flex items-center justify-center border transition-all ${isMapped
                                     ? 'bg-blue-600 border-blue-600 text-white shadow-sm scale-110'
                                     : 'bg-gray-50 border-gray-200 text-transparent hover:border-blue-400 group-hover:bg-white'
-                                }`}
+                                  }`}
                               >
                                 <CheckCircle2 size={14} />
                               </button>
