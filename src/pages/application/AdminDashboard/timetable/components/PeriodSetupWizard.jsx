@@ -51,7 +51,7 @@ export default function PeriodSetupWizard({ onContinue, resources }) {
   const handleGoToLibrary = () => {
     if (!state.selectedClass || !currentTerm) return;
 
-    let url = `/dashboard/admin/timetable-library?classId=${state.selectedClass.id}&termId=${currentTerm.id}`;
+    let url = `/dashboard/admin/academics/timetables?classId=${state.selectedClass.id}&termId=${currentTerm.id}`;
     if (state.selectedArm) {
       url += `&armId=${state.selectedArm.id}`;
     }

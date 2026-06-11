@@ -4,6 +4,7 @@ import AdminLayout from '../components/layout/AdminLayout';
 import Input from '../components/ui/Input';
 import {getSchoolProfile, updateSchool, deactivateSchool, reactivateSchool} from "../../../auth/authAPIs.js";
 import {Toast} from "../components/ui/Toast.jsx";
+import SettingsBreadcrumb from '../components/ui/SettingsBreadcrumb.jsx';
 
 const Field = ({ label, value, icon: Icon, editable, name, onChange }) => (
     <div>
@@ -155,6 +156,7 @@ const SchoolProfilePage = () => {
                     onClose={() => setToast({ ...toast, show: false })}
                 />
             )}
+            <SettingsBreadcrumb section="Identity & Branding" />
             <div className="space-y-6">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                     <div className="flex justify-between items-center mb-6">

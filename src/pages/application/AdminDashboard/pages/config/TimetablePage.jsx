@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout.jsx';
 import { TimetableProvider, useTimetable } from '../../timetable/TimetableContext.jsx';
 import { useAcademic } from '../../../../../contexts/AcademicContext.jsx';
@@ -34,6 +35,14 @@ function TimetableContent() {
 
     return (
         <div className="flex flex-col h-full min-h-[calc(100vh-120px)]">
+            {/* Breadcrumb back to the Timetables hub */}
+            <Link
+                to="/dashboard/admin/academics/timetables"
+                className="inline-flex items-center gap-1.5 mb-3 text-[13px] font-semibold text-gray-500 hover:text-blue-700 transition-colors self-start"
+            >
+                <ArrowLeft size={14} /> Timetables
+            </Link>
+
             {/* Class / Arm / Term context bar */}
             <div className="flex flex-wrap  items-center gap-4 p-3 bg-white border border-gray-200 rounded-xs mb-4 shrink-0 overflow-visible z-10">
 

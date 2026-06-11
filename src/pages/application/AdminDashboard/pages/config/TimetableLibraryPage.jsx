@@ -217,10 +217,16 @@ function TimetableLibrary() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                        Timetable Library
+                        Timetables
                     </h1>
-                    <p className="text-gray-500 text-sm mt-1">Search and view published school timetables.</p>
+                    <p className="text-gray-500 text-sm mt-1">Your school's published timetables — open the builder to create or edit one.</p>
                 </div>
+                <button
+                    onClick={() => navigate('/dashboard/admin/academics/timetables/builder')}
+                    className="self-start md:self-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 shadow-sm transition-colors"
+                >
+                    Open builder
+                </button>
             </div>
 
             {/* Selection Bar */}
@@ -306,7 +312,7 @@ function TimetableLibrary() {
                                 : `No published timetable found for ${selectedClass.name} ${arms.length > 0 ? ", try selecting an Arm" : ""}.`}
                         </p>
                         <button
-                            onClick={() => navigate('/dashboard/admin/config/timetable')}
+                            onClick={() => navigate('/dashboard/admin/academics/timetables/builder')}
                             className="mt-6 text-blue-600 font-semibold text-sm hover:underline"
                         >
                             Go to Builder to create one
