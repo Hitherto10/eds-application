@@ -81,6 +81,13 @@ export default function AuthPage() {
         setIsLoading(true);
         try {
             const payload = { schoolId: formData.schoolId.trim(), email: formData.email.trim().toLowerCase(), password: formData.password };
+
+            // const payload = {
+            //     schoolId: "NEW3473",
+            //     email: "kogakip523@inraud.com",
+            //     password: "$Kene3504$"
+            // };
+
             const res = selectedRole === 'admin' ? await LoginSchool(payload) : await LoginUser(payload);
             if (res.success) {
                 await login(res);

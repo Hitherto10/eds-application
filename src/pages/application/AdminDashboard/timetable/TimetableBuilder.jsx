@@ -5,6 +5,7 @@ import {
   pointerWithin,
 } from '@dnd-kit/core';
 import { useTimetable, uid } from './TimetableContext';
+import { useAcademic } from '../../../../contexts/AcademicContext.jsx';
 import { saveTimetableDraft } from './timetableAPIs';
 
 // Components
@@ -31,8 +32,9 @@ import PeriodSetupWizard from './components/PeriodSetupWizard';
  * screen the user sees, completely bypassing the wizard. The guard now lives
  * inside PeriodSetupWizard where it belongs (disabling the Generate button).
  */
-export default function TimetableBuilder() {
+export default function TimetableBuilder({ resources }) {
   const { state, dispatch } = useTimetable();
+  const { currentYear, currentTerm } = useAcademic();
   const [activeDragData, setActiveDragData] = useState(null);
 
   // Auto-save debouncer
@@ -41,8 +43,8 @@ export default function TimetableBuilder() {
   useEffect(() => {
     // Only auto-save when we have a valid selection and we are in draft mode.
     // When the class has arms, arm must also be selected before saving.
-    const classArms = state.arms.filter(a => a.classId === state.selectedClass?.id);
-    if (!state.selectedClass || !state.selectedTerm || state.isPublished) return;
+    const classArms = resources.arms.filter(a => a.classId === state.selectedClass?.id);
+    if (!state.selectedClass || !currentTerm || state.isPublished) return;
     if (classArms.length > 0 && !state.selectedArm) return;
     // Nothing to save yet if the grid hasn't been configured
     if (state.periods.length === 0) return;
@@ -54,8 +56,8 @@ export default function TimetableBuilder() {
       try {
         const payload = {
           classId: state.selectedClass.id,
-          termId: state.selectedTerm.id,
-          academicYearId: state.selectedYear.id,
+          termId: currentTerm.id,
+          academicYearId: currentYear.id,
           armId: state.selectedArm?.id ?? null,
           schedules: state.schedules,
         };
@@ -69,7 +71,7 @@ export default function TimetableBuilder() {
     }, 4000); // 4-second debounce
 
     return () => clearTimeout(saveTimeoutRef.current);
-  }, [state.schedules, state.selectedClass, state.selectedTerm, state.isPublished, dispatch]);
+  }, [state.schedules, state.selectedClass, state.selectedArm, currentTerm, currentYear, state.isPublished, state.periods.length, resources.arms, dispatch]);
 
   // ── DnD handlers ────────────────────────────────────────────────────────────
 
@@ -160,7 +162,7 @@ export default function TimetableBuilder() {
   // Reset override when selection changes
   useEffect(() => {
     setOverrideShowGrid(false);
-  }, [state.selectedClass, state.selectedArm, state.selectedTerm]);
+  }, [state.selectedClass, state.selectedArm, currentTerm]);
 
   return (
       <DndContext
@@ -171,12 +173,12 @@ export default function TimetableBuilder() {
       >
         <div className="flex h-full w-full overflow-hidden ">
           {showWizard ? (
-              <PeriodSetupWizard onContinue={() => setOverrideShowGrid(true)} />
+              <PeriodSetupWizard onContinue={() => setOverrideShowGrid(true)} resources={resources} />
           ) : (
               <>
-                <PalettePanel />
+                <PalettePanel resources={resources} />
                 <WeeklyGrid activeDragData={activeDragData} />
-                <PropertiesPanel />
+                <PropertiesPanel resources={resources} />
               </>
           )}
         </div>

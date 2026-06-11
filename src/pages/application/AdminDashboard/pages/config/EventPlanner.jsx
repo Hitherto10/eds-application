@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useTimetable } from '../../timetable/TimetableContext';
 import {
     Trash2, ChevronLeft, ChevronRight, Bell, Calendar as CalendarIcon,
     Users, X, Check, Edit2, Info, Plus, Search, MapPin
@@ -50,7 +49,8 @@ function buildMonthDays(year, month) {
 
 // ── Component ────────────────────────────────────────────────────────────────
 export default function EventPlanner() {
-    const { state, dispatch } = useTimetable();
+    // Events are page-level data — owned here, fetched directly from the API.
+    const [events, setEvents] = useState([]);
 
     // ── Helpers ──
     const isoToLocalDateTime = (iso) => {
@@ -79,6 +79,7 @@ export default function EventPlanner() {
     const [eventForm, setEventForm] = useState({
         name: '',
         type: 'event',
+        time: '',
         notificationsEnabled: false,
         notificationTargets: { roles: [], everyone: false, userIds: [] },
         notificationSchedule: { type: 'immediate', sendAt: '', reminderEnabled: false }
@@ -138,7 +139,7 @@ export default function EventPlanner() {
     const fetchAllEvents = async () => {
         try {
             const res = await getEvents();
-            if (res?.success) dispatch({ type: 'SET_EVENTS', payload: res.data?.events ?? [] });
+            if (res?.success) setEvents(res.data?.events ?? []);
         } catch (e) {
             console.error('[EventPlanner] fetchAllEvents failed:', e);
         }
@@ -205,6 +206,7 @@ export default function EventPlanner() {
         setEventForm({
             name: '',
             type: 'event',
+            time: '',
             notificationsEnabled: false,
             notificationTargets: { roles: [], everyone: false, userIds: [] },
             notificationSchedule: { type: 'immediate', sendAt: '', reminderEnabled: false }
@@ -242,7 +244,14 @@ export default function EventPlanner() {
                 };
             }
         }
-        setEventForm({ name: eventObj.name, type: eventObj.type || 'event', ...notifState });
+        let eventTime = '';
+        if (eventObj.date) {
+            const d = new Date(eventObj.date);
+            if (!Number.isNaN(d.getTime())) {
+                eventTime = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+            }
+        }
+        setEventForm({ name: eventObj.name, type: eventObj.type || 'event', time: eventTime, ...notifState });
         setIsPanelOpen(true);
     };
 
@@ -272,11 +281,15 @@ export default function EventPlanner() {
             scheduleForPayload.sendAt = isIso ? s : localDateTimeToIso(s);
         }
 
+        const dateStr = selectedDateMsg.split('T')[0];
+        const timeStr = eventForm.time || '00:00';
+        const finalIsoDate = new Date(`${dateStr}T${timeStr}:00`).toISOString();
+
         const payload = {
             termId: activeProfile.currentTerm?.id,
             name: eventForm.name,
             type: eventForm.type,
-            date: selectedDateMsg,
+            date: finalIsoDate,
             notifications: {
                 enabled: eventForm.notificationsEnabled,
                 targets: eventForm.notificationTargets,
@@ -310,13 +323,13 @@ export default function EventPlanner() {
         e.stopPropagation();
         if (!confirm('Delete this event?')) return;
         const res = await deleteEvent(id);
-        if (res.success) { dispatch({ type: 'REMOVE_EVENT', id }); fetchAllEvents(); }
+        if (res.success) { setEvents(prev => prev.filter(ev => ev.id !== id)); fetchAllEvents(); }
     };
 
     const getEventsForDate = (dateObj) => {
         if (!dateObj) return [];
         const dStr = dateObj.toISOString().split('T')[0];
-        return state.events.filter(h => h.date.split('T')[0] === dStr);
+        return events.filter(h => h.date.split('T')[0] === dStr);
     };
 
     // ── Loading ──
@@ -332,7 +345,7 @@ export default function EventPlanner() {
         );
     }
 
-    const upcomingEvents = state.events
+    const upcomingEvents = events
         .filter(ev => new Date(ev.date) >= new Date(new Date().toISOString().split('T')[0]))
         .sort((a, b) => new Date(a.date) - new Date(b.date))
         .slice(0, 5);
@@ -757,6 +770,16 @@ export default function EventPlanner() {
                                         <option value="event">Special School Event</option>
                                     </select>
                                 </div>
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Event Time</label>
+                                    <input
+                                        disabled={panelMode === 'view'}
+                                        type="time"
+                                        value={eventForm.time}
+                                        onChange={e => setEventForm({ ...eventForm, time: e.target.value })}
+                                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-colors disabled:opacity-70 disabled:bg-gray-50"
+                                    />
+                                </div>
                             </section>
 
                             <hr className="border-gray-200" />
@@ -764,7 +787,6 @@ export default function EventPlanner() {
                             <section className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Bell size={18} /></div>
                                         <div>
                                             <h4 className="text-sm font-semibold text-gray-900">Dashboard Notification</h4>
                                             <p className="text-xs text-gray-500 mt-0.5">Alert users via their portal</p>
@@ -782,14 +804,14 @@ export default function EventPlanner() {
                                 {eventForm.notificationsEnabled && (
                                     <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
                                         <div className="space-y-2">
-                                            <label className="text-xs font-semibold text-gray-600 block">Target Audience</label>
+                                            <label className="text-xs font-semibold text-gray-600 block">Select Target Audience</label>
                                             <button
                                                 disabled={panelMode === 'view'}
                                                 onClick={toggleEveryone}
                                                 className={`w-full flex items-center justify-between p-3 rounded-lg border transition-colors ${eventForm.notificationTargets.everyone ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200 hover:border-gray-300'}`}
                                             >
                                                 <div className="flex items-center gap-2">
-                                                    <div className={`p-1.5 rounded ${eventForm.notificationTargets.everyone ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}><Users size={14} /></div>
+
                                                     <span className={`text-sm font-medium ${eventForm.notificationTargets.everyone ? 'text-blue-700' : 'text-gray-700'}`}>System-wide (Everyone)</span>
                                                 </div>
                                                 {eventForm.notificationTargets.everyone && <Check size={16} className="text-blue-600" />}
@@ -813,9 +835,9 @@ export default function EventPlanner() {
                                                 </div>
                                             )}
                                             <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg mt-2">
-                                                <Info size={13} className="text-amber-600 shrink-0 mt-0.5" />
+                                                {/*<Info size={13} className="text-amber-600 shrink-0 mt-0.5" />*/}
                                                 <p className="text-xs text-amber-800 leading-relaxed">
-                                                    Notifications will be delivered directly to users' dashboard feeds. Email and SMS alerts have been disabled.
+                                                    Notifications will be delivered directly to users' dashboard feeds.
                                                 </p>
                                             </div>
                                         </div>

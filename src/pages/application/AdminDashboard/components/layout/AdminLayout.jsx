@@ -45,9 +45,9 @@ const navItems = [
         icon: Users,
         link: '/dashboard/admin/users',
         children: [
-            { name: 'Teachers', icon: Users, link: '/dashboard/admin/users/teachers' },
-            { name: 'Parents',  icon: Users, link: '/dashboard/admin/users/parents' },
-            { name: 'Students', icon: GraduationCap, link: '/dashboard/admin/users/students' },
+            { name: 'Teachers', icon: 'Users', link: '/dashboard/admin/users/teachers' },
+            { name: 'Parents',  icon: 'Users', link: '/dashboard/admin/users/parents' },
+            { name: 'Students', icon: 'GraduationCap', link: '/dashboard/admin/users/students' },
         ]
     },
     {
@@ -55,24 +55,24 @@ const navItems = [
         icon: Wallet,
         link: '/dashboard/admin/fees',
         children: [
-            { name: 'Overview',           icon: LayoutDashboard, link: '/dashboard/admin/fees/overview'    },
-            { name: 'Fee Structures',     icon: FileStack,       link: '/dashboard/admin/fees/structures'  },
-            { name: 'Invoices',           icon: ReceiptText,     link: '/dashboard/admin/fees/invoices'    },
-            { name: 'Payments & Ledger',  icon: Wallet,          link: '/dashboard/admin/fees/payments'    },
-            { name: 'Reports',            icon: BarChart3,       link: '/dashboard/admin/fees/reports'     },
+            { name: 'Overview',           icon: 'LayoutDashboard', link: '/dashboard/admin/fees/overview'    },
+            { name: 'Fee Structures',     icon: 'FileStack',       link: '/dashboard/admin/fees/structures'  },
+            { name: 'Invoices',           icon: 'ReceiptText',     link: '/dashboard/admin/fees/invoices'    },
+            { name: 'Payments & Ledger',  icon: 'Wallet',          link: '/dashboard/admin/fees/payments'    },
+            { name: 'Reports',            icon: 'BarChart3',       link: '/dashboard/admin/fees/reports'     },
         ],
     },
-    { name: 'Timetable Library', icon: CalendarCheck2,  link: '/dashboard/admin/config/timetable-library' },
+    { name: 'Timetable Library', icon: CalendarCheck2,  link: '/dashboard/admin/timetable-library' },
     { name: 'Events Planner',  icon: CalendarClock,          link: '/dashboard/admin/events-planner', children: [] },
     {
         name: 'Configuration',
         icon: Settings,
         link: '/dashboard/admin/config',
         children: [
-            { name: 'Subject Setup',     icon: BookOpen,    link: '/dashboard/admin/config/subjects'  },
-            { name: 'Class Setup',       icon: Layers,      link: '/dashboard/admin/config/classes'   },
-            { name: 'Calendar Settings', icon: CalendarDays,link: '/dashboard/admin/config/calendar'  },
-            { name: 'Timetable Builder', icon: LayoutGrid,  link: '/dashboard/admin/config/timetable' },
+            { name: 'Subject Setup',     icon: 'BookOpen',    link: '/dashboard/admin/config/subjects'  },
+            { name: 'Class Setup',       icon: 'Layers',      link: '/dashboard/admin/config/classes'   },
+            { name: 'Calendar Settings', icon: 'CalendarDays',link: '/dashboard/admin/config/calendar'  },
+            { name: 'Timetable Builder', icon: 'LayoutGrid',  link: '/dashboard/admin/config/timetable' },
         ],
     },
     { name: 'School Profile',  icon: School,          link: '/dashboard/admin/school-profile', children: [] },
@@ -184,7 +184,7 @@ export const Sidebar = () => {
                             <div className={`overflow-hidden transition-all duration-200 ease-in-out ${
                                 isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                             }`}>
-                                <div className="ml-3 mt-0.5 mb-1 pl-4 space-y-0.5">
+                                <div className="ml-5 border-l mt-0.5 mb-1 pl-3 space-y-0.5">
                                     {item.children.map(child => (
                                         <NavLink
                                             key={child.link}
@@ -198,7 +198,7 @@ export const Sidebar = () => {
                                                 }`
                                             }
                                         >
-                                            <child.icon className="w-4 h-4 shrink-0" />
+                                            {/*<child.icon className="w-4 h-4 shrink-0" />*/}
                                             {child.name}
                                         </NavLink>
                                     ))}

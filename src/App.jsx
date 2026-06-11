@@ -2,6 +2,7 @@ import React, { lazy, useEffect} from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
 import { PWAProvider } from './contexts/PWAContext.jsx';
+import { AcademicProvider } from './contexts/AcademicContext.jsx';
 
 // Components
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
@@ -41,6 +42,7 @@ const FeeReportsPage      = lazy(() => import("./pages/application/AdminDashboar
 const ParentDashboard    = lazy(() => import("./pages/application/ParentDashboard/ParentDashboard.jsx"));
 const ChildSelectionPage = lazy(() => import("./pages/application/ParentDashboard/MyChildren.jsx"));
 const ParentProfilePage  = lazy(() => import("./pages/application/ParentDashboard/ParentProfilePage.jsx"));
+const ParentFeesPage     = lazy(() => import("./pages/application/ParentDashboard/FeesAndPayments.jsx"));
 
 // Teacher Pages
 const TeacherDashboard       = lazy(() => import("./pages/application/TeacherDashboard/TeacherDashboard.jsx"));
@@ -87,7 +89,8 @@ function AppRoutes() {
 
     return (
         <div className={`font-[Inter]`}>
-            <Routes>
+            <React.Suspense fallback={<LoadingFallback />}>
+                <Routes>
                 <Route path="/" element={<AuthPage />} />
                 <Route path="/complete-registration" element={<CompleteRegistration />} />
                 <Route element={<AuthLayout />}>
@@ -121,12 +124,13 @@ function AppRoutes() {
                 <Route path="/dashboard/admin/config/subjects"  element={<ProtectedRoute requiredRole="admin"><SubjectsPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/config/classes"   element={<ProtectedRoute requiredRole="admin"><ClassesPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/config/calendar"  element={<ProtectedRoute requiredRole="admin"><CalendarPage /></ProtectedRoute>} />
-                <Route path="/dashboard/admin/config/timetable-library" element={<ProtectedRoute requiredRole="admin"><TimetableLibraryPage /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/timetable-library" element={<ProtectedRoute requiredRole="admin"><TimetableLibraryPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/config/timetable" element={<ProtectedRoute requiredRole="admin"><TimetablePage /></ProtectedRoute>} />
 
                 {/* Parent Protected Routes */}
                 <Route path="/dashboard/parent" element={<ProtectedRoute requiredRole="parent"><ParentDashboard /></ProtectedRoute>}/>
                 <Route path="/dashboard/parent/children" element={<ProtectedRoute requiredRole="parent"><ChildSelectionPage /></ProtectedRoute>} />
+                <Route path="/dashboard/parent/fees" element={<ProtectedRoute requiredRole="parent"><ParentFeesPage /></ProtectedRoute>} />
                 <Route path="/dashboard/parent/profile" element={<ProtectedRoute requiredRole="parent"><ParentProfilePage /></ProtectedRoute>} />
 
                 {/* Teacher Protected Routes */}
@@ -139,7 +143,8 @@ function AppRoutes() {
 
                 <Route path="*" element={<Navigate to="/" />} />
 
-            </Routes>
+                </Routes>
+            </React.Suspense>
 
             <PWAUpdateBanner />
             <PWAInstallPrompt />
@@ -154,7 +159,9 @@ function App() {
         <AuthProvider>
             <PWAProvider>
                 <AuthContextBridge>
-                    <AppRoutes />
+                    <AcademicProvider>
+                        <AppRoutes />
+                    </AcademicProvider>
                 </AuthContextBridge>
             </PWAProvider>
         </AuthProvider>

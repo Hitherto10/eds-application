@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTimetable, uid } from '../TimetableContext';
+import { useAcademic } from '../../../../../contexts/AcademicContext.jsx';
 import { saveTimetableDraft } from '../timetableAPIs';
 import { Clock, Plus, Trash2, Settings2, Loader2, ArrowRight, AlertCircle, BookOpen, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -15,8 +16,9 @@ import { useNavigate } from 'react-router-dom';
  * ADDITION: Detects if a published timetable already exists. If so, prevents
  * new grid generation and offers a direct link to view it in the Library.
  */
-export default function PeriodSetupWizard({ onContinue }) {
+export default function PeriodSetupWizard({ onContinue, resources }) {
   const { state, dispatch } = useTimetable();
+  const { currentYear, currentTerm } = useAcademic();
   const navigate = useNavigate();
 
   const [startTime, setStartTime] = useState('08:00');
@@ -31,14 +33,14 @@ export default function PeriodSetupWizard({ onContinue }) {
 
   // Arms belonging to the currently selected class (empty = whole-class timetable)
   const classArms = state.selectedClass
-    ? state.arms.filter(a => a.classId === state.selectedClass.id)
+    ? (resources?.arms ?? []).filter(a => a.classId === state.selectedClass.id)
     : [];
   const classHasArms = classArms.length > 0;
 
   // Generate is blocked until class, term, and (when class has arms) arm are all chosen.
   const canGenerate = Boolean(
     state.selectedClass &&
-    state.selectedTerm &&
+    currentTerm &&
     (!classHasArms || state.selectedArm)
   );
 
@@ -47,9 +49,9 @@ export default function PeriodSetupWizard({ onContinue }) {
   const isPublished = state.isPublished;
 
   const handleGoToLibrary = () => {
-    if (!state.selectedClass || !state.selectedTerm) return;
-    
-    let url = `/dashboard/admin/config/timetable-library?classId=${state.selectedClass.id}&termId=${state.selectedTerm.id}`;
+    if (!state.selectedClass || !currentTerm) return;
+
+    let url = `/dashboard/admin/timetable-library?classId=${state.selectedClass.id}&termId=${currentTerm.id}`;
     if (state.selectedArm) {
       url += `&armId=${state.selectedArm.id}`;
     }
@@ -114,7 +116,7 @@ export default function PeriodSetupWizard({ onContinue }) {
   // ── Generate & save ────────────────────────────────────────────────────────
   const handleGenerate = async () => {
     // Guard: this should not be callable without class/term, but be defensive.
-    if (!state.selectedClass || !state.selectedTerm) return;
+    if (!state.selectedClass || !currentTerm) return;
 
     const generatedPeriods = generatePeriods();
     setSaving(true);
@@ -140,8 +142,8 @@ export default function PeriodSetupWizard({ onContinue }) {
       // 3. Persist the new structure as a fresh draft
       const payload = {
         classId: state.selectedClass.id,
-        termId: state.selectedTerm.id,
-        academicYearId: state.selectedYear?.id,
+        termId: currentTerm.id,
+        academicYearId: currentYear?.id,
         armId: state.selectedArm?.id ?? null,
         periods: generatedPeriods,
         periodConfig: periodConfigMetadata,
@@ -215,7 +217,7 @@ export default function PeriodSetupWizard({ onContinue }) {
                   <div className="flex items-start gap-3 p-4 mb-6 bg-amber-50 border border-amber-200 rounded-xl">
                     <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                     <div className="text-sm text-amber-800">
-                      {!state.selectedClass || !state.selectedTerm ? (
+                      {!state.selectedClass || !currentTerm ? (
                         <>
                           <p className="font-semibold mb-0.5">Select a class and term to continue</p>
                           <p className="opacity-80">

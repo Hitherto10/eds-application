@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { useFee } from '../FeeContext.jsx';
 import {
   voidInvoice,
   formatNaira,
@@ -23,9 +22,7 @@ const SummaryCard = ({ label, value, tone }) => (
   </div>
 );
 
-export default function FeeInvoicesTab({ showToast }) {
-  const { state, dispatch } = useFee();
-
+export default function FeeInvoicesTab({ showToast, classes = [], invoices = [], summary = {}, onUpdateInvoice }) {
   const [statusFilter, setStatusFilter] = useState('all');
   const [classFilter, setClassFilter]   = useState('all');
   const [search, setSearch]             = useState('');
@@ -38,7 +35,7 @@ export default function FeeInvoicesTab({ showToast }) {
     try {
       const res = await voidInvoice(inv.id, reason);
       if (res.success) {
-        dispatch({ type: 'UPDATE_INVOICE', payload: { id: inv.id, status: 'void' } });
+        onUpdateInvoice?.({ id: inv.id, status: 'void' });
         showToast('Invoice voided');
       }
     } catch (e) {
@@ -47,7 +44,7 @@ export default function FeeInvoicesTab({ showToast }) {
   };
 
   const filtered = useMemo(() => {
-    return state.invoices.filter(inv => {
+    return invoices.filter(inv => {
       const sOk = statusFilter === 'all' || inv.status === statusFilter;
       const cOk = classFilter === 'all' || inv.classId === classFilter;
       const term = search.trim().toLowerCase();
@@ -56,9 +53,9 @@ export default function FeeInvoicesTab({ showToast }) {
         (inv.feeStructureName || '').toLowerCase().includes(term);
       return sOk && cOk && qOk;
     });
-  }, [state.invoices, statusFilter, classFilter, search]);
+  }, [invoices, statusFilter, classFilter, search]);
 
-  const sm = state.invoiceSummary;
+  const sm = summary;
 
   return (
     <div className="space-y-5">
@@ -82,7 +79,7 @@ export default function FeeInvoicesTab({ showToast }) {
               className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
             >
               <option value="all">All classes</option>
-              {state.classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             <select
               value={statusFilter}
@@ -186,7 +183,7 @@ export default function FeeInvoicesTab({ showToast }) {
         <RecordPaymentModal
           invoice={payInvoice}
           onClose={() => setPayInvoice(null)}
-          onRecorded={(patch) => dispatch({ type: 'UPDATE_INVOICE', payload: patch })}
+          onRecorded={(patch) => onUpdateInvoice?.(patch)}
           showToast={showToast}
         />
       )}

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useFee } from '../FeeContext.jsx';
 import {
   createFeeStructure,
   updateFeeStructure,
@@ -7,7 +6,6 @@ import {
   transitionFeeStructure,
   cloneFeeStructure,
   generateInvoicesForClass,
-  getInvoices,
   formatNaira,
   toKobo,
   sumItems,
@@ -37,8 +35,7 @@ const StatusPill = ({ status }) => {
 };
 
 // ─── Builder modal ────────────────────────────────────────────────────────────
-function StructureBuilder({ initial, onClose, onSaved, showToast }) {
-  const { state } = useFee();
+function StructureBuilder({ initial, onClose, onSaved, showToast, classes = [], currentYear, currentTerm }) {
   const isEdit = Boolean(initial?.id);
 
   const [name, setName]               = useState(initial?.name || '');
@@ -80,10 +77,10 @@ function StructureBuilder({ initial, onClose, onSaved, showToast }) {
         return showToast(`Installment percentages must total 100% (currently ${totalPct}%)`, 'error');
     }
 
-    const cls = state.classes.find(c => c.id === classId);
+    const cls = classes.find(c => c.id === classId);
     const payload = {
-      academicYearId: state.selectedYear?.id,
-      termId: state.selectedTerm?.id,
+      academicYearId: currentYear?.id,
+      termId: currentTerm?.id,
       classId,
       className: cls?.name || '',
       name: name.trim(),
@@ -151,7 +148,7 @@ function StructureBuilder({ initial, onClose, onSaved, showToast }) {
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 outline-none"
                 >
                   <option value="">Select class…</option>
-                  {state.classes.map(c => (
+                  {classes.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
@@ -319,8 +316,7 @@ function StructureBuilder({ initial, onClose, onSaved, showToast }) {
 }
 
 // ─── Main tab ─────────────────────────────────────────────────────────────────
-export default function FeeStructuresTab({ showToast }) {
-  const { state, dispatch, scopedStructures } = useFee();
+export default function FeeStructuresTab({ showToast, classes = [], currentYear, currentTerm, structures = [], setStructures }) {
   const [builder, setBuilder] = useState(null);              // null | {} | structure
   const [publishConfirm, setPublishConfirm] = useState(null); // null | structure
   // Tracks which step of the publish sequence we are in:
@@ -328,7 +324,9 @@ export default function FeeStructuresTab({ showToast }) {
   const [publishStep, setPublishStep] = useState(false);
 
   const handleSaved = (structure, isEdit) => {
-    dispatch({ type: isEdit ? 'UPDATE_STRUCTURE' : 'ADD_STRUCTURE', payload: structure, id: structure.id });
+    setStructures(prev => isEdit
+      ? prev.map(s => (s.id === structure.id ? { ...s, ...structure } : s))
+      : [structure, ...prev]);
   };
 
   // ── Publish flow ────────────────────────────────────────────────────────────
@@ -351,10 +349,9 @@ export default function FeeStructuresTab({ showToast }) {
       }
 
       // Update the structure card to 'published' immediately so the UI reflects it.
-      dispatch({
-        type: 'UPDATE_STRUCTURE',
-        payload: { id: publishConfirm.id, ...transRes.data.feeStructure },
-      });
+      setStructures(prev => prev.map(s =>
+        s.id === publishConfirm.id ? { ...s, ...transRes.data.feeStructure } : s
+      ));
 
       // ── 2b. Auto-generate invoices for the class ───────────────────────────
       setPublishStep('generating');
@@ -364,21 +361,7 @@ export default function FeeStructuresTab({ showToast }) {
         classId: publishConfirm.classId,
       });
 
-      // ── 2c. Refresh the invoice list in the store ──────────────────────────
-      console.log('[FeeStructuresTab] Refreshing invoice list after publish.');
-      const scope = {
-        academicYearId: state.selectedYear?.id,
-        ...(state.selectedTerm ? { termId: state.selectedTerm.id } : {}),
-      };
-      const invRes = await getInvoices(scope);
-      if (invRes.success) {
-        dispatch({
-          type: 'SET_INVOICES',
-          payload: { invoices: invRes.data.invoices, summary: invRes.data.summary },
-        });
-      }
-
-      // ── 2d. Show combined success toast ───────────────────────────────────
+      // ── 2c. Show combined success toast ───────────────────────────────────
       const invoiceCount = genRes.data?.generated ?? 0;
       const skipped      = genRes.data?.skipped ?? 0;
       const className    = publishConfirm.className || 'the class';
@@ -403,7 +386,7 @@ export default function FeeStructuresTab({ showToast }) {
     try {
       const res = await deleteFeeStructure(s.id);
       if (res.success) {
-        dispatch({ type: 'REMOVE_STRUCTURE', id: s.id });
+        setStructures(prev => prev.filter(x => x.id !== s.id));
         showToast('Fee structure deleted');
       }
     } catch (e) {
@@ -414,15 +397,15 @@ export default function FeeStructuresTab({ showToast }) {
   const handleClone = async (s) => {
     try {
       const res = await cloneFeeStructure(s.id, {
-        targetAcademicYearId: state.selectedYear?.id,
-        targetTermId: state.selectedTerm?.id,
+        targetAcademicYearId: currentYear?.id,
+        targetTermId: currentTerm?.id,
         targetClassIds: [s.classId],
       });
       if (res.success) {
         const cloned = res.data.feeStructures?.length
           ? res.data.feeStructures
           : [{ ...s, id: `clone_${Date.now()}`, name: `${s.name} (Copy)`, status: 'draft', version: 1 }];
-        dispatch({ type: 'ADD_STRUCTURES', payload: cloned });
+        setStructures(prev => [...cloned, ...prev]);
         showToast('Structure cloned as draft');
       }
     } catch (e) {
@@ -436,10 +419,10 @@ export default function FeeStructuresTab({ showToast }) {
       <div className="flex flex-wrap items-center justify-between gap-3 p-5 border-b border-gray-100">
         <div>
           <h2 className="text-base font-bold text-gray-800">
-            Fee Structures ({scopedStructures.length})
+            Fee Structures ({structures.length})
           </h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            {state.selectedYear?.name} {state.selectedTerm ? `· ${state.selectedTerm.name}` : ''}
+            {currentYear?.name} {currentTerm ? `· ${currentTerm.name}` : ''}
             {' '}— Create as draft, then publish when ready
           </p>
         </div>
@@ -453,14 +436,14 @@ export default function FeeStructuresTab({ showToast }) {
 
       {/* List */}
       <div className="p-5 space-y-3">
-        {scopedStructures.length === 0 ? (
+        {structures.length === 0 ? (
           <div className="text-center py-16">
             <FileStack size={36} className="mx-auto text-gray-200 mb-3" />
             <p className="text-sm font-semibold text-gray-500">No fee structures for this scope</p>
             <p className="text-xs text-gray-400 mt-1">Create one to begin billing.</p>
           </div>
         ) : (
-          scopedStructures.map(s => {
+          structures.map(s => {
             // Only draft structures can be edited or deleted.
             const isDraft = s.status === 'draft';
             return (
@@ -547,6 +530,9 @@ export default function FeeStructuresTab({ showToast }) {
           onClose={() => setBuilder(null)}
           onSaved={handleSaved}
           showToast={showToast}
+          classes={classes}
+          currentYear={currentYear}
+          currentTerm={currentTerm}
         />
       )}
 

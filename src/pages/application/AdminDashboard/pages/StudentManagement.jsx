@@ -304,17 +304,17 @@ const StudentManagement = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                                 {currentStudents.map((student) => (
                                     <div key={student.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 hover:shadow-md transition-shadow relative group flex flex-col h-full">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className="flex items-center gap-3">
+                                        <div className="flex justify-between items-start mb-4 gap-2">
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
                                                 <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg shrink-0">
                                                     {getInitials(student.name)}
                                                 </div>
-                                                <div>
+                                                <div className="min-w-0 flex-1">
                                                     <h3 className="font-semibold text-gray-900 truncate" title={student.name}>{student.name}</h3>
                                                     <p className="text-xs text-gray-500 truncate">{student.class} {student.section !== '-' ? `- ${student.section}` : ''}</p>
                                                 </div>
                                             </div>
-                                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ${student.status ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                                            <span className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ${student.status ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
                                                 {student.status ? 'Active' : 'Inactive'}
                                             </span>
                                         </div>

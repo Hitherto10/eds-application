@@ -8,12 +8,15 @@ import {
     InviteParentModal,
     DeleteUserModal,
     StatusChangeModal,
-    ManageParentStudentLinkModal
+    ManageParentStudentLinkModal,
+    ParentInfoModal
 } from '../components/ui/modals.jsx';
 import { useAuth } from '../../../../contexts/AuthContext.jsx';
+import {getParentDetails} from "../../../auth/authAPIs.js";
 
 const ParentManagement = () => {
     const { user } = useAuth();
+    console.log(user)
     const [parents, setParents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -28,6 +31,9 @@ const ParentManagement = () => {
     const [selectedParent, setSelectedParent] = useState(null);
     const [modalType, setModalType] = useState(null); // 'status', 'delete', 'manageLinks'
     const [toast, setToast] = useState({ show: false, message: '', type: 'error' });
+    const [viewInfoModalVisible, setViewInfoModalVisible] = useState(false);
+    const [parentInfoData, setParentInfoData] = useState(null);
+    const [viewInfoLoading, setViewInfoLoading] = useState(false);
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -48,7 +54,7 @@ const ParentManagement = () => {
                 role: userInfo.role,
                 status: userInfo.isActive,
                 statusDisplay: userInfo.statusDisplay,
-                students: userInfo.students || [], // Assuming students are array of {id, name, class}
+                students: userInfo.students || [],
                 phone: userInfo.phone || '+234 801 234 5678', // mock fallback
                 updatedAt: userInfo.updatedAt
             }));
@@ -93,6 +99,22 @@ const ParentManagement = () => {
         setSelectedParent(null);
         setModalType(null);
         setShowInviteModal(false);
+        setViewInfoModalVisible(false);
+    };
+
+    const handleViewInfo = async (parentId) => {
+        setViewInfoModalVisible(true);
+        setViewInfoLoading(true);
+        setParentInfoData(null);
+        try {
+            const data = await getParentDetails(parentId);
+            setParentInfoData(data.data.parent);
+        } catch (err) {
+            showToast(err.message || 'Failed to fetch parent info', 'error');
+            setViewInfoModalVisible(false);
+        } finally {
+            setViewInfoLoading(false);
+        }
     };
 
     if (loading) {
@@ -128,15 +150,15 @@ const ParentManagement = () => {
 
                 {/* Stats Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-[#FFF8E7] rounded-2xl p-6 flex flex-col justify-center items-center shadow-sm">
+                    <div className="bg-[#FFF8E7] rounded-2xl p-3 flex flex-col justify-center items-center border">
                         <p className="text-sm text-amber-800/70 font-medium mb-1">Total parents</p>
                         <h2 className="text-4xl font-bold text-gray-900">{parents.length}</h2>
                     </div>
-                    <div className="bg-[#F0FAF5] rounded-2xl p-6 flex flex-col justify-center items-center shadow-sm">
+                    <div className="bg-[#F0FAF5] rounded-2xl p-3 flex flex-col justify-center items-center border">
                         <p className="text-sm text-emerald-800/70 font-medium mb-1">Active</p>
                         <h2 className="text-4xl font-bold text-gray-900">{activeCount}</h2>
                     </div>
-                    <div className="bg-[#FFF0EB] rounded-2xl p-6 flex flex-col justify-center items-center shadow-sm">
+                    <div className="bg-[#FFF0EB] rounded-2xl p-3 flex flex-col justify-center items-center border">
                         <p className="text-sm text-red-800/70 font-medium mb-1">Inactive</p>
                         <h2 className="text-4xl font-bold text-gray-900">{inactiveCount}</h2>
                     </div>
@@ -154,7 +176,7 @@ const ParentManagement = () => {
                             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         />
                     </div>
-                    
+
                     <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
                         <select
                             value={statusFilter}
@@ -202,35 +224,19 @@ const ParentManagement = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                                 {currentParents.map((parent) => (
                                     <div key={parent.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 hover:shadow-md transition-shadow relative group flex flex-col h-full">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className="flex items-center gap-3">
+                                        <div className="flex justify-between items-start mb-4 gap-2">
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
                                                 <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg shrink-0">
                                                     {getInitials(parent.name)}
                                                 </div>
-                                                <div>
+                                                <div className="min-w-0 flex-1">
                                                     <h3 className="font-semibold text-gray-900 truncate" title={parent.name}>{parent.name}</h3>
-                                                    <p className="text-xs text-gray-500">Parent</p>
+                                                    <p className="text-xs text-gray-500 truncate">Parent</p>
                                                 </div>
                                             </div>
-                                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ${parent.status ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                                            <span className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ${parent.status ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
                                                 {parent.status ? 'Active' : 'Inactive'}
                                             </span>
-                                        </div>
-
-                                        <div className="flex flex-col gap-2 mb-6 flex-1">
-                                            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Linked Students</div>
-                                            <div className="flex flex-wrap gap-2">
-                                                {parent.students && parent.students.length > 0 ? (
-                                                    parent.students.map((student, i) => (
-                                                        <span key={i} className="px-3 py-1 bg-blue-50/50 text-blue-700 border border-blue-100 rounded-lg text-xs font-medium flex items-center gap-1.5">
-                                                            <LinkIcon size={12} />
-                                                            {typeof student === 'string' ? student : student.name}
-                                                        </span>
-                                                    ))
-                                                ) : (
-                                                    <span className="text-xs text-gray-400 italic">No students linked</span>
-                                                )}
-                                            </div>
                                         </div>
 
                                         <div className="space-y-2 text-xs text-gray-500 pt-4 border-t border-gray-50">
@@ -266,6 +272,7 @@ const ParentManagement = () => {
                                                 </button>
                                                 <div className="hidden absolute right-0 mt-1 w-48 rounded-xl shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10 border border-gray-100 overflow-hidden">
                                                     <div className="py-1" role="menu">
+                                                        <button onClick={() => handleViewInfo(parent.id)} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors">View Info</button>
                                                         <button onClick={() => handleAction(parent, 'status')} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors">Change Status</button>
                                                         <button onClick={() => handleAction(parent, 'manageLinks')} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors">Manage Linked Students</button>
                                                         <div className="border-t border-gray-100 my-1"></div>
@@ -284,8 +291,8 @@ const ParentManagement = () => {
                                         <thead className="bg-gray-50/80 border-b border-gray-100">
                                             <tr>
                                                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Parent</th>
-                                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact</th>
-                                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Linked Students</th>
+                                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
+                                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Phone Number</th>
                                                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                                                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
                                             </tr>
@@ -305,20 +312,9 @@ const ParentManagement = () => {
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <p className="text-sm text-gray-600">{parent.email}</p>
-                                                        <p className="text-xs text-gray-400 mt-0.5">{parent.phone}</p>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        {parent.students && parent.students.length > 0 ? (
-                                                            <div className="flex flex-wrap gap-1 max-w-[200px]">
-                                                                {parent.students.map((student, i) => (
-                                                                    <span key={i} className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
-                                                                        {typeof student === 'string' ? student : student.name}
-                                                                    </span>
-                                                                ))}
-                                                            </div>
-                                                        ) : (
-                                                            <p className="text-sm text-gray-400 italic">-</p>
-                                                        )}
+                                                        <p className="text-sm text-gray-600">{parent.phone}</p>
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ${parent.status ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
@@ -342,6 +338,7 @@ const ParentManagement = () => {
                                                             </button>
                                                             <div className="hidden absolute right-0 mt-1 w-48 rounded-xl shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10 border border-gray-100 overflow-hidden text-left">
                                                                 <div className="py-1" role="menu">
+                                                                    <button onClick={() => handleViewInfo(parent.id)} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">View Info</button>
                                                                     <button onClick={() => handleAction(parent, 'status')} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">Change Status</button>
                                                                     <button onClick={() => handleAction(parent, 'manageLinks')} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">Manage Linked Students</button>
                                                                     <div className="border-t border-gray-100 my-1"></div>
@@ -386,6 +383,25 @@ const ParentManagement = () => {
 
             {/* Modals */}
             {showInviteModal && <InviteParentModal onClose={closeModals} showToast={showToast} onParentAdded={fetchParents} />}
+            
+            {viewInfoModalVisible && (
+                viewInfoLoading ? (
+                    <div className="fixed inset-0 z-50 overflow-y-auto">
+                        <div className="flex min-h-full items-center justify-center p-4">
+                            <div className="fixed inset-0 bg-black/30" onClick={closeModals} />
+                            <div className="relative rounded-2xl bg-white p-8 shadow-xl flex flex-col items-center justify-center">
+                                <div className="relative w-12 h-12 mb-4">
+                                    <div className="absolute inset-0 border-4 border-blue-100 rounded-full"></div>
+                                    <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+                                </div>
+                                <p className="text-sm text-gray-500 font-medium">Loading details...</p>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <ParentInfoModal onClose={closeModals} parentInfo={parentInfoData} />
+                )
+            )}
             
             {modalType === 'status' && selectedParent && (
                 <StatusChangeModal onClose={closeModals} showToast={showToast} user={selectedParent} schoolId={user.schoolId} />

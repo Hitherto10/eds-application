@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTimetable } from '../TimetableContext';
+import { useAcademic } from '../../../../../contexts/AcademicContext.jsx';
 import { checkConflicts, publishTimetable } from '../timetableAPIs';
 import { AlertTriangle, CheckCircle2, Lock, Loader2 } from 'lucide-react';
 import {
@@ -24,6 +25,7 @@ import {
  */
 export default function PublishScheduler({ open, onOpenChange }) {
   const { state, dispatch, hasErrors, conflicts } = useTimetable();
+  const { currentYear, currentTerm } = useAcademic();
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState(null);
 
@@ -43,8 +45,8 @@ export default function PublishScheduler({ open, onOpenChange }) {
 
       // 1. Backend validation (fail-safe)
       const checkRes = await checkConflicts({
-        academicYearId: state.selectedYear.id,
-        termId: state.selectedTerm.id,
+        academicYearId: currentYear.id,
+        termId: currentTerm.id,
         classId: state.selectedClass.id,
         armId,
         periods: periodPayload,
@@ -57,8 +59,8 @@ export default function PublishScheduler({ open, onOpenChange }) {
 
       // 2. Publish
       const payload = {
-        academicYearId: state.selectedYear.id,
-        termId: state.selectedTerm.id,
+        academicYearId: currentYear.id,
+        termId: currentTerm.id,
         classId: state.selectedClass.id,
         armId,
         periods: periodPayload,

@@ -399,13 +399,6 @@ export async function completeRegistration(payload) {
 }
 
 export async function assignStudenttoTeacher(payload) {
-    // expected payload:
-    // {
-    //     "teacherId": "6962b912fa5cba86752091ff",
-    //     "studentIds": ["6961b35ac534684284150259"],
-    //     "schoolId": "FED9474"
-    // }
-    //
     try {
         const { data } = await apiClient.post(`/api/admin/assign-teacher`,
             payload);
@@ -463,5 +456,34 @@ export async function updateAdminProfile(payload) {
     } catch (error) {
         throw error?.response?.data || error;
     }
+}
+
+export async function getParentDetails(parentId) {
+    try {
+        const { data } = await apiClient.get(`/api/parent-management/parents/${parentId}`);
+        return data;
+    } catch (error) {
+        throw error?.response?.data || error;
+    }
+}
+
+
+export async function getPendingFees(parentId) {
+   return [{
+       "studentId": "453bb662-8842-445c-81ba-8980874a149b",
+       "studentName": "Prisilla Daniels",
+       "className": null,
+       "feeStructureId": "43ca595d-5577-4bad-bcad-cc55599d794e",
+       "feeStructureName": "SSS2 First Term School Fees",
+       "invoiceNumber": "INV-5B0B3-MPZYBJT1-0000",
+       "amount": 20000000,
+       "amountPaid": 0,
+       "amountDue": 20000000,
+       "dueDate": "2026-06-17T00:00:00.000Z",
+       "status": "pending",
+       "academicYearId": "74718fda-6ada-48cf-a52f-c4dc9cf05743",
+       "termId": "e4df07a0-ebb3-401b-8f09-4d78f0717d2b",
+       "isActive": true,
+   }]
 }
 

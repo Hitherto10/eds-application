@@ -1,46 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout.jsx';
-import { FeeProvider, useFee } from '../../fees/FeeContext.jsx';
-import { useFeeData } from '../../fees/useFeeData.js';
+import ScopeBar from '../../components/ScopeBar.jsx';
+import { useAcademic } from '../../../../../contexts/AcademicContext.jsx';
 import { Toast } from '../../components/ui/Toast.jsx';
+import { getSchoolClasses } from '../../services/classAPIs.js';
+import { getFeeStructures } from '../../services/feeAPIs.js';
 import FeeStructuresTab from '../../fees/components/FeeStructuresTab.jsx';
 
-function ScopeBar({ handleYearChange }) {
-    const { state, dispatch } = useFee();
-    return (
-        <div className="flex flex-wrap items-center gap-3">
-            <select
-                value={state.selectedYear?.id || ''}
-                onChange={(e) => handleYearChange(e.target.value)}
-                className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            >
-                {state.academicYears.map(y => (
-                    <option key={y.id} value={y.id}>{y.name}{y.isActive ? ' (Active)' : ''}</option>
-                ))}
-            </select>
-            <select
-                value={state.selectedTerm?.id || ''}
-                onChange={(e) => {
-                    const t = state.terms.find(x => x.id === e.target.value);
-                    if (t) dispatch({ type: 'SELECT_TERM', payload: t });
-                }}
-                disabled={state.terms.length === 0}
-                className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50"
-            >
-                {state.terms.map(t => (
-                    <option key={t.id} value={t.id}>{t.name}{t.isCurrent ? ' (Current)' : ''}</option>
-                ))}
-            </select>
-        </div>
-    );
-}
-
 function FeeStructuresContent() {
-    const { initialLoad, handleYearChange } = useFeeData();
+    const { loading: scopeLoading, currentYear, currentTerm } = useAcademic();
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
     const showToast = (message, type = 'success') => setToast({ show: true, message, type });
 
-    if (initialLoad) {
+    const [classes, setClasses] = useState([]);
+    const [structures, setStructures] = useState([]);
+
+    // Classes are reference data — fetch once.
+    useEffect(() => {
+        getSchoolClasses()
+            .then(res => { if (res?.success) setClasses(res.data?.classes ?? []); })
+            .catch(err => console.error('[FeeStructures] classes failed:', err));
+    }, []);
+
+    // Structures are scoped to the active year/term.
+    useEffect(() => {
+        if (!currentYear?.id) return;
+        let cancelled = false;
+        getFeeStructures({
+            academicYearId: currentYear.id,
+            ...(currentTerm?.id ? { termId: currentTerm.id } : {}),
+        })
+            .then(res => { if (!cancelled && res?.success) setStructures(res.data?.feeStructures ?? []); })
+            .catch(err => console.error('[FeeStructures] structures failed:', err));
+        return () => { cancelled = true; };
+    }, [currentYear?.id, currentTerm?.id]);
+
+    if (scopeLoading) {
         return (
             <div className="flex flex-col items-center h-full justify-center py-32">
                 <div className="relative w-20 h-20">
@@ -62,9 +57,16 @@ function FeeStructuresContent() {
                     <h1 className="text-2xl font-bold text-gray-900">Fee Structures</h1>
                     <p className="text-sm text-gray-500 mt-1">Define and manage fee templates per class and term.</p>
                 </div>
-                <ScopeBar handleYearChange={handleYearChange} />
+                <ScopeBar />
             </div>
-            <FeeStructuresTab showToast={showToast} />
+            <FeeStructuresTab
+                showToast={showToast}
+                classes={classes}
+                currentYear={currentYear}
+                currentTerm={currentTerm}
+                structures={structures}
+                setStructures={setStructures}
+            />
         </div>
     );
 }
@@ -72,9 +74,7 @@ function FeeStructuresContent() {
 export default function FeeStructuresPage() {
     return (
         <AdminLayout>
-            <FeeProvider>
-                <FeeStructuresContent />
-            </FeeProvider>
+            <FeeStructuresContent />
         </AdminLayout>
     );
 }

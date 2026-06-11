@@ -18,7 +18,7 @@ import {
     toggleStatus,
     toggleStudentStatus,
     unassignStudentToTeacher,
-    unlinkStudentToParent,
+    unlinkStudentToParent, getParentDetails,
 } from '../../../../auth/authAPIs.js';
 import { formatStatus, getInitials } from '../../utils/formatters.js';
 import { getSchoolClasses } from '../../services/classAPIs.js';
@@ -829,7 +829,7 @@ export const InviteParentModal = ({ onClose, showToast }) => {
 
 
     const handleInvite = async () => {
-        if (!formData.firstName || !formData.lastName || !formData.email || selectedStudents.length === 0) {
+        if (!formData.firstName || !formData.lastName || !formData.email || selectedStudents.length === 0 || !formData.message) {
             showToast("Please fill all fields and select at least one student.", 'error');
             return;
         }
@@ -907,11 +907,13 @@ export const InviteParentModal = ({ onClose, showToast }) => {
                 <div className="grid grid-cols-2 gap-4">
                     <Input
                         label="First Name"
+                        needed={true}
                         value={formData.firstName}
                         onChange={(e) => setFormData({...formData, firstName: e.target.value})}
                         required
                     />
                     <Input
+                        needed={true}
                         label="Last Name"
                         value={formData.lastName}
                         onChange={(e) => setFormData({...formData, lastName: e.target.value})}
@@ -921,6 +923,7 @@ export const InviteParentModal = ({ onClose, showToast }) => {
 
                 <Input
                     label="Email Address"
+                    needed={true}
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({...formData, email: e.target.value})}
@@ -930,7 +933,7 @@ export const InviteParentModal = ({ onClose, showToast }) => {
                 <div>
                     <div>
                         <label className="block text-xs font-medium text-gray-500 mb-1">
-                            Children (Students)
+                            Children (Students)<span className="text-red-500">*</span>
                         </label>
 
                         {/* Selected Students (The "Pills") */}
@@ -1012,7 +1015,7 @@ export const InviteParentModal = ({ onClose, showToast }) => {
                 {/* Invitation Message */}
                 <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">
-                        Invitation Message
+                        Invitation Message<span className="text-red-500">*</span>
                     </label>
                     <textarea
                         value={formData.message}
@@ -1236,7 +1239,7 @@ export const CreateStudentModal = ({ onClose, showToast }) => {
     );
 };
 
-export const Modal = ({ title, onClose, onSubmit, children }) => (
+export const Modal = ({ title, onClose, onSubmit, children, submitText = 'Submit', submitDisabled = false, hideSubmit = false, cancelText = 'Cancel' }) => (
     <div className="fixed inset-0 z-50 overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4">
             <div className="fixed inset-0 bg-black/30" onClick={onClose} />
@@ -1247,8 +1250,10 @@ export const Modal = ({ title, onClose, onSubmit, children }) => (
                 <h3 className="text-lg font-bold text-gray-900 mb-6">{title}</h3>
                 <div className="space-y-5">{children}</div>
                 <div className="flex justify-end gap-3 pt-6">
-                    <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">Cancel</button>
-                    <button onClick={onSubmit} className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700">Submit</button>
+                    <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">{cancelText}</button>
+                    {!hideSubmit && (
+                        <button onClick={onSubmit} disabled={submitDisabled} className={`px-4 py-2 text-sm rounded-lg ${submitDisabled ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white`}>{submitText}</button>
+                    )}
                 </div>
             </div>
         </div>
@@ -1260,6 +1265,8 @@ export const Modal = ({ title, onClose, onSubmit, children }) => (
 export const ManageParentStudentLinkModal = ({ onClose, showToast, schoolId, parent = null }) => {
     const [parentsList, setParentsList] = useState([]);
     const [studentsList, setStudentsList] = useState([]);
+    const [linkedStudentsList, setLinkedStudentsList] = useState([]);
+    const [hasLinkedStudents, setHasLinkedStudents] = useState(false);
     const [selectedParent, setSelectedParent] = useState(parent);
     const [selectedStudents, setSelectedStudents] = useState([]);
     const [parentSearchQuery, setParentSearchQuery] = useState('');
@@ -1270,25 +1277,34 @@ export const ManageParentStudentLinkModal = ({ onClose, showToast, schoolId, par
     useEffect(() => {
         const fetchParentsAndStudents = async () => {
             try {
-                setLoadingStudents(true);
-                const studentsResponse = await getAllStudents();
-                setStudentsList(studentsResponse.data.students || []);
-
-                if (!parent) {
+                if (selectedParent) {
+                    setLoadingStudents(true);
+                    const details = await getParentDetails(selectedParent.id);
+                    const children = details?.data?.parent?.children || [];
+                    setLinkedStudentsList(children);
+                    
+                    if (children.length > 0) {
+                        setHasLinkedStudents(true);
+                    } else {
+                        setHasLinkedStudents(false);
+                        const studentsResponse = await getAllStudents();
+                        setStudentsList(studentsResponse.data.students || []);
+                    }
+                } else {
                     setLoadingParents(true);
                     const parentsResponse = await getAllParents();
                     setParentsList(parentsResponse.data.parents || []);
+                    setLoadingParents(false);
                 }
             } catch (error) {
-                console.error('Failed to fetch parents or students:', error);
+                console.error('Failed to fetch data:', error);
                 showToast('Failed to load data.', 'error');
             } finally {
                 setLoadingStudents(false);
-                if (!parent) setLoadingParents(false);
             }
         };
         fetchParentsAndStudents();
-    }, [parent]);
+    }, [selectedParent]);
 
     const filteredParents = parent ? [] : parentsList.filter(p =>
         p.firstName.toLowerCase().includes(parentSearchQuery.toLowerCase()) ||
@@ -1297,7 +1313,8 @@ export const ManageParentStudentLinkModal = ({ onClose, showToast, schoolId, par
     );
 
     const filteredStudents = studentsList.filter(student =>
-        student.fullName.toLowerCase().includes(studentSearchQuery.toLowerCase())
+        student.fullName?.toLowerCase().includes(studentSearchQuery.toLowerCase()) || 
+        student.firstName?.toLowerCase().includes(studentSearchQuery.toLowerCase())
     );
 
     const handleStudentToggle = (studentId) => {
@@ -1381,44 +1398,73 @@ export const ManageParentStudentLinkModal = ({ onClose, showToast, schoolId, par
                     </div>
                 )}
                 {selectedParent && (
-                    <p className="mt-2 text-sm text-gray-600">Selected Parent: <span className="font-medium">{selectedParent.name}</span></p>
+                    <p className="mt-2 text-sm text-gray-600">Selected Parent: <span className="font-medium">{selectedParent.name || `${selectedParent.firstName} ${selectedParent.lastName}`}</span></p>
                 )}
 
-                <div>
-                    <h4 className="text-md font-semibold text-gray-800 mb-2">Select Students</h4>
-                    <Input
-                        placeholder="Search student by name or email"
-                        value={studentSearchQuery}
-                        onChange={(e) => setStudentSearchQuery(e.target.value)}
-                    />
-                    <div className="mt-2 h-40 overflow-y-auto border border-gray-200 rounded-lg p-2">
-                        {loadingStudents ? (
-                            <p className="text-center text-gray-500">Loading students...</p>
-                        ) : filteredStudents.length > 0 ? (
-                            filteredStudents.map(student => (
-                                <div
-                                    key={student.id}
-                                    onClick={() => handleStudentToggle(student.id)}
-                                    className={`flex items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-gray-100 ${selectedStudents.includes(student.id) ? 'bg-blue-100' : ''}`}
-                                >
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedStudents.includes(student.id)}
-                                        onChange={() => handleStudentToggle(student.id)}
-                                        className="rounded text-blue-600"
-                                    />
-                                    <UserCircle2 size={20} className="text-gray-500" />
-                                    <span>{student.fullName}</span>
-                                </div>
-                            ))
-                        ) : (
-                            <p className="text-center text-gray-500">No students found.</p>
+                {selectedParent && (
+                    <div>
+                        <h4 className="text-md font-semibold text-gray-800 mb-2">
+                            {hasLinkedStudents ? 'Linked Students' : 'Select Students to Link'}
+                        </h4>
+                        
+                        {!hasLinkedStudents && (
+                            <Input
+                                placeholder="Search student by name or email"
+                                value={studentSearchQuery}
+                                onChange={(e) => setStudentSearchQuery(e.target.value)}
+                            />
+                        )}
+                        
+                        <div className="mt-2 h-40 overflow-y-auto border border-gray-200 rounded-lg p-2">
+                            {loadingStudents ? (
+                                <p className="text-center text-gray-500">Loading students...</p>
+                            ) : hasLinkedStudents ? (
+                                linkedStudentsList.length > 0 ? (
+                                    linkedStudentsList.map(student => (
+                                        <div
+                                            key={student.id}
+                                            onClick={() => handleStudentToggle(student.id)}
+                                            className={`flex items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-gray-100 ${selectedStudents.includes(student.id) ? 'bg-red-50 text-red-700' : ''}`}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedStudents.includes(student.id)}
+                                                onChange={() => handleStudentToggle(student.id)}
+                                                className="rounded text-red-600"
+                                            />
+                                            <UserCircle2 size={20} className="text-gray-500" />
+                                            <span>{student.fullName || `${student.firstName} ${student.lastName}`}</span>
+                                        </div>
+                                    ))
+                                ) : null
+                            ) : (
+                                filteredStudents.length > 0 ? (
+                                    filteredStudents.map(student => (
+                                        <div
+                                            key={student.id}
+                                            onClick={() => handleStudentToggle(student.id)}
+                                            className={`flex items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-gray-100 ${selectedStudents.includes(student.id) ? 'bg-blue-100' : ''}`}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedStudents.includes(student.id)}
+                                                onChange={() => handleStudentToggle(student.id)}
+                                                className="rounded text-blue-600"
+                                            />
+                                            <UserCircle2 size={20} className="text-gray-500" />
+                                            <span>{student.fullName || `${student.firstName} ${student.lastName}`}</span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-center text-gray-500">No students found.</p>
+                                )
+                            )}
+                        </div>
+                        {selectedStudents.length > 0 && (
+                            <p className="mt-2 text-sm text-gray-600">Selected Students: <span className="font-medium">{selectedStudents.length}</span></p>
                         )}
                     </div>
-                    {selectedStudents.length > 0 && (
-                        <p className="mt-2 text-sm text-gray-600">Selected Students: <span className="font-medium">{selectedStudents.length}</span></p>
-                    )}
-                </div>
+                )}
 
                 <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
                     <button
@@ -1428,22 +1474,93 @@ export const ManageParentStudentLinkModal = ({ onClose, showToast, schoolId, par
                     >
                         Cancel
                     </button>
-                    <button
-                        type="button"
-                        onClick={handleLinkStudents}
-                        disabled={!selectedParent || selectedStudents.length === 0}
-                        className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        Link Students
-                    </button>
-                    <button
-                        type="button"
-                        onClick={handleUnlinkStudents}
-                        disabled={!selectedParent || selectedStudents.length === 0}
-                        className="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        Unlink Students
-                    </button>
+                    {!hasLinkedStudents ? (
+                        <button
+                            type="button"
+                            onClick={handleLinkStudents}
+                            disabled={!selectedParent || selectedStudents.length === 0}
+                            className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Link Students
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={handleUnlinkStudents}
+                            disabled={!selectedParent || selectedStudents.length === 0}
+                            className="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Unlink Students
+                        </button>
+                    )}
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+export const ParentInfoModal = ({ onClose, parentInfo }) => {
+    if (!parentInfo) return null;
+
+    return (
+        <Modal title="Parent Information" onClose={onClose} hideSubmit={true} cancelText="Close">
+            <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                        <h4 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2">Personal Details</h4>
+                        <div className="space-y-2">
+                            <p className="text-sm"><span className="text-gray-500 inline-block w-24">Full Name:</span> <span className="font-medium text-gray-900">{parentInfo.fullName}</span></p>
+                            <p className="text-sm"><span className="text-gray-500 inline-block w-24">Email:</span> <span className="font-medium text-gray-900">{parentInfo.email}</span></p>
+                            <p className="text-sm"><span className="text-gray-500 inline-block w-24">Phone:</span> <span className="font-medium text-gray-900">{parentInfo.phone || 'N/A'}</span></p>
+                            <p className="text-sm"><span className="text-gray-500 inline-block w-24">Address:</span> <span className="font-medium text-gray-900">{parentInfo.address || 'N/A'}</span></p>
+                            <p className="text-sm"><span className="text-gray-500 inline-block w-24">Occupation:</span> <span className="font-medium text-gray-900">{parentInfo.occupation || 'N/A'}</span></p>
+                        </div>
+                    </div>
+                    <div className="space-y-4">
+                        <h4 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2">Account Status</h4>
+                        <div className="space-y-2">
+                            <p className="text-sm flex items-center"><span className="text-gray-500 inline-block w-24">Status:</span> 
+                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ${parentInfo.isActive ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                                    {parentInfo.statusDisplay}
+                                </span>
+                            </p>
+                            <p className="text-sm"><span className="text-gray-500 inline-block w-24">Verified:</span> <span className="font-medium text-gray-900">{parentInfo.isVerified ? 'Yes' : 'No'}</span></p>
+                            <p className="text-sm"><span className="text-gray-500 inline-block w-24">Created At:</span> <span className="font-medium text-gray-900">{new Date(parentInfo.createdAt).toLocaleDateString()}</span></p>
+                            <p className="text-sm"><span className="text-gray-500 inline-block w-24">Invited By:</span> <span className="font-medium text-gray-900">{parentInfo.invitedBy?.name || 'N/A'}</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                {(parentInfo.emergencyContact || parentInfo.emergencyPhone) && (
+                    <div className="space-y-4">
+                        <h4 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2">Emergency Contact</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <p className="text-sm"><span className="text-gray-500 inline-block w-24">Name:</span> <span className="font-medium text-gray-900">{parentInfo.emergencyContact || 'N/A'}</span></p>
+                            <p className="text-sm"><span className="text-gray-500 inline-block w-24">Phone:</span> <span className="font-medium text-gray-900">{parentInfo.emergencyPhone || 'N/A'}</span></p>
+                        </div>
+                    </div>
+                )}
+
+                <div className="space-y-4">
+                    <h4 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2">Linked Children ({parentInfo.childrenCount || 0})</h4>
+                    {parentInfo.children && parentInfo.children.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {parentInfo.children.map((child, index) => (
+                                <div key={child.id || index} className="p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-1.5 transition-all hover:shadow-sm">
+                                    <p className="font-semibold text-gray-900 flex justify-between items-start">
+                                        <span>{child.fullName}</span>
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase ${child.isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                                            {child.statusDisplay}
+                                        </span>
+                                    </p>
+                                    <p className="text-gray-600 text-xs font-medium">{child.classDisplay || 'No class assigned'}</p>
+                                    {child.gender && <p className="text-gray-500 text-xs capitalize">{child.gender}</p>}
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-gray-500 italic">No children linked to this parent.</p>
+                    )}
                 </div>
             </div>
         </Modal>

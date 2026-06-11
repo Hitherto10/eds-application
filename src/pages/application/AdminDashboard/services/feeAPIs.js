@@ -32,7 +32,7 @@ import apiClient from '../../../../utils/axiosConfig.js';
  *  `id` so the frontend state shape stays consistent.
  */
 
-export const FEE_BACKEND_LIVE = false;
+export const FEE_BACKEND_LIVE = true;
 
 const delay = (ms = 400) => new Promise(r => setTimeout(r, ms));
 
@@ -763,7 +763,7 @@ export async function getAdjustments(filters = {}) {
  *             balance, reference, account }  // account = receivable | revenue
  */
 export async function getStudentLedger(studentId, filters = {}) {
-  console.log(`📡 GET /api/fees/ledger/student/${studentId}`, { params: filters });
+  console.log(`📡 GET /api/fees/ledger/students/${studentId}`, { params: filters });
   console.log('📦 Expected response:', {
     success: true,
     data: {
@@ -778,7 +778,7 @@ export async function getStudentLedger(studentId, filters = {}) {
   });
 
   if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.get(`/api/fees/ledger/student/${studentId}`, { params: filters });
+    const { data } = await apiClient.get(`/api/fees/ledger/students/${studentId}`, { params: filters });
     return data;
   }
 
@@ -884,7 +884,7 @@ export async function getFeeAnalytics(filters = {}) {
   });
 
   if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.get('/api/fees/analytics', { params: filters });
+    const { data } = await apiClient.get('/api/fees/reports/analytics', { params: filters });
     return data;
   }
 

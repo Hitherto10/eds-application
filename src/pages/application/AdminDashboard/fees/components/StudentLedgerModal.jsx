@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useFee } from '../FeeContext.jsx';
+import { useAcademic } from '../../../../../contexts/AcademicContext.jsx';
 import { getStudentLedger, formatNaira } from '../../services/feeAPIs.js';
 import { X, Loader2, ArrowDownCircle, ArrowUpCircle, SlidersHorizontal } from 'lucide-react';
 
@@ -14,7 +14,7 @@ const typeMeta = {
  * Props: { student: { id, name }, onClose }
  */
 export default function StudentLedgerModal({ student, onClose }) {
-  const { state } = useFee();
+  const { currentYear, currentTerm } = useAcademic();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
 
@@ -22,8 +22,8 @@ export default function StudentLedgerModal({ student, onClose }) {
     (async () => {
       try {
         const res = await getStudentLedger(student.id, {
-          academicYearId: state.selectedYear?.id,
-          termId: state.selectedTerm?.id,
+          academicYearId: currentYear?.id,
+          termId: currentTerm?.id,
         });
         if (res.success) setData(res.data);
       } catch (e) {

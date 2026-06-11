@@ -69,7 +69,7 @@ const RecentActivity = ({ activities = { users: [], students: [], invitations: [
     };
 
     return (
-        <div className="bg-white rounded-4xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white w-full  rounded-4xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="p-4 border-b border-gray-50 flex justify-between items-center">
                 <h3 className="font-bold text-gray-800">Recent Activity</h3>
             </div>
@@ -113,7 +113,7 @@ export const PendingInvitations = (invitations) => {
         <>
 
             {/* Invitation Management Section */}
-            <div className="bg-white p-6 rounded-4xl shadow-sm border border-gray-100 flex flex-col h-full">
+            <div className="bg-white w-full p-6 rounded-4xl shadow-sm border border-gray-100 flex flex-col h-full">
                 <div className="flex items-center justify-between mb-6">
                     <div>
                         <h2 className="text-xl font-bold text-gray-800">Pending Invitations</h2>
@@ -501,7 +501,7 @@ const DashboardPage = () => {
                 <AnalyticsComponent userStatsAnalytics={userStats} />
                 <QuickActions />
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8 p-2">
+            <div className="flex gap-6 mt-8 p-2">
                 <RecentActivity activities={userActivities} />
                 <PendingInvitations invitations={invitationList} />
             </div>

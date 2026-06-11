@@ -9,9 +9,10 @@ import { getSubjectColor } from '../TimetableContext';
  * ─────────────────────────────────────────────────────────────────────────────
  * Left sidebar containing draggable entities (Subjects, Teachers, Rooms).
  */
-export default function PalettePanel() {
+export default function PalettePanel({ resources }) {
   const { state } = useTimetable();
-  
+  const { subjects, teachers, arms } = resources;
+
   const [openSections, setOpenSections] = useState({
     subjects: true,
     teachers: true,
@@ -24,12 +25,12 @@ export default function PalettePanel() {
   const [search, setSearch] = useState('');
   const term = search.toLowerCase();
 
-  const filteredSubjects = state.subjects.filter(s => s.name.toLowerCase().includes(term));
-  const filteredTeachers = state.teachers.filter(t => t.name.toLowerCase().includes(term));
-  
+  const filteredSubjects = subjects.filter(s => s.name.toLowerCase().includes(term));
+  const filteredTeachers = teachers.filter(t => t.name.toLowerCase().includes(term));
+
   // Extract arms that belong to the currently selected class
   const classArms = state.selectedClass
-    ? state.arms.filter(arm => arm.classId === state.selectedClass.id)
+    ? arms.filter(arm => arm.classId === state.selectedClass.id)
     : [];
 
   const filteredArms = classArms.filter(a => a.name.toLowerCase().includes(term));
@@ -67,7 +68,7 @@ export default function PalettePanel() {
                 <p className="text-xs text-gray-400 p-2 text-center bg-gray-50 rounded">No subjects found.</p>
               ) : (
                 filteredSubjects.map(subject => (
-                  <PaletteItem key={subject.id} id={`base_${subject.id}`} type="SUBJECT" payload={subject} />
+                  <PaletteItem key={subject.id} id={`base_${subject.id}`} type="SUBJECT" payload={subject} arms={arms} />
                 ))
               )}
             </div>
@@ -87,7 +88,7 @@ export default function PalettePanel() {
                 <p className="text-xs text-gray-400 p-2 text-center bg-gray-50 rounded">No teachers found.</p>
               ) : (
                 filteredTeachers.map(teacher => (
-                  <PaletteItem key={teacher.id} id={`base_${teacher.id}`} type="TEACHER" payload={teacher} />
+                  <PaletteItem key={teacher.id} id={`base_${teacher.id}`} type="TEACHER" payload={teacher} arms={arms} />
                 ))
               )}
             </div>
@@ -120,11 +121,11 @@ export default function PalettePanel() {
 }
 
 // ─── Draggable Item Component ──────────────────────────────────────────────────
-function PaletteItem({ id, type, payload }) {
+function PaletteItem({ id, type, payload, arms = [] }) {
   const { state } = useTimetable();
   // Dragging is disabled when: published, no class, or class has arms but none selected yet.
   const classArms = state.selectedClass
-    ? state.arms.filter(a => a.classId === state.selectedClass.id)
+    ? arms.filter(a => a.classId === state.selectedClass.id)
     : [];
   const needsArm = classArms.length > 0 && !state.selectedArm;
   const isDragDisabled = state.isPublished || !state.selectedClass || needsArm;

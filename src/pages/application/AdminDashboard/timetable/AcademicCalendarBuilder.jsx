@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useTimetable } from './TimetableContext';
+import { useAcademic } from '../../../../contexts/AcademicContext.jsx';
 import {
   Plus, Edit2, Trash2, CheckCircle, AlertCircle, Calendar as CalendarIcon,
   Clock, Check, X, ShieldAlert, ArrowRight, Settings, ChevronLeft, ChevronRight, Loader2
@@ -7,7 +7,7 @@ import {
 import {
   createAcademicYear, updateAcademicYear, deleteAcademicYear,
   createTerm, updateTerm, deleteTerm, setAcademicContext, getAcademicProfile,
-  createEvent, deleteEvent, getAcademicYears, setCurrentTerm
+  getAcademicYears, getTerms, setCurrentTerm
 } from './timetableAPIs';
 import {
   AlertDialog,
@@ -20,11 +20,12 @@ import {
   AlertDialogFooter
 } from '../../../../components/ui/alert-dialog';
 import {formatYear} from "../utils/formatters";
-import {useGlobalTimetableData} from "./useGlobalTimetableData.js";
 
 export default function AcademicCalendarBuilder() {
-  const { state, dispatch } = useTimetable();
-  const { initialLoad } = useGlobalTimetableData();
+  // Academic years + terms are this page's own data — fetched directly here.
+  const { refresh: refreshAcademic } = useAcademic();
+  const [academicYears, setAcademicYears] = useState([]);
+  const [terms, setTerms] = useState([]);
 
 
 
@@ -61,11 +62,30 @@ export default function AcademicCalendarBuilder() {
   for (let i = 0; i < firstDayIndex; i++) days.push(null);
   for (let i = 1; i <= daysInMonth; i++) days.push(new Date(currentDate.getFullYear(), currentDate.getMonth(), i));
 
-  // Fetch Academic Profile on mount
+  // Fetch academic profile + years on mount
   useEffect(() => {
     fetchProfile();
+    loadYears();
   }, []);
 
+  // Reload the terms list whenever the viewed year changes.
+  useEffect(() => {
+    if (!selectedViewYearId) { setTerms([]); return; }
+    let cancelled = false;
+    getTerms(selectedViewYearId)
+      .then(res => { if (!cancelled && res?.success) setTerms(res.data?.terms ?? []); })
+      .catch(e => console.error('Failed to load terms', e));
+    return () => { cancelled = true; };
+  }, [selectedViewYearId]);
+
+  const loadYears = async () => {
+    try {
+      const res = await getAcademicYears();
+      if (res?.success) setAcademicYears(res.data?.years ?? []);
+    } catch (e) {
+      console.error('Failed to load academic years', e);
+    }
+  };
 
   const fetchProfile = async () => {
     try {
@@ -85,16 +105,16 @@ export default function AcademicCalendarBuilder() {
 
   // Set selected view year initially if none selected
   useEffect(() => {
-    if (!selectedViewYearId && state.academicYears.length > 0) {
+    if (!selectedViewYearId && academicYears.length > 0) {
       // Prefer active year, then most recent
       const active = activeProfile.currentYear?.id;
-      if (active && state.academicYears.some(y => y.id === active)) {
+      if (active && academicYears.some(y => y.id === active)) {
         setSelectedViewYearId(active);
       } else {
-        setSelectedViewYearId(state.academicYears[state.academicYears.length - 1].id);
+        setSelectedViewYearId(academicYears[academicYears.length - 1].id);
       }
     }
-  }, [state.academicYears, activeProfile.currentYear, selectedViewYearId]);
+  }, [academicYears, activeProfile.currentYear, selectedViewYearId]);
 
   // --- Handlers ---
 
@@ -113,16 +133,18 @@ export default function AcademicCalendarBuilder() {
     if (editYearId) {
       const res = await updateAcademicYear(editYearId, payload);
       if (res.success) {
-        dispatch({ type: 'UPDATE_ACADEMIC_YEAR', payload: res.data.academicYear });
+        const updated = res.data.academicYear;
+        setAcademicYears(prev => prev.map(y => (y.id === updated.id ? updated : y)));
         setShowYearModal(false);
         setEditYearId(null);
       }
     } else {
       const res = await createAcademicYear(payload);
       if (res.success) {
-        dispatch({ type: 'ADD_ACADEMIC_YEAR', payload: res.data.academicYear });
+        const created = res.data.academicYear;
+        setAcademicYears(prev => [...prev, created]);
         setShowYearModal(false);
-        if (!selectedViewYearId) setSelectedViewYearId(res.data.academicYear.id);
+        if (!selectedViewYearId) setSelectedViewYearId(created.id);
       }
     }
   };
@@ -131,7 +153,7 @@ export default function AcademicCalendarBuilder() {
     if (confirm('Delete this academic year? All associated terms and schedules may be affected.')) {
       const res = await deleteAcademicYear(id);
       if (res.success) {
-        dispatch({ type: 'REMOVE_ACADEMIC_YEAR', id });
+        setAcademicYears(prev => prev.filter(y => y.id !== id));
         if (selectedViewYearId === id) setSelectedViewYearId(null);
       }
     }
@@ -164,15 +186,15 @@ export default function AcademicCalendarBuilder() {
     if (editTermId) {
       const res = await updateTerm(editTermId, payload);
       if (res.success) {
-        dispatch({ type: 'UPDATE_TERM', payload: res.data.term });
+        const updated = res.data.term;
+        setTerms(prev => prev.map(t => (t.id === updated.id ? updated : t)));
         setShowTermModal(false);
         setEditTermId(null);
       }
     } else {
       const res = await createTerm(payload);
-      console.log(payload);
       if (res.success) {
-        dispatch({ type: 'ADD_TERM', payload: res.data.term });
+        setTerms(prev => [...prev, res.data.term]);
         setShowTermModal(false);
       }
     }
@@ -181,21 +203,23 @@ export default function AcademicCalendarBuilder() {
   const handleDeleteTerm = async (id) => {
     if (confirm('Delete this term? All associated schedules will be affected.')) {
       const res = await deleteTerm(id);
-      if (res.success) dispatch({ type: 'REMOVE_TERM', id });
+      if (res.success) setTerms(prev => prev.filter(t => t.id !== id));
     }
   };
 
   const handleSetActiveContext = async (yearId, termId) => {
     const res = await setAcademicContext(yearId);
     if (res.success) {
-      fetchProfile(); // Refresh profile to get updated active objects
+      fetchProfile();        // Refresh local active badges
+      refreshAcademic();     // Propagate to the global academic scope
     }
   };
 
   const handleSetActiveTerm = async (termId) => {
     const res = await setCurrentTerm(termId);
     if (res.success) {
-      fetchProfile(); // Refresh profile to get updated active objects
+      fetchProfile();        // Refresh local active badges
+      refreshAcademic();     // Propagate to the global academic scope
     }
   };
 
@@ -218,7 +242,7 @@ export default function AcademicCalendarBuilder() {
       : <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600"><Clock size={12} /> Inactive</span>
   );
 
-  const viewTerms = state.terms?.filter(t => t.academicYearId === selectedViewYearId);
+  const viewTerms = terms?.filter(t => t.academicYearId === selectedViewYearId);
 
 
 
@@ -284,7 +308,7 @@ export default function AcademicCalendarBuilder() {
             </div>
 
             <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-[500px]">
-              {state.academicYears.length === 0 ? (
+              {academicYears.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
                     <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
                       <CalendarIcon className="text-gray-400" size={32} />
@@ -304,7 +328,7 @@ export default function AcademicCalendarBuilder() {
                       </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                      {state.academicYears.map(y => {
+                      {academicYears.map(y => {
                         const isSystemActive = activeProfile.currentYear?.id === y.id;
                         const isSelected = selectedViewYearId === y.id;
                         return (
@@ -358,7 +382,7 @@ export default function AcademicCalendarBuilder() {
                 Terms
                 {selectedViewYearId && (
                     <span className="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                  for {state.academicYears.find(y => y.id === selectedViewYearId)?.name || 'Selected Year'}
+                  for {academicYears.find(y => y.id === selectedViewYearId)?.name || 'Selected Year'}
                 </span>
                 )}
               </h3>
@@ -382,7 +406,7 @@ export default function AcademicCalendarBuilder() {
                     <ArrowRight className="text-gray-300 mb-3" size={32} />
                     <p>Select an Academic Year from the left to view its terms.</p>
                   </div>
-              ) : state.terms.length === 0 ? (
+              ) : terms.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
                     <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
                       <CalendarIcon className="text-gray-400" size={32} />
@@ -394,7 +418,7 @@ export default function AcademicCalendarBuilder() {
               ) : (
                   <div className="overflow-y-auto flex-1 p-4">
                     <div className="grid grid-cols-1 gap-3">
-                      {state.terms.map(t => {
+                      {terms.map(t => {
                         const isSystemActiveYear = activeProfile.currentYear?.id === selectedViewYearId;
                         const isSystemActiveTerm = activeProfile.currentTerm?.id === t.id;
 
@@ -508,7 +532,7 @@ export default function AcademicCalendarBuilder() {
           <AlertDialogHeader>
             <AlertDialogTitle>{editTermId ? 'Edit Term' : 'Add Term'}</AlertDialogTitle>
             <AlertDialogDescription>
-              {selectedViewYearId && `Adding term to ${state.academicYears.find(y => y.id === selectedViewYearId)?.name}`}
+              {selectedViewYearId && `Adding term to ${academicYears.find(y => y.id === selectedViewYearId)?.name}`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-4 py-4">

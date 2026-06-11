@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import AdminLayout from '../../components/layout/AdminLayout.jsx';
 import { TimetableProvider, useTimetable } from '../../timetable/TimetableContext.jsx';
+import { useAcademic } from '../../../../../contexts/AcademicContext.jsx';
 import TimetableBuilder from '../../timetable/TimetableBuilder.jsx';
 import { useGlobalTimetableData } from '../../timetable/useGlobalTimetableData.js';
 
@@ -14,9 +15,10 @@ import { useGlobalTimetableData } from '../../timetable/useGlobalTimetableData.j
  */
 function TimetableContent() {
     const { state, dispatch } = useTimetable();
-    const { initialLoad, handleYearChange } = useGlobalTimetableData();
+    const { academicYears, currentYear, terms, currentTerm, selectYear, selectTerm, loading: academicLoading } = useAcademic();
+    const { initialLoad, resources } = useGlobalTimetableData();
 
-    if (initialLoad) {
+    if (initialLoad || academicLoading) {
         return (
             <div className="flex-1 flex flex-col items-center justify-center p-8 h-full">
                 <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-4" />
@@ -25,11 +27,9 @@ function TimetableContent() {
         );
     }
 
-    console.log("TimetableContent:", state.selectedYear, state.selectedTerm, state.selectedClass, state.selectedArm);
-
     // Arms for the currently selected class (empty = class has no arms → whole-class timetable)
     const classArms = state.selectedClass
-        ? state.arms.filter(a => a.classId === state.selectedClass.id)
+        ? resources.arms.filter(a => a.classId === state.selectedClass.id)
         : [];
 
     return (
@@ -43,13 +43,13 @@ function TimetableContent() {
                     <select
                         value={state.selectedClass?.id || ''}
                         onChange={e => {
-                            const c = state.classes.find(x => x.id === e.target.value) ?? null;
+                            const c = resources.classes.find(x => x.id === e.target.value) ?? null;
                             dispatch({ type: 'SELECT_CLASS', payload: c });
                         }}
                         className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                     >
                         <option value="">-- Choose Class --</option>
-                        {state.classes.map(c => (
+                        {resources.classes.map(c => (
                             <option key={c.id} value={c.id}>{c.name}</option>
                         ))}
                     </select>
@@ -81,13 +81,13 @@ function TimetableContent() {
                 <div className="w-px h-6 bg-gray-200 hidden md:block" />
 
                 <div className="flex flex-wrap items-center gap-3">
-                    {/* Academic year selector — change triggers sequential term reload via handleYearChange */}
+                    {/* Academic year selector — reads/writes the global academic scope */}
                     <select
-                        value={state.selectedYear?.id || ''}
-                        onChange={e => handleYearChange(e.target.value)}
+                        value={currentYear?.id || ''}
+                        onChange={e => selectYear(e.target.value)}
                         className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                     >
-                        {state.academicYears.map(y => (
+                        {academicYears.map(y => (
                             <option key={y.id} value={y.id}>{y.name}{y.isActive ? ' (Active)' : ''}</option>
                         ))}
                     </select>
@@ -96,15 +96,12 @@ function TimetableContent() {
 
                     {/* Term selector — populated after year is resolved */}
                     <select
-                        value={state.selectedTerm?.id || ''}
-                        onChange={e => {
-                            const t = state.terms.find(x => x.id === e.target.value);
-                            if (t) dispatch({ type: 'SELECT_TERM', payload: t });
-                        }}
-                        disabled={state.loading.terms || state.terms.length === 0}
+                        value={currentTerm?.id || ''}
+                        onChange={e => selectTerm(e.target.value)}
+                        disabled={terms.length === 0}
                         className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50"
                     >
-                        {state.terms.map(t => (
+                        {terms.map(t => (
                             <option key={t.id} value={t.id}>{t.name}{t.isCurrent ? ' (Current)' : ''}</option>
                         ))}
                     </select>
@@ -119,7 +116,7 @@ function TimetableContent() {
 
             {/* Builder */}
             <div className="flex-1 overflow-hidden">
-                <TimetableBuilder />
+                <TimetableBuilder resources={resources} />
             </div>
         </div>
     );

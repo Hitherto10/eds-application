@@ -1,46 +1,16 @@
 import React, { useState } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout.jsx';
-import { FeeProvider, useFee } from '../../fees/FeeContext.jsx';
-import { useFeeData } from '../../fees/useFeeData.js';
+import ScopeBar from '../../components/ScopeBar.jsx';
+import { useAcademic } from '../../../../../contexts/AcademicContext.jsx';
 import { Toast } from '../../components/ui/Toast.jsx';
 import FeePaymentsTab from '../../fees/components/FeePaymentsTab.jsx';
 
-function ScopeBar({ handleYearChange }) {
-    const { state, dispatch } = useFee();
-    return (
-        <div className="flex flex-wrap items-center gap-3">
-            <select
-                value={state.selectedYear?.id || ''}
-                onChange={(e) => handleYearChange(e.target.value)}
-                className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            >
-                {state.academicYears.map(y => (
-                    <option key={y.id} value={y.id}>{y.name}{y.isActive ? ' (Active)' : ''}</option>
-                ))}
-            </select>
-            <select
-                value={state.selectedTerm?.id || ''}
-                onChange={(e) => {
-                    const t = state.terms.find(x => x.id === e.target.value);
-                    if (t) dispatch({ type: 'SELECT_TERM', payload: t });
-                }}
-                disabled={state.terms.length === 0}
-                className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50"
-            >
-                {state.terms.map(t => (
-                    <option key={t.id} value={t.id}>{t.name}{t.isCurrent ? ' (Current)' : ''}</option>
-                ))}
-            </select>
-        </div>
-    );
-}
-
 function FeePaymentsContent() {
-    const { initialLoad, handleYearChange } = useFeeData();
+    const { loading: scopeLoading, currentYear } = useAcademic();
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
     const showToast = (message, type = 'success') => setToast({ show: true, message, type });
 
-    if (initialLoad) {
+    if (scopeLoading) {
         return (
             <div className="flex flex-col items-center justify-center py-32 h-full">
                 <div className="relative w-20 h-20">
@@ -62,9 +32,9 @@ function FeePaymentsContent() {
                     <h1 className="text-2xl font-bold text-gray-900">Payments &amp; Ledger</h1>
                     <p className="text-sm text-gray-500 mt-1">Record payments and view per-student ledger entries.</p>
                 </div>
-                <ScopeBar handleYearChange={handleYearChange} />
+                <ScopeBar />
             </div>
-            <FeePaymentsTab showToast={showToast} />
+            <FeePaymentsTab showToast={showToast} currentYear={currentYear} />
         </div>
     );
 }
@@ -72,9 +42,7 @@ function FeePaymentsContent() {
 export default function FeePaymentsPage() {
     return (
         <AdminLayout>
-            <FeeProvider>
-                <FeePaymentsContent />
-            </FeeProvider>
+            <FeePaymentsContent />
         </AdminLayout>
     );
 }

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTimetable } from '../TimetableContext';
+import { useAcademic } from '../../../../../contexts/AcademicContext.jsx';
 import { Save, Lock, AlertTriangle, AlertCircle, Edit2, X, RefreshCw, ChevronDown, Trash2 } from 'lucide-react';
 import ConflictInspector from './ConflictInspector';
 import PublishScheduler from './PublishScheduler';
@@ -12,8 +13,9 @@ import {deleteTimetableDraft} from "../timetableAPIs.js";
  * The right-hand inspector panel.
  * Shows context-sensitive details based on selection, plus global publish controls.
  */
-export default function PropertiesPanel() {
+export default function PropertiesPanel({ resources }) {
   const { state, dispatch, hasErrors, conflicts } = useTimetable();
+  const { currentTerm } = useAcademic();
   const [showPublish, setShowPublish] = useState(false);
   const [showDuplicate, setShowDuplicate] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -25,7 +27,7 @@ export default function PropertiesPanel() {
     
     setIsDeleting(true);
     try {
-      await deleteTimetableDraft(state.selectedClass.id, state.selectedTerm.id);
+      await deleteTimetableDraft(state.selectedClass.id, currentTerm.id);
       dispatch({ type: 'CLEAR_PERIODS_AND_SCHEDULES' });
     } catch (err) {
       console.error(err);
@@ -115,7 +117,7 @@ export default function PropertiesPanel() {
 
         {/* Selected block properties (contextual) */}
         {selectedEntry ? (
-          <SelectionEditor entry={selectedEntry} dispatch={dispatch} state={state} />
+          <SelectionEditor entry={selectedEntry} dispatch={dispatch} state={state} resources={resources} />
         ) : (
            <div className="p-4 bg-gray-50 border border-gray-100 border-dashed rounded-xl text-center">
              <p className="text-xs text-gray-500">Select a schedule block on the grid to edit its properties.</p>
@@ -140,14 +142,15 @@ export default function PropertiesPanel() {
 
       {/* Modals */}
       <PublishScheduler open={showPublish} onOpenChange={setShowPublish} />
-      <DuplicateWizard open={showDuplicate} onOpenChange={setShowDuplicate} />
+      <DuplicateWizard open={showDuplicate} onOpenChange={setShowDuplicate} resources={resources} />
     </div>
   );
 }
 
 // ─── Inline Editor for Selected Entry ─────────────────────────────────────────
-function SelectionEditor({ entry, dispatch, state }) {
+function SelectionEditor({ entry, dispatch, state, resources }) {
   const isReadOnly = state.isPublished;
+  const { teachers = [], rooms = [] } = resources || {};
 
   const handleChange = (field, value) => {
     dispatch({
@@ -158,7 +161,7 @@ function SelectionEditor({ entry, dispatch, state }) {
 
   const handleTeacherChange = (e) => {
     const tid = e.target.value;
-    const t = state.teachers.find(x => x.id === tid);
+    const t = teachers.find(x => x.id === tid);
     dispatch({
       type: 'UPDATE_SCHEDULE_ENTRY',
       payload: { id: entry.id, teacherId: tid || null, teacherName: t ? t.name : null }
@@ -208,7 +211,7 @@ function SelectionEditor({ entry, dispatch, state }) {
             className="w-full p-2 bg-white border border-gray-200 rounded text-sm focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50 disabled:bg-gray-50"
           >
             <option value="">-- Unassigned --</option>
-            {state.teachers.map(t => (
+            {teachers.map(t => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
           </select>
@@ -224,7 +227,7 @@ function SelectionEditor({ entry, dispatch, state }) {
              className="w-full p-2 bg-white border border-gray-200 rounded text-sm focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50 disabled:bg-gray-50"
           >
             <option value="">-- Unassigned --</option>
-            {state.rooms.map(r => (
+            {rooms.map(r => (
               <option key={r} value={r}>{r}</option>
             ))}
           </select>

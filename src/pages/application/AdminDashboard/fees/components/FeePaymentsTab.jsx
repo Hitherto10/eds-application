@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useFee } from '../FeeContext.jsx';
 import {
   getAllPayments,
   applyAdjustment,
@@ -123,9 +122,7 @@ function AdjustmentModal({ onClose, onApplied, showToast }) {
 }
 
 // ─── Main tab ─────────────────────────────────────────────────────────────────
-export default function FeePaymentsTab({ showToast }) {
-  const { state } = useFee();
-
+export default function FeePaymentsTab({ showToast, currentYear }) {
   const [payments, setPayments]   = useState([]);
   const [loading, setLoading]     = useState(true);
   const [methodFilter, setMethod] = useState('all');
@@ -138,7 +135,7 @@ export default function FeePaymentsTab({ showToast }) {
     setLoading(true);
     try {
       const res = await getAllPayments({
-        academicYearId: state.selectedYear?.id,
+        academicYearId: currentYear?.id,
         ...(methodFilter !== 'all' ? { method: methodFilter } : {}),
       });
       if (res.success) setPayments(res.data.payments || []);
@@ -147,7 +144,7 @@ export default function FeePaymentsTab({ showToast }) {
     } finally {
       setLoading(false);
     }
-  }, [state.selectedYear, methodFilter]);
+  }, [currentYear, methodFilter]);
 
   useEffect(() => { load(); }, [load]);
 

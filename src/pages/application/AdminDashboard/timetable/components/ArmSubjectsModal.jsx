@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useTimetable } from '../TimetableContext';
 import {
   getArmSubjects,
   addSubjectsToArm,
@@ -7,7 +6,7 @@ import {
   copySubjectsToArms,
 } from '../../services/armAPIs';
 import { addSubjectsToClass } from '../../services/classAPIs';
-import { CATEGORY_STYLES, CATEGORY_LABELS } from '../../services/subjectAPIs';
+import { getSchoolSubjects, CATEGORY_STYLES, CATEGORY_LABELS } from '../../services/subjectAPIs';
 import {
   X,
   BookOpen,
@@ -43,17 +42,21 @@ const CategoryPill = ({ category }) => {
  * ArmSubjectsModal
  *
  * Props:
- *   arm        { id, classId, name }  — the arm being managed
- *   classArms  { id, name }[]         — sibling arms (for copy-from)
- *   onClose    () => void
+ *   arm             { id, classId, name }  — the arm being managed
+ *   classArms       { id, name }[]         — sibling arms (for copy-from)
+ *   onClose         () => void
+ *   onSubjectsChange (armId, count) => void — lets the parent track per-arm counts
  */
-export default function ArmSubjectsModal({ arm, classArms, onClose }) {
-  const { state, dispatch } = useTimetable();
-
+export default function ArmSubjectsModal({ arm, classArms, onClose, onSubjectsChange }) {
   const [activeTab,    setActiveTab]    = useState('current');
   const [loading,      setLoading]      = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [toast,        setToast]        = useState(null); // { msg, type }
+
+  // Data owned by this modal, fetched directly from the API.
+  const [subjects,    setSubjects]    = useState([]);  // school-wide pool
+  const [armSubjects, setArmSubjects] = useState([]);  // this arm's subjects
+  const [siblingCounts, setSiblingCounts] = useState({}); // { [armId]: count } for copy tab
 
   // "Add" tab state
   const [search,        setSearch]        = useState('');
@@ -64,22 +67,39 @@ export default function ArmSubjectsModal({ arm, classArms, onClose }) {
   const [sourceArmId,   setSourceArmId]   = useState('');
   const [copyConfirmed, setCopyConfirmed] = useState(false);
 
-  // Current subjects for this arm (from context)
-  const armSubjects = state.armSubjects[arm.id] || [];
-
-  // ─── Load subjects on mount ─────────────────────────────────────────────────
+  // ─── Load the subject pool, this arm's subjects, and sibling counts ─────────
   useEffect(() => {
+    let cancelled = false;
     (async () => {
-      // If already loaded and non-empty, skip the round-trip
-      if (armSubjects.length > 0) { setInitializing(false); return; }
       try {
-        const res = await getArmSubjects(arm.id);
-        if (res.success) {
-          dispatch({ type: 'SET_ARM_SUBJECTS', armId: arm.id, subjects: res.data.subjects });
+        const [poolRes, armRes] = await Promise.all([
+          getSchoolSubjects(),
+          getArmSubjects(arm.id),
+        ]);
+        if (cancelled) return;
+        if (poolRes?.success) setSubjects(poolRes.data?.subjects ?? []);
+        if (armRes?.success) {
+          const subs = armRes.data?.subjects ?? [];
+          setArmSubjects(subs);
+          onSubjectsChange?.(arm.id, subs.length);
         }
-      } catch (e) { console.error(e); }
-      finally { setInitializing(false); }
+
+        // Counts for sibling arms (shown in the Copy tab dropdown)
+        const siblings = classArms.filter(a => a.id !== arm.id);
+        if (siblings.length > 0) {
+          const results = await Promise.all(siblings.map(a => getArmSubjects(a.id)));
+          if (cancelled) return;
+          const counts = {};
+          siblings.forEach((a, i) => { counts[a.id] = (results[i]?.data?.subjects ?? []).length; });
+          setSiblingCounts(counts);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (!cancelled) setInitializing(false);
+      }
     })();
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [arm.id]);
 
@@ -96,7 +116,7 @@ export default function ArmSubjectsModal({ arm, classArms, onClose }) {
   );
 
   const availableToAdd = useMemo(() => {
-    return state.subjects.filter(s => {
+    return subjects.filter(s => {
       const notAssigned = !assignedIds.has(s.id);
       const matchesSearch =
         !search.trim() ||
@@ -104,20 +124,22 @@ export default function ArmSubjectsModal({ arm, classArms, onClose }) {
         (s.code || '').toLowerCase().includes(search.toLowerCase());
       return notAssigned && matchesSearch;
     });
-  }, [state.subjects, assignedIds, search]);
+  }, [subjects, assignedIds, search]);
 
   // ─── Remove a single subject from arm ──────────────────────────────────────
   const handleRemove = async (subject) => {
+    const previous = armSubjects;
+    const next = armSubjects.filter(s => s.id !== subject.id);
     // Optimistic UI
-    dispatch({ type: 'REMOVE_ARM_SUBJECT', armId: arm.id, subjectId: subject.id });
+    setArmSubjects(next);
+    onSubjectsChange?.(arm.id, next.length);
     try {
-      // Re-sync: replace with current list minus this one
-      const remaining = armSubjects.filter(s => s.id !== subject.id).map(s => s.id);
-      await replaceArmSubjects(arm.id, remaining);
+      await replaceArmSubjects(arm.id, next.map(s => s.id));
       showToast(`"${subject.name}" removed`);
     } catch (e) {
       // Roll back on error
-      dispatch({ type: 'ADD_ARM_SUBJECTS', armId: arm.id, subjects: [subject] });
+      setArmSubjects(previous);
+      onSubjectsChange?.(arm.id, previous.length);
       showToast('Failed to remove subject', 'error');
     }
   };
@@ -126,7 +148,8 @@ export default function ArmSubjectsModal({ arm, classArms, onClose }) {
   const handleAddSelected = async () => {
     if (selectedToAdd.size === 0) return;
     const ids = [...selectedToAdd];
-    const subjectsToAdd = state.subjects.filter(s => ids.includes(s.id));
+    const subjectsToAdd = subjects.filter(s => ids.includes(s.id));
+    const nextArmSubjects = [...armSubjects, ...subjectsToAdd];
 
     setLoading(true);
     try {
@@ -134,16 +157,15 @@ export default function ArmSubjectsModal({ arm, classArms, onClose }) {
         // Add to every arm in the class via class-level endpoint
         const res = await addSubjectsToClass(arm.classId, ids);
         if (res.success) {
-          // Update all sibling arms in context
-          classArms.forEach(a => {
-            dispatch({ type: 'ADD_ARM_SUBJECTS', armId: a.id, subjects: subjectsToAdd });
-          });
+          setArmSubjects(nextArmSubjects);
+          onSubjectsChange?.(arm.id, nextArmSubjects.length);
           showToast(`${ids.length} subject(s) added to all arms`);
         }
       } else {
         const res = await addSubjectsToArm(arm.id, ids);
         if (res.success) {
-          dispatch({ type: 'ADD_ARM_SUBJECTS', armId: arm.id, subjects: subjectsToAdd });
+          setArmSubjects(nextArmSubjects);
+          onSubjectsChange?.(arm.id, nextArmSubjects.length);
           showToast(`${ids.length} subject(s) added`);
         }
       }
@@ -163,9 +185,11 @@ export default function ArmSubjectsModal({ arm, classArms, onClose }) {
     try {
       const res = await copySubjectsToArms(sourceArmId, [arm.id]);
       if (res.success) {
-        // Pull source arm's local subjects into this arm
-        const sourceSubjects = state.armSubjects[sourceArmId] || [];
-        dispatch({ type: 'ADD_ARM_SUBJECTS', armId: arm.id, subjects: sourceSubjects });
+        // Re-fetch this arm's subjects so the merged result is accurate
+        const refreshed = await getArmSubjects(arm.id);
+        const subs = refreshed?.success ? (refreshed.data?.subjects ?? []) : armSubjects;
+        setArmSubjects(subs);
+        onSubjectsChange?.(arm.id, subs.length);
         showToast('Subjects copied successfully');
         setCopyConfirmed(false);
         setSourceArmId('');
@@ -340,7 +364,7 @@ export default function ArmSubjectsModal({ arm, classArms, onClose }) {
                 )}
 
                 {/* Subject list */}
-                {state.subjects.length === 0 ? (
+                {subjects.length === 0 ? (
                   <p className="text-sm text-gray-400 text-center py-8">
                     No school-wide subjects defined yet. Go to{' '}
                     <span className="font-semibold">Config → Subject Setup</span> first.
@@ -418,7 +442,7 @@ export default function ArmSubjectsModal({ arm, classArms, onClose }) {
                       >
                         <option value="">Select source arm…</option>
                         {siblingsForCopy.map(a => {
-                          const count = (state.armSubjects[a.id] || []).length;
+                          const count = siblingCounts[a.id] ?? 0;
                           return (
                             <option key={a.id} value={a.id}>
                               Arm {a.name} ({count} subject{count !== 1 ? 's' : ''})

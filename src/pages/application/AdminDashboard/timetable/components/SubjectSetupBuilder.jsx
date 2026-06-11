@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { useTimetable } from '../TimetableContext';
+import React, { useState, useEffect } from 'react';
 import { availableSubjects as defaultSubjects } from '../../../../../utils/imports';
 import {
   Import,
@@ -12,6 +11,7 @@ import {
   Wand2,
 } from 'lucide-react';
 import {
+  getSchoolSubjects,
   bulkCreateSubjects,
   createSubject,
   updateSubject,
@@ -21,7 +21,6 @@ import {
   CATEGORY_LABELS,
   CATEGORY_STYLES,
 } from '../../services/subjectAPIs.js';
-import {useGlobalTimetableData} from "../useGlobalTimetableData.js";
 
 // ─── Category pill ─────────────────────────────────────────────────────────────
 const CategoryPill = ({ category }) => {
@@ -133,10 +132,21 @@ function SubjectForm({ initial = {}, onSave, onCancel, loading }) {
 
 // =============================================================================
 export default function SubjectSetupBuilder() {
-  const { state, dispatch } = useTimetable();
+  // Subjects are this page's own data — fetched directly from the API.
+  const [subjects, setSubjects] = useState([]);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getSchoolSubjects()
+      .then(res => { if (!cancelled && res?.success) setSubjects(res.data?.subjects ?? []); })
+      .catch(err => console.error('[Subjects] load failed:', err))
+      .finally(() => { if (!cancelled) setInitialLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   // Form state
   const [showForm,    setShowForm]    = useState(false);
@@ -168,7 +178,7 @@ export default function SubjectSetupBuilder() {
     try {
       const res = await bulkCreateSubjects(payload);
       if (res.success) {
-        dispatch({ type: 'SET_SUBJECTS', payload: res.data.subjects });
+        setSubjects(res.data.subjects);
         setSuccess(true);
         setTimeout(() => setSuccess(false), 3000);
       }
@@ -186,7 +196,7 @@ export default function SubjectSetupBuilder() {
     try {
       const res = await createSubject({ name, code, category });
       if (res.success) {
-        dispatch({ type: 'ADD_SUBJECT', payload: res.data.subject });
+        setSubjects(prev => [...prev, res.data.subject]);
         setShowForm(false);
       }
     } catch (err) {
@@ -205,12 +215,9 @@ export default function SubjectSetupBuilder() {
       const res = await updateSubject(editingSubj.id, { name, code, category });
       if (res.success) {
         // Rebuild the subjects list with the updated entry in-place
-        dispatch({
-          type: 'SET_SUBJECTS',
-          payload: state.subjects.map(s =>
-            s.id === editingSubj.id ? { ...s, name, code, category } : s
-          ),
-        });
+        setSubjects(prev => prev.map(s =>
+          s.id === editingSubj.id ? { ...s, name, code, category } : s
+        ));
         setEditingSubj(null);
       }
     } catch (err) {
@@ -227,15 +234,24 @@ export default function SubjectSetupBuilder() {
     try {
       const res = await deleteSubjects(subj.id);
       if (res.success) {
-        dispatch({ type: 'REMOVE_SUBJECT', id: subj.id });
+        setSubjects(prev => prev.filter(s => s.id !== subj.id));
       }
     } catch (err) {
       console.error(err);
     }
   };
 
+  // ─── Loading ─────────────────────────────────────────────────────────────────
+  if (initialLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center py-32">
+        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+      </div>
+    );
+  }
+
   // ─── Zero-state ──────────────────────────────────────────────────────────────
-  if (state.subjects.length === 0 && !showForm) {
+  if (subjects.length === 0 && !showForm) {
     return (
       <div className="flex-1 overflow-y-auto bg-gray-50 flex items-center justify-center p-6">
         <div className="max-w-3xl w-full">
@@ -304,7 +320,7 @@ export default function SubjectSetupBuilder() {
   }
 
   // ─── Active / loaded view ────────────────────────────────────────────────────
-  const filtered = state.subjects.filter(s => {
+  const filtered = subjects.filter(s => {
     const matchesSearch =
       !search.trim() ||
       s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -320,7 +336,7 @@ export default function SubjectSetupBuilder() {
       <div className="flex flex-wrap items-center justify-between mb-5 gap-3 shrink-0">
         <div>
           <h2 className="text-lg font-bold text-gray-800">
-            School Subjects ({state.subjects.length})
+            School Subjects ({subjects.length})
           </h2>
           <p className="text-sm text-gray-500 mt-0.5">
             School-wide subjects available for arm assignment

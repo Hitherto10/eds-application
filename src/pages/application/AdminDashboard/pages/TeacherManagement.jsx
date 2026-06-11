@@ -174,7 +174,7 @@ const TeacherManagement = () => {
                         <select
                             value={subjectFilter}
                             onChange={(e) => { setSubjectFilter(e.target.value); setCurrentPage(1); }}
-                            className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[140px]"
+                            className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700  bg-white min-w-[140px]"
                         >
                             <option value="All Subjects">All Subjects</option>
                             {allSubjects.map(sub => (
@@ -185,7 +185,7 @@ const TeacherManagement = () => {
                         <select
                             value={statusFilter}
                             onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                            className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[120px]"
+                            className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700  bg-white min-w-[120px]"
                         >
                             <option value="All">All Status</option>
                             <option value="Active">Active</option>
@@ -228,19 +228,19 @@ const TeacherManagement = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                                 {currentTeachers.map((teacher) => (
                                     <div key={teacher.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 hover:shadow-md transition-shadow relative group flex flex-col h-full">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className="flex items-center gap-3">
+                                        <div className="flex justify-between items-start mb-4 gap-2">
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
                                                 <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg shrink-0">
                                                     {getInitials(teacher.name)}
                                                 </div>
-                                                <div>
+                                                <div className="min-w-0 flex-1">
                                                     <h3 className="font-semibold text-gray-900 truncate" title={teacher.name}>{teacher.name}</h3>
                                                     <p className="text-xs text-gray-500 truncate" title={teacher.classes?.join(', ') || 'No Classes Assigned'}>
                                                         {teacher.classes?.join(', ') || 'No Classes'}
                                                     </p>
                                                 </div>
                                             </div>
-                                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ${teacher.status ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                                            <span className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ${teacher.status ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
                                                 {teacher.status ? 'Active' : 'Inactive'}
                                             </span>
                                         </div>

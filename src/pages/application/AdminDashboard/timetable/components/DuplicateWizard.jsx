@@ -13,13 +13,14 @@ import {
  * ─────────────────────────────────────────────────────────────────────────────
  * Modal dialog to copy a schedule from the currently selected class to another.
  */
-export default function DuplicateWizard({ open, onOpenChange }) {
+export default function DuplicateWizard({ open, onOpenChange, resources }) {
   const { state, dispatch } = useTimetable();
+  const { classes = [] } = resources || {};
   const [targetClassId, setTargetClassId] = useState('');
-  
+
   if (!state.selectedClass || state.schedules.length === 0) return null;
 
-  const targetClass = state.classes.find(c => c.id === targetClassId);
+  const targetClass = classes.find(c => c.id === targetClassId);
 
   const handleDuplicate = () => {
     if (!targetClass) return;
@@ -64,7 +65,7 @@ export default function DuplicateWizard({ open, onOpenChange }) {
               className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
             >
               <option value="">Select a destination class...</option>
-              {state.classes.filter(c => c.id !== state.selectedClass.id).map(cls => (
+              {classes.filter(c => c.id !== state.selectedClass.id).map(cls => (
                 <option key={cls.id} value={cls.id}>{cls.name}</option>
               ))}
             </select>

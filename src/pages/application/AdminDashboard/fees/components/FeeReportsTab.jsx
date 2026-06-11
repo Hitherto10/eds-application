@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useFee } from '../FeeContext.jsx';
 import {
   getOutstandingBalances,
   getAgingReport,
@@ -33,9 +32,7 @@ function exportCsv(filename, rows) {
   URL.revokeObjectURL(url);
 }
 
-export default function FeeReportsTab() {
-  const { state } = useFee();
-
+export default function FeeReportsTab({ classes = [], currentYear, currentTerm }) {
   const [classFilter, setClassFilter] = useState('all');
   const [loading, setLoading]         = useState(true);
   const [outstanding, setOutstanding] = useState({ students: [], totals: {} });
@@ -46,8 +43,8 @@ export default function FeeReportsTab() {
   const load = useCallback(async () => {
     setLoading(true);
     const scope = {
-      academicYearId: state.selectedYear?.id,
-      ...(state.selectedTerm ? { termId: state.selectedTerm.id } : {}),
+      academicYearId: currentYear?.id,
+      ...(currentTerm ? { termId: currentTerm.id } : {}),
       ...(classFilter !== 'all' ? { classId: classFilter } : {}),
     };
     try {
@@ -64,7 +61,7 @@ export default function FeeReportsTab() {
     } finally {
       setLoading(false);
     }
-  }, [state.selectedYear, state.selectedTerm, classFilter]);
+  }, [currentYear, currentTerm, classFilter]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -81,7 +78,7 @@ export default function FeeReportsTab() {
           className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
         >
           <option value="all">All classes</option>
-          {state.classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>
 

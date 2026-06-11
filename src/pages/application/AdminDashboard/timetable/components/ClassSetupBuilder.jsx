@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { useTimetable } from '../TimetableContext';
+import React, { useState, useEffect } from 'react';
 import {createClasses, deleteClasses, getSchoolClasses} from '../../services/classAPIs';
-import { createArms, deleteArms, updateArm } from '../../services/armAPIs';
+import { createArms, deleteArms, updateArm, getClassArms } from '../../services/armAPIs';
 import { registryStyles } from '../../../../../utils/imports';
 import ArmSubjectsModal from './ArmSubjectsModal';
 import {
@@ -28,14 +27,40 @@ const badge = (count, label) => (
   </span>
 );
 
-console.log(await getSchoolClasses())
-
 // =============================================================================
 export default function ClassSetupBuilder() {
-  const { state, dispatch } = useTimetable();
+  // Classes + arms are this page's own data — fetched directly from the API.
+  const [classes, setClasses] = useState([]);
+  const [arms, setArms] = useState([]);
+  const [armSubjectCounts, setArmSubjectCounts] = useState({}); // { [armId]: count }
+  const [initialLoading, setInitialLoading] = useState(true);
+
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [search, setSearch] = useState('');
+
+  // Load classes + their arms once on mount.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await getSchoolClasses();
+        if (cancelled || !res?.success) return;
+        const cls = res.data?.classes ?? [];
+        setClasses(cls);
+        if (cls.length > 0) {
+          const armResults = await Promise.all(cls.map(c => getClassArms(c.id)));
+          if (cancelled) return;
+          setArms(armResults.flatMap(r => r?.data?.arms ?? []));
+        }
+      } catch (e) {
+        console.error('[Classes] load failed:', e);
+      } finally {
+        if (!cancelled) setInitialLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Matrix builder state
   const [baseLevels, setBaseLevels] = useState([]);
@@ -147,7 +172,7 @@ export default function ClassSetupBuilder() {
       if (!classRes.success) throw new Error(classRes.message || 'Failed to create classes');
 
       const createdClasses = classRes.data.classes;
-      dispatch({ type: 'SET_CLASSES', payload: createdClasses });
+      setClasses(createdClasses);
 
       // ── Phase 2: Create arms (only where streams are mapped) ───────────────
       const armsToCreate = [];
@@ -163,7 +188,7 @@ export default function ClassSetupBuilder() {
       if (armsToCreate.length > 0) {
         const armRes = await createArms({ arms: armsToCreate });
         if (armRes.success) {
-          dispatch({ type: 'SET_ARMS', payload: armRes.data.arms });
+          setArms(armRes.data.arms);
         }
       }
 
@@ -183,8 +208,8 @@ export default function ClassSetupBuilder() {
     try {
       const res = await deleteClasses(cls.id);
       if (res.success) {
-        dispatch({ type: 'SET_CLASSES', payload: state.classes.filter(c => c.id !== cls.id) });
-        dispatch({ type: 'REMOVE_CLASS_ARMS', classId: cls.id });
+        setClasses(prev => prev.filter(c => c.id !== cls.id));
+        setArms(prev => prev.filter(a => a.classId !== cls.id));
         if (expandedClassId === cls.id) setExpandedClassId(null);
       }
     } catch (e) { console.error(e); }
@@ -194,7 +219,7 @@ export default function ClassSetupBuilder() {
     if (!confirm(`Remove arm "${arm.name}"?`)) return;
     try {
       const res = await deleteArms(arm.id);
-      if (res.success) dispatch({ type: 'REMOVE_ARM', id: arm.id });
+      if (res.success) setArms(prev => prev.filter(a => a.id !== arm.id));
     } catch (e) { console.error(e); }
   };
 
@@ -211,7 +236,7 @@ export default function ClassSetupBuilder() {
     const id = editingArmId;
     setEditingArmId(null);
     setEditArmName('');
-    dispatch({ type: 'UPDATE_ARM', payload: { id, name } }); // optimistic
+    setArms(prev => prev.map(a => (a.id === id ? { ...a, name } : a))); // optimistic
     try {
       await updateArm(id, { name });
     } catch (err) {
@@ -229,7 +254,7 @@ export default function ClassSetupBuilder() {
     try {
       const res = await createArms({ arms: [{ classId: cls.id, name }] });
       if (res.success && res.data?.arms?.length > 0) {
-        dispatch({ type: 'ADD_ARMS', payload: res.data.arms });
+        setArms(prev => [...prev, ...res.data.arms]);
       }
     } catch (err) {
       console.error('[ClassSetupBuilder] createArms failed:', err);
@@ -238,12 +263,12 @@ export default function ClassSetupBuilder() {
 
   // ─── 8c. Enter builder mode pre-populated from existing data ──────────────────
   const enterBuilderMode = () => {
-    const levels = state.classes.map(c => c.name);
-    const armNames = [...new Set(state.arms.map(a => a.name))];
+    const levels = classes.map(c => c.name);
+    const armNames = [...new Set(arms.map(a => a.name))];
     const mat = {};
     levels.forEach(lv => {
-      const cls = state.classes.find(c => c.name === lv);
-      mat[lv] = cls ? state.arms.filter(a => a.classId === cls.id).map(a => a.name) : [];
+      const cls = classes.find(c => c.name === lv);
+      mat[lv] = cls ? arms.filter(a => a.classId === cls.id).map(a => a.name) : [];
     });
     setBaseLevels(levels);
     setStreams(armNames);
@@ -253,20 +278,29 @@ export default function ClassSetupBuilder() {
 
   // ─── 8. Arms-subjects modal ───────────────────────────────────────────────────
   const openArmSubjects = (arm) => {
-    const classArms = state.arms.filter(a => a.classId === arm.classId);
+    const classArms = arms.filter(a => a.classId === arm.classId);
     setArmSubjectsTarget({ arm, classArms });
   };
 
   // ─── Derived data ─────────────────────────────────────────────────────────────
-  const hasExistingData = state.classes.length > 0 && !showBuilder;
-  const armsForClass = (classId) => state.arms.filter(a => a.classId === classId);
+  const hasExistingData = classes.length > 0 && !showBuilder;
+  const armsForClass = (classId) => arms.filter(a => a.classId === classId);
+
+  // ─── Loading ─────────────────────────────────────────────────────────────────
+  if (initialLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center py-32">
+        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+      </div>
+    );
+  }
 
 
   // ─────────────────────────────────────────────────────────────────────────────
   // ACTIVE DATA VIEW (classes already saved)
   // ─────────────────────────────────────────────────────────────────────────────
   if (hasExistingData) {
-    const filtered = state.classes.filter(c =>
+    const filtered = classes.filter(c =>
       c.name.toLowerCase().includes(search.toLowerCase())
     );
 
@@ -277,7 +311,7 @@ export default function ClassSetupBuilder() {
           <div className="flex flex-wrap md:flex-nowrap items-center justify-between mb-6">
             <div className={`w-full`}>
               <h2 className="text-lg font-bold text-gray-800">
-                School Class Structure ({state.classes.length})
+                School Class Structure ({classes.length})
               </h2>
               <p className="text-sm text-gray-500 mt-1">
                 Manage classes and their arm-level subject assignments.
@@ -371,8 +405,7 @@ export default function ClassSetupBuilder() {
                         </p>
                       )}
                       {arms.length > 0 && arms.map(arm => {
-                        const subjectCount =
-                          (state.armSubjects[arm.id] || []).length;
+                        const subjectCount = armSubjectCounts[arm.id] ?? 0;
 
                         return (
                           <div
@@ -492,6 +525,9 @@ export default function ClassSetupBuilder() {
             arm={armSubjectsTarget.arm}
             classArms={armSubjectsTarget.classArms}
             onClose={() => setArmSubjectsTarget(null)}
+            onSubjectsChange={(armId, count) =>
+              setArmSubjectCounts(prev => ({ ...prev, [armId]: count }))
+            }
           />
         )}
       </>
@@ -526,7 +562,7 @@ export default function ClassSetupBuilder() {
               )}
             </div>
           </div>
-          {state.classes.length > 0 && (
+          {classes.length > 0 && (
             <button
               onClick={() => setShowBuilder(false)}
               className="px-4 py-2.5 border border-gray-300 text-gray-600 hover:bg-gray-100 font-semibold rounded-lg transition text-sm"

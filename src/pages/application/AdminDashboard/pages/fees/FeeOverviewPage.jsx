@@ -1,46 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout.jsx';
-import { FeeProvider, useFee } from '../../fees/FeeContext.jsx';
-import { useFeeData } from '../../fees/useFeeData.js';
+import ScopeBar from '../../components/ScopeBar.jsx';
+import { useAcademic } from '../../../../../contexts/AcademicContext.jsx';
 import { Toast } from '../../components/ui/Toast.jsx';
+import { getFeeAnalytics } from '../../services/feeAPIs.js';
 import FeeOverviewTab from '../../fees/components/FeeOverviewTab.jsx';
 
-function ScopeBar({ handleYearChange }) {
-    const { state, dispatch } = useFee();
-    return (
-        <div className="flex flex-wrap items-center gap-3">
-            <select
-                value={state.selectedYear?.id || ''}
-                onChange={(e) => handleYearChange(e.target.value)}
-                className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            >
-                {state.academicYears.map(y => (
-                    <option key={y.id} value={y.id}>{y.name}{y.isActive ? ' (Active)' : ''}</option>
-                ))}
-            </select>
-            <select
-                value={state.selectedTerm?.id || ''}
-                onChange={(e) => {
-                    const t = state.terms.find(x => x.id === e.target.value);
-                    if (t) dispatch({ type: 'SELECT_TERM', payload: t });
-                }}
-                disabled={state.terms.length === 0}
-                className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50"
-            >
-                {state.terms.map(t => (
-                    <option key={t.id} value={t.id}>{t.name}{t.isCurrent ? ' (Current)' : ''}</option>
-                ))}
-            </select>
-        </div>
-    );
-}
-
 function FeeOverviewContent() {
-    const { initialLoad, handleYearChange } = useFeeData();
+    const { loading: scopeLoading, currentYear, currentTerm } = useAcademic();
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
     const showToast = (message, type = 'success') => setToast({ show: true, message, type });
 
-    if (initialLoad) {
+    const [analytics, setAnalytics] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    // Reload analytics whenever the academic scope changes.
+    useEffect(() => {
+        if (!currentYear?.id) return;
+        let cancelled = false;
+        setLoading(true);
+        getFeeAnalytics({
+            academicYearId: currentYear.id,
+            ...(currentTerm?.id ? { termId: currentTerm.id } : {}),
+        })
+            .then(res => { if (!cancelled && res?.success) setAnalytics(res.data); })
+            .catch(err => console.error('[FeeOverview] analytics failed:', err))
+            .finally(() => { if (!cancelled) setLoading(false); });
+        return () => { cancelled = true; };
+    }, [currentYear?.id, currentTerm?.id]);
+
+    if (scopeLoading) {
         return (
             <div className="flex flex-col items-center h-full justify-center py-32">
                 <div className="relative w-20 h-20">
@@ -62,9 +51,9 @@ function FeeOverviewContent() {
                     <h1 className="text-2xl font-bold text-gray-900">Overview</h1>
                     <p className="text-sm text-gray-500 mt-1">Summary of fees, collections, and outstanding balances.</p>
                 </div>
-                <ScopeBar handleYearChange={handleYearChange} />
+                <ScopeBar />
             </div>
-            <FeeOverviewTab showToast={showToast} />
+            <FeeOverviewTab analytics={analytics} loading={loading} showToast={showToast} />
         </div>
     );
 }
@@ -72,9 +61,7 @@ function FeeOverviewContent() {
 export default function FeeOverviewPage() {
     return (
         <AdminLayout>
-            <FeeProvider>
-                <FeeOverviewContent />
-            </FeeProvider>
+            <FeeOverviewContent />
         </AdminLayout>
     );
 }

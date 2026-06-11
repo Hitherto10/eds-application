@@ -1,5 +1,4 @@
 import React from 'react';
-import { useFee } from '../FeeContext.jsx';
 import { formatNaira } from '../../services/feeAPIs.js';
 import {
   TrendingUp,
@@ -24,11 +23,10 @@ const StatCard = ({ title, value, sub, icon: Icon, tone }) => (
   </div>
 );
 
-export default function FeeOverviewTab() {
-  const { state } = useFee();
-  const a = state.analytics;
+export default function FeeOverviewTab({ analytics, loading }) {
+  const a = analytics;
 
-  if (state.loading.analytics && !a) {
+  if (loading && !a) {
     return <p className="text-sm text-gray-400 py-16 text-center">Loading analytics…</p>;
   }
 

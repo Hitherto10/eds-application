@@ -14,6 +14,7 @@ import './dark-mode.css'
 
 import { getTheme, toggleTheme } from "../../utils/theme.js";
 import { getAcademicProfile } from "./AdminDashboard/timetable/timetableAPIs.js";
+import { getParentDashboard, getTeacherDashboard } from "../auth/authAPIs.js";
 
 let cachedAcademicContext = null;
 
@@ -55,22 +56,45 @@ export const Header = () => {
         }
         const fetchContext = async () => {
             try {
-                const res = await getAcademicProfile();
-                if (res.success && res.data.school) {
-                    const ctx = {
-                        year: res.data.currentAcademicYear?.name || 'No Active Year',
-                        term: res.data.currentTerm?.name || 'No Active Term'
-                    };
-                    cachedAcademicContext = ctx;
-                    setAcademicContext(ctx);
+                let res;
+                let yearName = 'No Active Year';
+                let termName = 'No Active Term';
+
+                if (role === 'parent') {
+                    res = await getParentDashboard();
+                    if (res.success && res.data?.school) {
+                        yearName = res.data.school.currentAcademicYear?.name || 'No Active Year';
+                        termName = res.data.school.currentAcademicTerm?.name || 'No Active Term';
+                    }
+                } else if (role === 'teacher') {
+                    res = await getTeacherDashboard();
+                    if (res.success && res.data?.school) {
+                        yearName = res.data.school.currentAcademicYear?.name || 'No Active Year';
+                        termName = res.data.school.currentAcademicTerm?.name || 'No Active Term';
+                    }
+                } else {
+                    res = await getAcademicProfile();
+                    if (res.success && res.data?.school) {
+                        yearName = res.data.currentAcademicYear?.name || 'No Active Year';
+                        termName = res.data.currentTerm?.name || 'No Active Term';
+                    }
                 }
+
+                const ctx = {
+                    year: yearName,
+                    term: termName
+                };
+                cachedAcademicContext = ctx;
+                setAcademicContext(ctx);
             } catch (err) {
                 console.error('Failed to fetch academic context:', err);
                 setAcademicContext({ year: 'Setup Needed', term: 'Setup Needed' });
             }
         };
-        fetchContext();
-    }, []);
+        if (role) {
+            fetchContext();
+        }
+    }, [role]);
 
 
 
