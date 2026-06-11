@@ -46,6 +46,12 @@ const AnnouncementsPage   = lazy(() => import("./pages/application/AdminDashboar
 const DeliveryLogsPage    = lazy(() => import("./pages/application/AdminDashboard/pages/communication/DeliveryLogsPage.jsx"));
 const ReportsHubPage      = lazy(() => import("./pages/application/AdminDashboard/pages/ReportsHubPage.jsx"));
 const SettingsHubPage     = lazy(() => import("./pages/application/AdminDashboard/pages/settings/SettingsHubPage.jsx"));
+const ApprovalsPage       = lazy(() => import("./pages/application/AdminDashboard/pages/ApprovalsPage.jsx"));
+const StudentProfilePage  = lazy(() => import("./pages/application/AdminDashboard/pages/people/StudentProfilePage.jsx"));
+const StaffProfilePage    = lazy(() => import("./pages/application/AdminDashboard/pages/people/StaffProfilePage.jsx"));
+const GuardianProfilePage = lazy(() => import("./pages/application/AdminDashboard/pages/people/GuardianProfilePage.jsx"));
+const InvoiceDetailPage   = lazy(() => import("./pages/application/AdminDashboard/pages/finance/InvoiceDetailPage.jsx"));
+const PaymentDetailPage   = lazy(() => import("./pages/application/AdminDashboard/pages/finance/PaymentDetailPage.jsx"));
 
 // Parent Pages
 const ParentDashboard    = lazy(() => import("./pages/application/ParentDashboard/ParentDashboard.jsx"));
@@ -113,7 +119,10 @@ function AppRoutes() {
 
                 {/* People */}
                 <Route path="/dashboard/admin/people/students"   element={<ProtectedRoute requiredRole="admin"><StudentManagement /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/people/students/:studentId" element={<ProtectedRoute requiredRole="admin"><StudentProfilePage /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/people/staff/:staffId" element={<ProtectedRoute requiredRole="admin"><StaffProfilePage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/people/guardians"  element={<ProtectedRoute requiredRole="admin"><ParentManagement /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/people/guardians/:guardianId" element={<ProtectedRoute requiredRole="admin"><GuardianProfilePage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/people/staff"      element={<ProtectedRoute requiredRole="admin"><TeacherManagement /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/people/admissions" element={<ProtectedRoute requiredRole="admin"><AdmissionsPage /></ProtectedRoute>} />
 
@@ -132,7 +141,9 @@ function AppRoutes() {
                 <Route path="/dashboard/admin/finance/overview"   element={<ProtectedRoute requiredRole="admin"><FeeOverviewPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/finance/structures" element={<ProtectedRoute requiredRole="admin"><FeeStructuresPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/finance/invoices"   element={<ProtectedRoute requiredRole="admin"><FeeInvoicesPage /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/finance/invoices/:invoiceId" element={<ProtectedRoute requiredRole="admin"><InvoiceDetailPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/finance/payments"   element={<ProtectedRoute requiredRole="admin"><FeePaymentsPage /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/finance/payments/:paymentId" element={<ProtectedRoute requiredRole="admin"><PaymentDetailPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/finance/defaulters" element={<ProtectedRoute requiredRole="admin"><DefaultersPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/finance/reports"    element={<ProtectedRoute requiredRole="admin"><FeeReportsPage /></ProtectedRoute>} />
 
@@ -143,6 +154,9 @@ function AppRoutes() {
 
                 {/* Reports */}
                 <Route path="/dashboard/admin/reports" element={<ProtectedRoute requiredRole="admin"><ReportsHubPage /></ProtectedRoute>} />
+
+                {/* Approvals */}
+                <Route path="/dashboard/admin/approvals" element={<ProtectedRoute requiredRole="admin"><ApprovalsPage /></ProtectedRoute>} />
 
                 {/* Settings */}
                 <Route path="/dashboard/admin/settings"          element={<ProtectedRoute requiredRole="admin"><SettingsHubPage /></ProtectedRoute>} />

@@ -6,6 +6,7 @@ import { Images } from '../../../../../components/images.jsx';
 import { NAV_GROUPS, SETTINGS_NAV } from '../../navigation/navConfig.js';
 import Topbar from '../topbar/Topbar.jsx';
 import useSchoolBrand from '../../hooks/useSchoolBrand.js';
+import { ToastHost } from '../../../../../components/patterns';
 
 /**
  * AdminLayout — the application shell for every admin page.
@@ -256,6 +257,8 @@ const AdminLayout = ({ children, className = '' }) => {
                     {children}
                 </main>
             </div>
+
+            <ToastHost />
         </div>
     );
 };

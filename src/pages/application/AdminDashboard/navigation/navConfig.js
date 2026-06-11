@@ -51,6 +51,7 @@ export const ROUTES = {
     deliveryLogs:    `${BASE}/communication/delivery-logs`,
 
     reports:         `${BASE}/reports`,
+    approvals:       `${BASE}/approvals`,
 
     settings:        `${BASE}/settings`,
     settingsIdentity:`${BASE}/settings/identity`,
@@ -160,6 +161,7 @@ export const PAGE_INDEX = [
     { label: 'Delivery Logs',       group: 'Navigation', route: ROUTES.deliveryLogs,     keywords: 'notifications sent log communication' },
     { label: 'Reports',             group: 'Navigation', route: ROUTES.reports,          keywords: 'analytics exports hub' },
     { label: 'My Profile',          group: 'Navigation', route: ROUTES.adminProfile,     keywords: 'account me admin profile' },
+    { label: 'Approvals',           group: 'Navigation', route: ROUTES.approvals,        keywords: 'sign off review waiting queue inbox' },
 
     { label: 'Settings',                       group: 'Settings', route: ROUTES.settings,         keywords: 'configuration preferences' },
     { label: 'Settings · Identity & Branding', group: 'Settings', route: ROUTES.settingsIdentity, keywords: 'school profile logo name address contact deactivate' },

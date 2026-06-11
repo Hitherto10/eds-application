@@ -96,48 +96,31 @@ export function NotificationBell() {
     );
 }
 
-/* ─── Approvals chip ───────────────────────────────────────────────────────── */
+/* ─── Approvals chip — navigates to the Approvals destination ──────────────── */
 export function ApprovalsChip() {
-    const { open, setOpen, ref } = usePopover();
-    // Approval queues (results sign-off, fee waivers, excuse notes) populate this
-    // as their workflows ship. Count is real — currently nothing routes here.
+    const navigate = useNavigate();
+    // Approval queues (results sign-off, fee waivers, excuse notes) drive this
+    // count as their workflows ship. Count is real — currently nothing routes here.
     const count = 0;
 
     return (
-        <div className="relative" ref={ref}>
-            <button
-                onClick={() => setOpen(o => !o)}
-                className={`hidden md:flex items-center gap-1.5 h-8 px-3 rounded-full border text-xs font-semibold transition-colors ${
-                    count > 0
-                        ? 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
-                        : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
-                }`}
-                title="Items awaiting your approval"
-            >
-                <ClipboardCheck size={13} className={count > 0 ? 'text-amber-500' : 'text-gray-400'} />
-                Approvals
-                {count > 0 && (
-                    <span className="flex h-4.5 min-w-[18px] items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white">
-                        {count}
-                    </span>
-                )}
-            </button>
-
-            {open && (
-                <Panel>
-                    <PanelHeader title="Awaiting your approval" sub="Everything that needs your sign-off, in one place" />
-                    <div className="px-4 py-10 text-center">
-                        <div className="mx-auto w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center mb-3">
-                            <ClipboardCheck size={18} className="text-gray-300" />
-                        </div>
-                        <p className="text-sm font-semibold text-gray-700">Nothing waiting on you</p>
-                        <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
-                            Result sheets, fee waivers, and excuse notes will queue here for sign-off.
-                        </p>
-                    </div>
-                </Panel>
+        <button
+            onClick={() => navigate(ROUTES.approvals)}
+            className={`hidden md:flex items-center gap-1.5 h-8 px-3 rounded-full border text-xs font-semibold transition-colors ${
+                count > 0
+                    ? 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
+                    : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
+            }`}
+            title="Items awaiting your approval"
+        >
+            <ClipboardCheck size={13} className={count > 0 ? 'text-amber-500' : 'text-gray-400'} />
+            Approvals
+            {count > 0 && (
+                <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white">
+                    {count}
+                </span>
             )}
-        </div>
+        </button>
     );
 }
 

@@ -5,12 +5,11 @@ import {
 } from 'lucide-react';
 import AdminLayout from '../components/layout/AdminLayout';
 import AnalyticsComponent from '../AnalyticsComponent';
-import {formatDate} from "../utils/formatters";
 import {useAuth} from "../../../../contexts/AuthContext.jsx";
 import QuickActions from '../components/dashboard/QuickActions';
 import {resendInvitation, terminateInvitation} from "../../../auth/authAPIs.js";
-import {Toast} from "../components/ui/Toast.jsx";
 import { getDashboardAnalytics, getInvitations } from '../services/adminService';
+import { DashboardSkeleton, pushToast } from '../../../../components/patterns';
 
 // TODO: Remove the total invitations page
 const EducationMetricCard = ({ title, value, icon: Icon, colorClass }) => {
@@ -206,12 +205,9 @@ const InvitationItem = ({inv}) => {
         cancelled: 'bg-gray-50 text-gray-600'
     };
 
-    const [toast, setToast] = useState({ show: false, message: '', type: 'error' });
     const [cancelInvitation, setCancelInvitation] = useState(false);
 
-    const showToast = (message, type = 'error') => {
-        setToast({ show: true, message, type });
-    };
+    const showToast = (message) => pushToast({ message });
 
     const auth = useAuth();
     const schoolID = auth.user?.schoolId;
@@ -247,14 +243,6 @@ const InvitationItem = ({inv}) => {
     return (
         <div
             className="group p-4 rounded-2xl border border-gray-50 bg-white hover:border-blue-100 hover:shadow-sm transition-all flex items-center gap-4">
-            {toast.show && (
-                <Toast
-                    message={toast.message}
-                    type={toast.type}
-                    onClose={() => setToast({ ...toast, show: false })}
-                />
-            )}
-
             {/* Info */}
             <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
@@ -458,20 +446,8 @@ const DashboardPage = () => {
         fetchAnalytics();
     }, []);
 
-    const { logout } = useAuth();
-
     if (loading) {
-        return (
-            <AdminLayout className={`content-center`}>
-                <div className="flex flex-col items-center justify-center">
-                    <div className="relative w-20 h-20">
-                        <div className="absolute inset-0 border-4 border-blue-100 rounded-full"></div>
-                        <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
-                    </div>
-                    <p className="mt-4 text-gray-500 font-medium animate-pulse">Loading Admin Dashboard...</p>
-                </div>
-            </AdminLayout>
-        );
+        return <AdminLayout><DashboardSkeleton /></AdminLayout>;
     }
 
     if (error) {

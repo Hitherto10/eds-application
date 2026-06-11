@@ -3,7 +3,7 @@ import { User, Save } from 'lucide-react';
 import AdminLayout from '../components/layout/AdminLayout';
 import Input from '../components/ui/Input';
 import {updateAdminProfile} from "../../../auth/authAPIs.js";
-import {Toast} from "../components/ui/Toast.jsx";
+import { pushToast } from '../../../../components/patterns';
 
 const AdminProfilePage = () => {
     const [formData, setFormData] = useState({
@@ -12,14 +12,7 @@ const AdminProfilePage = () => {
         lastName: '',
         phone: '',
     });
-    const [toast, setToast] = useState({ show: false, message: '', type: 'error', onClose: null });
-    const showToast = (message, type = 'error', duration = 2000, onClose = null) => {
-        setToast({ show: true, message, type, onClose });
-        setTimeout(() => {
-            setToast((prev) => ({ ...prev, show: false }));
-            if (onClose) onClose();
-        }, duration);
-    };
+    const showToast = (message) => pushToast({ message });
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
@@ -39,10 +32,10 @@ const AdminProfilePage = () => {
         }
 
         try{
-            updateAdminProfile(payload).then((response) => {
-                showToast('Profile updated successfully!', 'success');
-            }).catch((error) => {
-                showToast('Failed to update profile. Please try again.', 'error');
+            updateAdminProfile(payload).then(() => {
+                showToast('Profile updated successfully!');
+            }).catch(() => {
+                showToast('Failed to update profile. Please try again.');
             });
         }catch{
             showToast('Failed to update profile. Please try again.');
@@ -51,13 +44,6 @@ const AdminProfilePage = () => {
 
     return (
         <AdminLayout>
-            {toast.show && (
-                <Toast
-                    message={toast.message}
-                    type={toast.type}
-                    onClose={() => setToast({ ...toast, show: false })}
-                />
-            )}
             <div className="max-w-3xl items-start mx-auto space-y-6">
                 <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center">

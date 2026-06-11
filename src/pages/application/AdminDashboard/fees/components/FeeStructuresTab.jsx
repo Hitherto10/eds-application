@@ -10,7 +10,6 @@ import {
   toKobo,
   sumItems,
   FEE_TYPES,
-  STRUCTURE_STATUS,
 } from '../../services/feeAPIs.js';
 import {
   Plus,
@@ -23,16 +22,11 @@ import {
   Loader2,
   FileStack,
 } from 'lucide-react';
+import { StatusChip } from '../../../../../components/patterns';
 
 // ─── Status pill ──────────────────────────────────────────────────────────────
-const StatusPill = ({ status }) => {
-  const s = STRUCTURE_STATUS[status] || STRUCTURE_STATUS.draft;
-  return (
-    <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${s.style}`}>
-      {s.label}
-    </span>
-  );
-};
+// Status now uses the platform-wide StatusChip (draft → gray, published → green).
+const StatusPill = ({ status }) => <StatusChip status={status} />;
 
 // ─── Builder modal ────────────────────────────────────────────────────────────
 function StructureBuilder({ initial, onClose, onSaved, showToast, classes = [], currentYear, currentTerm }) {
