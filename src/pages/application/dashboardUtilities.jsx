@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Bell, User, ChevronDown, LogOut, Settings, UserCircle, Moon, Sun } from 'lucide-react';
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext.jsx";
-import { getInitials } from "./AdminDashboard/utils/formatters.js";
+import { Avatar } from "../../components/patterns";
 import {
     AlertDialog, AlertDialogAction, AlertDialogCancel,
     AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
@@ -141,9 +141,7 @@ export const Header = () => {
                             className={`flex items-center px-2 py-1.5 space-x-2 cursor-pointer rounded-xl transition-all duration-150 ${isProfileOpen ? 'bg-gray-100' : 'hover:bg-gray-50'
                                 }`}
                         >
-                            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs ring-2 ring-blue-50 ring-offset-1">
-                                {getInitials(displayName)}
-                            </div>
+                            <Avatar name={displayName} src={user?.profileImage} size={32} />
                             <div className="hidden sm:flex flex-col items-start leading-none">
                                 <span className="text-sm font-bold text-gray-800">{displayName}</span>
                                 <span className="text-[10px] text-gray-400 font-medium uppercase mt-0.5">{role}</span>

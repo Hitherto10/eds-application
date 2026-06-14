@@ -1,19 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    Bell, CheckCheck, ClipboardCheck, Circle, CheckCircle2, ChevronRight,
+    Bell, CheckCheck, ClipboardCheck, CheckCircle2,
     User, Moon, Sun, LogOut, Settings2, Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../../../../contexts/AuthContext.jsx';
 import { getTheme, toggleTheme } from '../../../../../utils/theme.js';
 import useSetupProgress from '../../hooks/useSetupProgress.js';
 import { ROUTES } from '../../navigation/navConfig.js';
+import { Avatar } from '../../../../../components/patterns';
 import {
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '../../../../../components/ui/alert-dialog';
 
-/* ─── Shared popover behaviour ─────────────────────────────────────────────── */
+/* ─── Shared popover behaviour ─ */
 function usePopover() {
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
@@ -41,7 +42,7 @@ const PanelHeader = ({ title, sub, action }) => (
     </div>
 );
 
-/* ─── Notification bell ────────────────────────────────────────────────────── */
+/* ─── Notification bell ──────── */
 export function NotificationBell() {
     const { open, setOpen, ref } = usePopover();
     // Notification feed wiring lands with the platform notification engine;
@@ -124,61 +125,47 @@ export function ApprovalsChip() {
     );
 }
 
-/* ─── Setup progress chip ──────────────────────────────────────────────────── */
+/* ─── Setup progress chip — links to the Setup Checklist page ──────────────────
+ * Shows "Setup X%" while incomplete. After go-live it stays for a 7-day window
+ * as a subtle "Setup ✓" link, then disappears. Existing fully-set-up schools
+ * that never ran onboarding see nothing.
+ */
 export function SetupProgressChip() {
-    const { open, setOpen, ref } = usePopover();
     const navigate = useNavigate();
-    const { loading, steps, percent, complete } = useSetupProgress();
+    const { loading, percent, complete, withinGoLiveWindow } = useSetupProgress();
 
-    if (loading || complete) return null;
+    if (loading) return null;
+
+    if (complete) {
+        if (!withinGoLiveWindow) return null;
+        return (
+            <button
+                onClick={() => navigate(ROUTES.setup)}
+                className="hidden sm:flex items-center gap-1.5 h-8 px-3 rounded-full bg-green-50 border border-green-200 text-xs font-semibold text-green-700 hover:bg-green-100 transition-colors"
+                title="Your school is set up — revisit the checklist"
+            >
+                <CheckCircle2 size={13} className="text-green-500" />
+                Setup complete
+            </button>
+        );
+    }
 
     return (
-        <div className="relative" ref={ref}>
-            <button
-                onClick={() => setOpen(o => !o)}
-                className="hidden sm:flex items-center gap-2 h-8 px-3 rounded-full bg-blue-50 border border-blue-200 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
-                title="Finish setting up your school"
-            >
-                <Sparkles size={13} className="text-blue-500" />
-                Setup {percent}%
-                <span className="w-14 h-1.5 rounded-full bg-blue-100 overflow-hidden">
-                    <span className="block h-full bg-blue-500 rounded-full transition-all duration-500" style={{ width: `${percent}%` }} />
-                </span>
-            </button>
-
-            {open && (
-                <Panel width="w-[340px]">
-                    <PanelHeader
-                        title={`School setup — ${percent}% complete`}
-                        sub="Each step unlocks part of the platform. Status comes from real data."
-                    />
-                    <div className="py-1.5">
-                        {steps.map(step => (
-                            <button
-                                key={step.id}
-                                onClick={() => { setOpen(false); navigate(step.route); }}
-                                className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors group"
-                            >
-                                {step.done
-                                    ? <CheckCircle2 size={17} className="text-green-500 shrink-0" />
-                                    : <Circle size={17} className="text-gray-300 shrink-0" />}
-                                <span className="flex-1 min-w-0">
-                                    <span className={`block text-sm font-medium ${step.done ? 'text-gray-400 line-through decoration-gray-300' : 'text-gray-800'}`}>
-                                        {step.label}
-                                    </span>
-                                    {!step.done && <span className="block text-[11px] text-gray-400">{step.hint}</span>}
-                                </span>
-                                {!step.done && <ChevronRight size={14} className="text-gray-300 group-hover:text-blue-400 shrink-0" />}
-                            </button>
-                        ))}
-                    </div>
-                </Panel>
-            )}
-        </div>
+        <button
+            onClick={() => navigate(ROUTES.setup)}
+            className="hidden sm:flex items-center gap-2 h-8 px-3 rounded-full bg-blue-50 border border-blue-200 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
+            title="Finish setting up your school"
+        >
+            <Sparkles size={13} className="text-blue-500" />
+            Setup {percent}%
+            <span className="w-14 h-1.5 rounded-full bg-blue-100 overflow-hidden">
+                <span className="block h-full bg-blue-500 rounded-full transition-all duration-500" style={{ width: `${percent}%` }} />
+            </span>
+        </button>
     );
 }
 
-/* ─── Profile menu ─────────────────────────────────────────────────────────── */
+/* ─── Profile menu ───────────── */
 export function ProfileMenu() {
     const { open, setOpen, ref } = usePopover();
     const { user, logout } = useAuth();
@@ -187,7 +174,6 @@ export function ProfileMenu() {
     const [confirmLogout, setConfirmLogout] = useState(false);
 
     const name = user?.fullName || user?.name || 'Administrator';
-    const initials = name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
 
     const handleTheme = () => {
         toggleTheme();
@@ -198,17 +184,20 @@ export function ProfileMenu() {
         <div className="relative" ref={ref}>
             <button
                 onClick={() => setOpen(o => !o)}
-                className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-xs font-bold hover:ring-4 hover:ring-blue-100 transition-all"
+                className="rounded-full hover:ring-4 hover:ring-blue-100 transition-all"
                 title={name}
             >
-                {initials || 'A'}
+                <Avatar name={name} src={user?.profileImage} size={32} />
             </button>
 
             {open && (
                 <Panel width="w-64">
-                    <div className="px-4 py-3 border-b border-gray-100">
-                        <p className="text-sm font-bold text-gray-900 truncate">{name}</p>
-                        <p className="text-[11px] text-gray-400 truncate">{user?.email}</p>
+                    <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+                        <Avatar name={name} src={user?.profileImage} size={40} />
+                        <div className="min-w-0">
+                            <p className="text-sm font-bold text-gray-900 truncate">{name}</p>
+                            <p className="text-[11px] text-gray-400 truncate">{user?.email}</p>
+                        </div>
                     </div>
                     <div className="py-1.5">
                         <button

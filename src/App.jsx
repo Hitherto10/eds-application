@@ -20,7 +20,8 @@ const CompleteRegistration = lazy(() => import("./pages/auth/UserRegistration/Co
 const RegisterSchool       = lazy(() => import("./pages/auth/RegisterSchool.jsx").then(m => ({ default: m.RegisterSchool })));
 
 // Admin Pages
-const DashboardPage       = lazy(() => import("./pages/application/AdminDashboard/pages/DashboardPage.jsx"));
+const AdminHome           = lazy(() => import("./pages/application/AdminDashboard/pages/AdminHome.jsx"));
+const SetupChecklistPage  = lazy(() => import("./pages/application/AdminDashboard/pages/onboarding/SetupChecklistPage.jsx"));
 const TeacherManagement   = lazy(() => import("./pages/application/AdminDashboard/pages/TeacherManagement.jsx"));
 const ParentManagement    = lazy(() => import("./pages/application/AdminDashboard/pages/ParentManagement.jsx"));
 const StudentManagement   = lazy(() => import("./pages/application/AdminDashboard/pages/StudentManagement.jsx"));
@@ -31,6 +32,7 @@ const ClassesPage         = lazy(() => import("./pages/application/AdminDashboar
 const CalendarPage        = lazy(() => import("./pages/application/AdminDashboard/pages/config/CalendarPage.jsx"));
 const TimetableLibraryPage = lazy(() => import("./pages/application/AdminDashboard/pages/config/TimetableLibraryPage.jsx"));
 const TimetablePage       = lazy(() => import("./pages/application/AdminDashboard/pages/config/TimetablePage.jsx"));
+const TimetableViewPage   = lazy(() => import("./pages/application/AdminDashboard/pages/config/TimetableViewPage.jsx"));
 const EventPage           = lazy(() => import("./pages/application/AdminDashboard/pages/config/EventPage.jsx"));
 const FeeOverviewPage     = lazy(() => import("./pages/application/AdminDashboard/pages/fees/FeeOverviewPage.jsx"));
 const FeeStructuresPage   = lazy(() => import("./pages/application/AdminDashboard/pages/fees/FeeStructuresPage.jsx"));
@@ -114,7 +116,8 @@ function AppRoutes() {
                 </Route>
 
                 {/* ── Admin — canonical IA (job-to-be-done) ─────────────────── */}
-                <Route path="/dashboard/admin" element={<ProtectedRoute requiredRole="admin"><DashboardPage /></ProtectedRoute>} />
+                <Route path="/dashboard/admin" element={<ProtectedRoute requiredRole="admin"><AdminHome /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/setup" element={<ProtectedRoute requiredRole="admin"><SetupChecklistPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/profile" element={<ProtectedRoute requiredRole="admin"><AdminProfilePage /></ProtectedRoute>} />
 
                 {/* People */}
@@ -132,6 +135,7 @@ function AppRoutes() {
                 <Route path="/dashboard/admin/academics/grading"            element={<ProtectedRoute requiredRole="admin"><GradingPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/academics/report-cards"       element={<ProtectedRoute requiredRole="admin"><ReportCardsPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/academics/timetables"         element={<ProtectedRoute requiredRole="admin"><TimetableLibraryPage /></ProtectedRoute>} />
+                <Route path="/dashboard/admin/academics/timetables/view"    element={<ProtectedRoute requiredRole="admin"><TimetableViewPage /></ProtectedRoute>} />
                 <Route path="/dashboard/admin/academics/timetables/builder" element={<ProtectedRoute requiredRole="admin"><TimetablePage /></ProtectedRoute>} />
 
                 {/* Attendance */}

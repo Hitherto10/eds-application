@@ -134,3 +134,18 @@
 .pagination-number.active {
     @apply bg-blue-600 text-white shadow-sm;
 }
+
+@media print {
+    body * { visibility: hidden !important; }
+    #timetable-print-zone,
+    #timetable-print-zone * { visibility: visible !important; }
+    #timetable-print-zone {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        padding: 24px !important;
+        background: white !important;
+    }
+    #timetable-print-zone .overflow-x-auto { overflow: visible !important; }
+}

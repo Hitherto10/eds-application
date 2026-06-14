@@ -4,6 +4,7 @@ import TodaysClassesBoard from './attendance/TodaysClassesBoard.jsx';
 import { getScheduledClasses } from './attendance/attendanceAPIs.js';
 import { CalendarDays, RefreshCw } from 'lucide-react';
 
+
 function formatHeaderDate(date = new Date()) {
   return date.toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
@@ -37,11 +38,12 @@ export default function AttendancePage() {
     fetchClasses();
   }, []);
 
+
   return (
     <TeacherLayout>
       <div className="w-full mx-auto">
 
-        {/* ── Page header ─────────────────────────────────────────────── */}
+        {/* ── Page header ─ */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
@@ -62,7 +64,7 @@ export default function AttendancePage() {
           </button>
         </div>
 
-        {/* ── Error state ──────────────────────────────────────────────── */}
+        {/* ── Error state ── */}
         {error && (
           <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 mb-5">
             <span className="flex-1">{error}</span>
@@ -75,14 +77,14 @@ export default function AttendancePage() {
           </div>
         )}
 
-        {/* ── Board ────────────────────────────────────────────────────── */}
+        {/* ── Board ──────── */}
         <TodaysClassesBoard
           classes={scheduledClasses}
           loading={loading}
           academicContext={academicContext}
         />
 
-        {/* ── Last refreshed ───────────────────────────────────────────── */}
+        {/* ── Last refreshed ──────── */}
         {lastRefreshed && !loading && (
           <p className="text-xs text-gray-400 text-right mt-3">
             Last updated {lastRefreshed.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}

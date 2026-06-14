@@ -3,8 +3,9 @@ import { useTimetable } from './TimetableContext.jsx';
 import { useAcademic } from '../../../../contexts/AcademicContext.jsx';
 import {
     getTimetableDraft,
-    getPublishedTimetable,
+    getAllPublishedTimetables,
 } from './timetableAPIs.js';
+import { expandPeriods, extractPeriodConfig } from './timetableUtils.js';
 import { getSchoolClasses } from '../services/classAPIs.js';
 import { getClassArms } from '../services/armAPIs.js';
 import { getSchoolSubjects } from '../services/subjectAPIs.js';
@@ -12,7 +13,7 @@ import * as adminService from '../services/adminService.js';
 
 /**
  * useGlobalTimetableData
- * ─────────────────────────────────────────────────────────────────────────────
+ * ───────────────────────────────
  * Loads the timetable builder's *reference resources* (classes, arms, teachers,
  * subjects) once on mount, and reloads the active draft whenever the selected
  * class / arm / term changes.
@@ -42,11 +43,6 @@ export function useGlobalTimetableData() {
         mountedRef.current = true;
         return () => { mountedRef.current = false; };
     }, []);
-
-    const normalizePeriods = (rawPeriods) => {
-        if (!Array.isArray(rawPeriods)) return [];
-        return rawPeriods.filter(p => p && typeof p === 'object' && p.id && p.start && p.end);
-    };
 
     // ── Load builder reference resources once on mount ────────────────────────
     useEffect(() => {
@@ -89,7 +85,6 @@ export function useGlobalTimetableData() {
         }
 
         loadResources();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // run exactly once on mount
 
     // ── Reactive: reload the draft when class, arm, or term changes ───────────
@@ -110,17 +105,27 @@ export function useGlobalTimetableData() {
         async function loadDraft() {
             dispatch({ type: 'SET_LOADING', payload: { draft: true } });
             try {
-                const pubRes = await getPublishedTimetable(selectedClassId, selectedTermId, selectedArmId);
+                // Fetch all published timetables and match the current selection client-side.
+                const allPublished = await getAllPublishedTimetables();
                 if (cancelled) return;
+                const published = (allPublished || []).find(t =>
+                    t.classId === selectedClassId &&
+                    t.termId === selectedTermId &&
+                    (selectedArmId ? t.armId === selectedArmId : true)
+                );
 
-                if (pubRes?.success && pubRes.data?.timetable) {
+                if (published) {
+                    // Published returns only the period CONFIG — expand it (reusing the
+                    // periodIds the schedules reference) so the grid is fully prefilled.
                     dispatch({
                         type: 'SET_DRAFT',
-                        periods: normalizePeriods(pubRes.data.timetable.periods),
-                        schedules: pubRes.data.timetable.schedules ?? [],
+                        periods: expandPeriods(published),
+                        schedules: published.schedules ?? [],
                         draftId: null,
                     });
-                    dispatch({ type: 'SET_PUBLISHED', publishedAt: pubRes.data.timetable.publishedAt });
+                    const cfg = extractPeriodConfig(published);
+                    if (cfg) dispatch({ type: 'SET_PERIOD_CONFIG', payload: cfg });
+                    dispatch({ type: 'SET_PUBLISHED', publishedAt: published.publishedAt });
                     return;
                 }
 
@@ -128,14 +133,18 @@ export function useGlobalTimetableData() {
                 if (cancelled) return;
 
                 if (draftRes?.success && draftRes.data?.draft) {
+                    const draft = draftRes.data.draft;
+                    // Drafts already carry expanded periods; expandPeriods passes them through.
                     dispatch({
                         type: 'SET_DRAFT',
-                        periods: normalizePeriods(draftRes.data.draft.periods),
-                        schedules: draftRes.data.draft.schedules ?? [],
-                        draftId: draftRes.data.draft.id,
+                        periods: expandPeriods(draft),
+                        schedules: draft.schedules ?? [],
+                        draftId: draft.id,
                     });
-                    if (draftRes.data.draft.updatedAt) {
-                        dispatch({ type: 'SET_SAVED', at: draftRes.data.draft.updatedAt });
+                    const cfg = extractPeriodConfig(draft);
+                    if (cfg) dispatch({ type: 'SET_PERIOD_CONFIG', payload: cfg });
+                    if (draft.updatedAt) {
+                        dispatch({ type: 'SET_SAVED', at: draft.updatedAt });
                     }
                 } else {
                     dispatch({ type: 'CLEAR_PERIODS_AND_SCHEDULES' });

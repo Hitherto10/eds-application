@@ -19,7 +19,7 @@ import apiClient from '../../../../utils/axiosConfig.js';
  *  │  • 2-phase lifecycle — draft → published (no intermediate review or      │
  *  │                        locked states; publish is visible to parents      │
  *  │                        and students immediately)                         │
- *  └──────────────────────────────────────────────────────────────────────────┘
+ *  └────────────────────────────┘
  *
  *  MONEY: all amounts are stored & transmitted in KOBO (integer). Never floats.
  *         Use formatNaira(kobo) for display only.
@@ -36,7 +36,7 @@ export const FEE_BACKEND_LIVE = true;
 
 const delay = (ms = 400) => new Promise(r => setTimeout(r, ms));
 
-// ── ID normalisation (live-mode only) ─────────────────────────────────────────
+// ── ID normalisation (live-mode only) ────
 const normalizeId = (obj) => {
   if (!obj || typeof obj !== 'object') return obj;
   const { _id, ...rest } = obj;
@@ -146,7 +146,7 @@ export function sumItems(items = []) {
   return items.reduce((acc, it) => acc + (Number(it.amount) || 0), 0);
 }
 
-// ── Mock id helper ────────────────────────────────────────────────────────────
+// ── Mock id helper ──────────────
 let _seq = 0;
 const mockId = (prefix) => `${prefix}_${Date.now().toString(36)}_${_seq++}`;
 

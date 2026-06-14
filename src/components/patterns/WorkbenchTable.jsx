@@ -137,7 +137,7 @@ export default function WorkbenchTable({
     const activeFilterEntries = Object.entries(activeFilters).filter(([, v]) => v != null && v !== '');
     const hasActiveQuery = !!search.trim() || activeFilterEntries.length > 0;
 
-    /* ── Selection ─────────────────────────────────────────────────────── */
+    /* ── Selection ───────── */
     const pageKeys = pageRows.map(rowKey);
     const allPageSelected = pageKeys.length > 0 && pageKeys.every(k => selected.has(k));
     const toggleAll = () => {
@@ -156,7 +156,7 @@ export default function WorkbenchTable({
         [rows, selected, rowKey]
     );
 
-    /* ── Saved views ───────────────────────────────────────────────────── */
+    /* ── Saved views ─────── */
     const saveCurrentView = () => {
         const name = window.prompt('Name this view (e.g. "JSS1 inactive")');
         if (!name?.trim()) return;
@@ -181,7 +181,7 @@ export default function WorkbenchTable({
 
     const cellPad = density === 'compact' ? 'px-4 py-2' : 'px-4 py-3.5';
 
-    /* ── States ────────────────────────────────────────────────────────── */
+    /* ── States ──────────── */
     if (loading) return <TableSkeleton />;
 
     if (error) {
@@ -194,7 +194,7 @@ export default function WorkbenchTable({
 
     return (
         <div className="bg-white border border-gray-200 rounded-2xl overflow-visible" ref={menuRef}>
-            {/* ── Toolbar ──────────────────────────────────────────────── */}
+            {/* ── Toolbar ── */}
             <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-gray-100">
                 <div className="relative w-full sm:w-64">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
@@ -352,7 +352,7 @@ export default function WorkbenchTable({
                 </div>
             )}
 
-            {/* ── Table ────────────────────────────────────────────────── */}
+            {/* ── Table ──── */}
             {filtered.length === 0 ? (
                 hasActiveQuery
                     ? <EmptyState variant="filtered" onClearFilters={clearAll} compact />

@@ -6,7 +6,7 @@ import { getSubjectColor } from '../TimetableContext';
 
 /**
  * PalettePanel
- * ─────────────────────────────────────────────────────────────────────────────
+ * ───────────────────────────────
  * Left sidebar containing draggable entities (Subjects, Teachers, Rooms).
  */
 export default function PalettePanel({ resources }) {
@@ -120,7 +120,7 @@ export default function PalettePanel({ resources }) {
   );
 }
 
-// ─── Draggable Item Component ──────────────────────────────────────────────────
+// ─── Draggable Item Component ────
 function PaletteItem({ id, type, payload, arms = [] }) {
   const { state } = useTimetable();
   // Dragging is disabled when: published, no class, or class has arms but none selected yet.

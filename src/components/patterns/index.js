@@ -6,6 +6,9 @@
  */
 export { default as StatusChip } from './StatusChip.jsx';
 export { statusTone, CHIP_TONES } from './statusTokens.js';
+export { default as Avatar } from './Avatar.jsx';
+export { getInitials } from './avatarUtils.js';
+export { default as ImageUploadField } from './ImageUploadField.jsx';
 export { default as EmptyState } from './EmptyState.jsx';
 export { Shimmer, TableSkeleton, DetailSkeleton, DashboardSkeleton, CardGridSkeleton } from './Skeletons.jsx';
 export { default as Timeline } from './Timeline.jsx';

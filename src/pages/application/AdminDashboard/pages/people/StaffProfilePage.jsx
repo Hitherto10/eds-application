@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Power, Trash2, BookOpen, Layers, UserPlus, UserMinus, RefreshCw, FilePlus2 } from 'lucide-react';
+import { Power, Trash2, BookOpen, Layers, RefreshCw, FilePlus2 } from 'lucide-react';
 import AdminLayout from '../../components/layout/AdminLayout.jsx';
 import { DetailPage, EmptyState, Timeline, StatusChip, pushToast } from '../../../../../components/patterns';
 import { getDashboardUsers } from '../../services/adminService';
-import {
-    StatusChangeModal, DeleteUserModal, AssignStudentsToTeacherModal,
-    UnassignStudentFromTeacherModal, AssignClassesModal, UnassignClassesModal,
-} from '../../components/ui/modals.jsx';
+import { StatusChangeModal, DeleteUserModal, UnassignClassesModal } from '../../components/ui/modals.jsx';
+import TeacherClassAssignmentModal from './TeacherClassAssignmentModal.jsx';
+import TeacherSubjectAssignmentModal from './TeacherSubjectAssignmentModal.jsx';
 import { useAuth } from '../../../../../contexts/AuthContext.jsx';
 import { ROUTES } from '../../navigation/navConfig.js';
 
@@ -25,7 +24,7 @@ export default function StaffProfilePage() {
     const [staff, setStaff] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [modal, setModal] = useState(null); // status | delete | assignClasses | unassignClasses | assignStudents | unassignStudents
+    const [modal, setModal] = useState(null); // status | delete | assignClasses | unassignClasses | assignSubjects
 
     const toast = (message) => pushToast({ message });
 
@@ -43,6 +42,7 @@ export default function StaffProfilePage() {
                 lastName: found.lastName,
                 email: found.email,
                 phone: found.phone || '—',
+                profileImage: found.profileImage ?? null,
                 status: found.isActive,
                 subjects: found.subjects || [],
                 classes: found.classes || [],
@@ -81,17 +81,16 @@ export default function StaffProfilePage() {
             <DetailPage
                 loading={loading}
                 breadcrumb={[{ label: 'People', to: ROUTES.staff }, { label: 'Staff', to: ROUTES.staff }, { label: staff?.name ?? '…' }]}
-                avatar={{ name: staff?.name }}
+                avatar={{ name: staff?.name, image: staff?.profileImage }}
                 title={staff?.name}
                 subtitle={staff?.email || 'No email on record'}
                 status={staff?.status ? 'active' : 'inactive'}
                 primaryActions={[
                     { id: 'classes', label: 'Assign classes', icon: Layers, variant: 'outline', onClick: () => setModal('assignClasses') },
-                    { id: 'students', label: 'Assign students', icon: UserPlus, onClick: () => setModal('assignStudents') },
+                    { id: 'subjects', label: 'Assign subjects', icon: BookOpen, onClick: () => setModal('assignSubjects') },
                 ]}
                 overflowActions={[
                     { id: 'unassignClasses', label: 'Unassign classes', icon: Layers, onClick: () => setModal('unassignClasses') },
-                    { id: 'unassignStudents', label: 'Unassign students', icon: UserMinus, onClick: () => setModal('unassignStudents') },
                     { id: 'status', label: staff?.status ? 'Deactivate' : 'Activate', icon: Power, onClick: () => setModal('status') },
                     { id: 'delete', label: 'Remove staff', icon: Trash2, destructive: true, onClick: () => setModal('delete') },
                 ]}
@@ -149,10 +148,9 @@ export default function StaffProfilePage() {
 
             {modal === 'status' && <StatusChangeModal onClose={afterAction} showToast={toast} user={staff} schoolId={user?.schoolId} />}
             {modal === 'delete' && <DeleteUserModal onClose={() => { closeModal(); navigate(ROUTES.staff); }} showToast={toast} user={staff} schoolId={user?.schoolId} />}
-            {modal === 'assignClasses' && <AssignClassesModal onClose={afterAction} showToast={toast} teacher={staff} schoolId={user?.schoolId} />}
+            {modal === 'assignClasses' && <TeacherClassAssignmentModal teacher={staff} schoolId={user?.schoolId} onClose={closeModal} onAssigned={load} />}
+            {modal === 'assignSubjects' && <TeacherSubjectAssignmentModal teacher={staff} onClose={closeModal} onAssigned={load} />}
             {modal === 'unassignClasses' && <UnassignClassesModal onClose={afterAction} showToast={toast} teacher={staff} schoolId={user?.schoolId} />}
-            {modal === 'assignStudents' && <AssignStudentsToTeacherModal onClose={afterAction} showToast={toast} teacher={staff} schoolId={user?.schoolId} />}
-            {modal === 'unassignStudents' && <UnassignStudentFromTeacherModal onClose={afterAction} showToast={toast} teacher={staff} schoolId={user?.schoolId} />}
         </AdminLayout>
     );
 }

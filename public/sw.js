@@ -37,7 +37,7 @@ const SAFE_CACHE_PATTERNS = [
     /\/api\/parent\/dashboard/,
 ];
 
-// ─── Install ────────────────────────────────────────────────────────────────
+// ─── Install ──────────────────
 self.addEventListener('install', (event) => {
     console.log(`[SW v${SW_VERSION}] Installing…`);
     event.waitUntil(
@@ -47,7 +47,7 @@ self.addEventListener('install', (event) => {
     );
 });
 
-// ─── Activate ────────────────────────────────────────────────────────────────
+// ─── Activate ──────────────────
 self.addEventListener('activate', (event) => {
     console.log(`[SW v${SW_VERSION}] Activating…`);
     event.waitUntil(
@@ -68,7 +68,7 @@ self.addEventListener('activate', (event) => {
     });
 });
 
-// ─── Fetch ────────────────────────────────────────────────────────────────────
+// ─── Fetch ──────────────────────
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
@@ -122,7 +122,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(networkFirstWithCache(request, CACHE_STATIC));
 });
 
-// ─── Helper: Cache-First ──────────────────────────────────────────────────────
+// ─── Helper: Cache-First ────────
 async function cacheFirst(request) {
     const cached = await caches.match(request);
     if (cached) return cached;

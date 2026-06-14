@@ -1,6 +1,6 @@
 /**
  * Conflict Detection Engine
- * ─────────────────────────────────────────────────────────────────────────────
+ * ───────────────────────────────
  * Pure, synchronous functions that run on every schedules[] mutation to give
  * real-time conflict feedback in the builder UI.
  *
@@ -15,7 +15,7 @@
  *   MISSING_TEACHER        — a period block has no teacher assigned (warning)
  */
 
-// ─── Types (JSDoc for IDE hints) ─────────────────────────────────────────────
+// ─── Types (JSDoc for IDE hints) ────────
 /**
  * @typedef {Object} ScheduleEntry
  * @property {string}      id
@@ -45,7 +45,7 @@
  * @property {string[]} affectedEntryIds
  */
 
-// ─── Main export ──────────────────────────────────────────────────────────────
+// ─── Main export ────────────────
 /**
  * Run all conflict checks against the current schedule entries.
  * @param {ScheduleEntry[]} schedules
@@ -54,7 +54,7 @@
 export function detectConflicts(schedules) {
   const conflicts = [];
 
-  // ── 1. Teacher double-booking ────────────────────────────────────────────
+  // ── 1. Teacher double-booking ───────
   // Same teacher in two different class+arm groups at the exact same slot.
   // armKey ensures "Grade 10A" and "Grade 10B" are treated as different groups.
   const byTeacherSlot = groupBy(
@@ -75,7 +75,7 @@ export function detectConflicts(schedules) {
     }
   }
 
-  // ── 2. Room conflict ──────────────────────────────────────────────────────
+  // ── 2. Room conflict ────────
   // Same room used by two different class+arm groups at the same slot.
   const byRoomSlot = groupBy(
     schedules.filter(s => s.roomId),
@@ -139,7 +139,7 @@ export function detectConflicts(schedules) {
     }
   }
 
-  // ── 5. Missing teacher (warning) ──────────────────────────────────────────
+  // ── 5. Missing teacher (warning) ─────
   const unassigned = schedules.filter(s => !s.teacherId);
   if (unassigned.length > 0) {
     conflicts.push({
@@ -193,7 +193,7 @@ export function hasBlockingConflicts(conflicts) {
   return conflicts.some(c => c.severity === 'error');
 }
 
-// ─── Utils ────────────────────────────────────────────────────────────────────
+// ─── Utils ──────────────────────
 function groupBy(arr, keyFn) {
   const result = {};
   for (const item of arr) {

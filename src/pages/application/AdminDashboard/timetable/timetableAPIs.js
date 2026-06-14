@@ -1,6 +1,6 @@
 /**
  * Timetable & Academic Calendar API Stubs
- * ─────────────────────────────────────────────────────────────────────────────
+ * ───────────────────────────────
  * Every function logs its exact payload / URL so the backend developer has a
  * clear specification to implement against.
  *
@@ -146,6 +146,25 @@ export async function publishTimetable(payload) {
 export async function getPublishedTimetable(classId, termId, armId = null) {
   const params = { classId, termId, ...(armId ? { armId } : {}) };
   const { data } = await apiClient.get('/api/admin/timetable/published', { params });
+  return data;
+}
+
+/**
+ * Fetch EVERY published timetable in the school — no class/term/arm filter.
+ * Same endpoint as getPublishedTimetable, just without params.
+ * Returns the raw array: [{ id, classId, termId, armId, publishedAt, periods, schedules }].
+ */
+export async function getAllPublishedTimetables() {
+  const { data } = await apiClient.get('/api/admin/timetable/published');
+  return data?.data?.timetables ?? [];
+}
+
+/**
+ * Delete a published timetable by its id.
+ * NOTE: backend endpoint may still be pending — see README. Mirrors the draft delete.
+ */
+export async function deletePublishedTimetable(timetableId) {
+  const { data } = await apiClient.delete(`/api/admin/timetable/published/${timetableId}`);
   return data;
 }
 

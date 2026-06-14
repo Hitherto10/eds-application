@@ -22,7 +22,7 @@ import {
   CATEGORY_STYLES,
 } from '../../services/subjectAPIs.js';
 
-// ─── Category pill ─────────────────────────────────────────────────────────────
+// ─── Category pill ───────────────
 const CategoryPill = ({ category }) => {
   const cls = CATEGORY_STYLES[category] || 'bg-gray-100 text-gray-500 border border-gray-200';
   return (
@@ -156,7 +156,7 @@ export default function SubjectSetupBuilder() {
   const [search,          setSearch]          = useState('');
   const [filterCategory,  setFilterCategory]  = useState('all');
 
-  // ─── Path A: Load standard subjects ─────────────────────────────────────────
+  // ─── Path A: Load standard subjects ────
   const handleLoadDefaults = async () => {
     if (!confirm('This will load all standard subjects into the school database. Continue?')) return;
     setLoading(true);
@@ -190,7 +190,7 @@ export default function SubjectSetupBuilder() {
     }
   };
 
-  // ─── Path B: Create single subject ──────────────────────────────────────────
+  // ─── Path B: Create single subject ─────
   const handleCreate = async ({ name, code, category }) => {
     setLoading(true);
     try {
@@ -207,7 +207,7 @@ export default function SubjectSetupBuilder() {
     }
   };
 
-  // ─── Update existing subject ─────────────────────────────────────────────────
+  // ─── Update existing subject ───
   const handleUpdate = async ({ name, code, category }) => {
     if (!editingSubj) return;
     setLoading(true);
@@ -228,7 +228,7 @@ export default function SubjectSetupBuilder() {
     }
   };
 
-  // ─── Delete (unified) ────────────────────────────────────────────────────────
+  // ─── Delete (unified) ──────────
   const handleDelete = async (subj) => {
     if (!confirm(`Delete "${subj.name}"? This removes it from the school database.`)) return;
     try {
@@ -241,7 +241,7 @@ export default function SubjectSetupBuilder() {
     }
   };
 
-  // ─── Loading ─────────────────────────────────────────────────────────────────
+  // ─── Loading ───────────────────
   if (initialLoading) {
     return (
       <div className="flex-1 flex items-center justify-center py-32">
@@ -250,7 +250,7 @@ export default function SubjectSetupBuilder() {
     );
   }
 
-  // ─── Zero-state ──────────────────────────────────────────────────────────────
+  // ─── Zero-state ────────────────
   if (subjects.length === 0 && !showForm) {
     return (
       <div className="flex-1 overflow-y-auto bg-gray-50 flex items-center justify-center p-6">
@@ -319,7 +319,7 @@ export default function SubjectSetupBuilder() {
     );
   }
 
-  // ─── Active / loaded view ────────────────────────────────────────────────────
+  // ─── Active / loaded view ──────
   const filtered = subjects.filter(s => {
     const matchesSearch =
       !search.trim() ||

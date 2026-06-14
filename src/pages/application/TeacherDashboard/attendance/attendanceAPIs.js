@@ -1,14 +1,27 @@
 /**
  * Attendance API Functions — Frontend Contract
- * ─────────────────────────────────────────────────────────────────────────────
- * Read-side functions (getScheduledClasses, getSessionStudents) now fetch real
- * data from the existing teacher API endpoints in authAPIs.js.
+ * ─────────────────────────────────────────────
+ * All functions make real HTTP calls via apiClient (axios).
  *
- * Write-side functions (saveDraftAttendance, submitAttendance, updateAttendance)
- * retain their stub implementations until the attendance backend endpoints are
- * live — replace the mock returns with real apiClient calls at that point.
+ * READ routes (already-live teacher endpoints):
+ *   getScheduledClasses   → GET  /api/teacher/attendance/schedule?date=YYYY-MM-DD
+ *   getSessionStudents    → GET  /api/teacher/attendance/sessions/:scheduleId/students
+ *   getAttendanceHistory  → GET  /api/teacher/attendance/history?page=&limit=&classId=&subjectId=
+ *   getAttendanceByDate   → GET  /api/teacher/attendance/date/:date
+ *   getAttendanceSummary  → GET  /api/teacher/attendance/summary/:scheduleId
+ *
+ * WRITE routes (pending backend implementation):
+ *   saveDraftAttendance   → POST /api/teacher/attendance/draft
+ *   submitAttendance      → POST /api/teacher/attendance/submit
+ *   updateAttendance      → PUT  /api/teacher/attendance/:attendanceId
+ *
+ * When ATTENDANCE_BACKEND_LIVE === false the write functions fall back to
+ * local mocks so the UI stays functional during development.
+ *
+ * Flip ATTENDANCE_BACKEND_LIVE to `true` once the backend is deployed.
  */
 
+import apiClient from '../../../../utils/axiosConfig';
 import {
   getTeacherClasses,
   getSubjectsByClass,
@@ -16,7 +29,11 @@ import {
   getTeacherDashboard,
 } from '../../../auth/authAPIs.js';
 
-// ─── Period time slots (adapt once a real timetable endpoint exists) ──────────
+// ─── Feature flag ──────────────────────────────────────────────────────────
+// Set to `true` once ALL attendance backend endpoints are live.
+export const ATTENDANCE_BACKEND_LIVE = false;
+
+// ─── Period time slots (used in fallback mode only) ─────────────────────────
 const PERIOD_SLOTS = [
   { periodNumber: 1, start: '08:00', end: '08:45' },
   { periodNumber: 2, start: '09:00', end: '09:45' },
@@ -28,31 +45,65 @@ const PERIOD_SLOTS = [
   { periodNumber: 8, start: '16:00', end: '16:45' },
 ];
 
-export const TIMETABLE_BACKEND_LIVE = true;
-
-// ─── Simple stable ID helpers ─────────────────────────────────────────────────
-function classId(className)  { return `cls_${String(className).replace(/\s+/g, '_').toLowerCase()}`; }
-function subjectId(subjectName) { return `sub_${String(subjectName).replace(/\s+/g, '_').toLowerCase()}`; }
+// ─── Stable ID helpers (used in fallback mode) ──────────────────────────────
+function classId(className)    { return `cls_${String(className).replace(/\s+/g, '_').toLowerCase()}`; }
+function subjectId(subjectName){ return `sub_${String(subjectName).replace(/\s+/g, '_').toLowerCase()}`; }
 function scheduleId(className, subjectName, periodNumber) {
   return `sch_${classId(className)}_${subjectId(subjectName)}_p${periodNumber}`;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GET  /api/teacher/attendance/schedule
-// Builds today's class list from real teacher classes + subjects.
-// No timetable endpoint exists yet, so each class-subject pair gets a synthetic
-// period slot. Once a real timetable API is available, replace the body below.
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Delay helper (fallback mock only) ──────────────────────────────────────
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// ───────────────────────────────────────────────────────────────────────────
+// 1.  GET /api/teacher/attendance/schedule?date=YYYY-MM-DD
+//
+//     Returns the teacher's scheduled classes for a given date, enriched with
+//     per-session attendance status (not_started / in_progress / completed).
+//
+//     Query params:
+//       date  (required) — ISO date string YYYY-MM-DD. Defaults to today.
+//
+//     Expected response:
+//     {
+//       "success": true,
+//       "data": {
+//         "date": "YYYY-MM-DD",
+//         "academicContext": {
+//           "academicYearId": "string",
+//           "academicYear": "string",
+//           "termId": "string",
+//           "term": "string"
+//         },
+//         "scheduledClasses": [
+//           {
+//             "scheduleId": "string",
+//             "classId": "string",
+//             "className": "string",
+//             "subjectId": "string",
+//             "subjectName": "string",
+//             "periodId": "string",
+//             "periodNumber": 1,
+//             "timeSlot": { "start": "HH:mm", "end": "HH:mm" },
+//             "room": "string | null",
+//             "attendanceStatus": "not_started | in_progress | completed",
+//             "attendanceId": "string | null",
+//             "studentCount": 30,
+//             "presentCount": 0,
+//             "absentCount": 0,
+//             "lateCount": 0
+//           }
+//         ]
+//       }
+//     }
+// ───────────────────────────────────────────────────────────────────────────
 export async function getScheduledClasses(date = new Date().toISOString().split('T')[0]) {
-  if (TIMETABLE_BACKEND_LIVE) {
-    // Direct call to the published timetable endpoint once backend exists
-    const res = await getTeacherDailySchedule(date);
-    if (res.success) return res.data;
-    throw new Error("Failed to fetch formal timetable");
+  if (ATTENDANCE_BACKEND_LIVE) {
+    const { data } = await apiClient.get('/api/teacher/attendance/schedule', { params: { date } });
+    return data;
   }
 
-  // 1. Fetch real classes assigned to this teacher
-  // Fetch classes and dashboard (for academic context) in parallel
+  // ── Fallback: assemble schedule from existing teacher endpoints ────────────
   const [classRes, dashboardRes] = await Promise.all([
     getTeacherClasses(),
     getTeacherDashboard(),
@@ -61,7 +112,6 @@ export async function getScheduledClasses(date = new Date().toISOString().split(
   const classes = classRes?.data?.classes ?? [];
   const teacher = dashboardRes?.data?.teacher ?? {};
 
-  // Build academic context from dashboard data where available
   const academicContext = {
     academicYearId: teacher.academicYearId ?? 'ay_current',
     academicYear:   teacher.academicYear   ?? 'Current Year',
@@ -69,9 +119,10 @@ export async function getScheduledClasses(date = new Date().toISOString().split(
     term:           teacher.currentTerm    ?? teacher.term ?? 'Current Term',
   };
 
-  // Fan out: for every class fetch its subjects, then flatten into schedule entries
   const subjectResults = await Promise.allSettled(
-    classes.map(cls => getSubjectsByClass(cls.name).then(r => ({ cls, subjects: r?.data?.subjects ?? [] })))
+    classes.map((cls) =>
+      getSubjectsByClass(cls.name).then((r) => ({ cls, subjects: r?.data?.subjects ?? [] }))
+    )
   );
 
   let periodCounter = 0;
@@ -87,9 +138,9 @@ export async function getScheduledClasses(date = new Date().toISOString().split(
 
       scheduledClasses.push({
         scheduleId:       scheduleId(cls.name, subject.name, slot.periodNumber),
-        classId:          classId(cls.name),
+        classId:          cls.id || cls._id || classId(cls.name),
         className:        cls.name,
-        subjectId:        subjectId(subject.name),
+        subjectId:        subject.id || subject._id || subjectId(subject.name),
         subjectName:      subject.name,
         periodId:         `per_${String(slot.periodNumber).padStart(3, '0')}`,
         periodNumber:     slot.periodNumber,
@@ -115,30 +166,64 @@ export async function getScheduledClasses(date = new Date().toISOString().split(
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GET  /api/teacher/attendance/sessions/:scheduleId/students
-// Fetches real students for the class+subject encoded in the scheduleId.
-// scheduleId format: sch_<classId>_<subjectId>_p<period>
-// ─────────────────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────────
+// 2.  GET /api/teacher/attendance/sessions/:scheduleId/students
+//
+//     Returns the student roster for a scheduled session, including any
+//     previously saved attendance status for each student.
+//
+//     Path params:
+//       scheduleId — unique schedule identifier
+//
+//     Query params (optional — helps backend resolve class+subject):
+//       className, subjectName
+//
+//     Expected response:
+//     {
+//       "success": true,
+//       "data": {
+//         "scheduleId": "string",
+//         "attendanceId": "string | null",
+//         "attendanceStatus": "not_started | in_progress | completed",
+//         "submittedAt": "ISO8601 | null",
+//         "students": [
+//           {
+//             "studentId": "string",
+//             "rollNumber": "string",
+//             "fullName": "string",
+//             "status": "present | absent | late | null",
+//             "reason": "string",
+//             "lateArrivalTime": "HH:mm | empty string"
+//           }
+//         ]
+//       }
+//     }
+// ───────────────────────────────────────────────────────────────────────────
 export async function getSessionStudents(scheduleEntry) {
-  // scheduleEntry is the full schedule object (className + subjectName)
-  // so we can call the real endpoint directly.
   const { className, subjectName, scheduleId: sid } = scheduleEntry;
 
   if (!className || !subjectName) {
     throw new Error('getSessionStudents requires className and subjectName on the schedule entry.');
   }
 
+  if (ATTENDANCE_BACKEND_LIVE) {
+    const { data } = await apiClient.get(
+      `/api/teacher/attendance/sessions/${sid}/students`,
+      { params: { className, subjectName } }
+    );
+    return data;
+  }
+
+  // ── Fallback: fetch real students from existing endpoint ──────────────────
   const res = await getStudentsByClassandSubject(className, subjectName);
   const rawStudents = res?.data?.students ?? [];
 
-  // Normalise to the shape AttendanceRegister expects
   const students = rawStudents.map((s, i) => ({
-    studentId:      s.id || s._id || s.studentId,
-    rollNumber:     s.studentId || String(i + 1).padStart(3, '0'),
-    fullName:       s.fullName,
-    status:         null,   // not yet marked
-    reason:         '',
+    studentId:       s.id || s._id || s.studentId,
+    rollNumber:      s.rollNumber || s.studentId || String(i + 1).padStart(3, '0'),
+    fullName:        s.fullName,
+    status:          null,
+    reason:          '',
     lateArrivalTime: '',
   }));
 
@@ -154,100 +239,107 @@ export async function getSessionStudents(scheduleEntry) {
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// POST  /api/teacher/attendance/draft
-// Saves attendance as draft (can be edited later, not locked)
-// ─────────────────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────────
+// 3.  POST /api/teacher/attendance/draft
+//
+//     Saves an in-progress attendance session as a draft. The record can be
+//     retrieved and edited later. Draft records are NOT visible to admins.
+//
+//     Request body:
+//     {
+//       "academicYearId": "string",
+//       "termId": "string",
+//       "scheduleId": "string",
+//       "classId": "string",
+//       "subjectId": "string",
+//       "periodId": "string",
+//       "teacherId": "string",
+//       "date": "YYYY-MM-DD",
+//       "attendanceId": "string | null",   // include if updating an existing draft
+//       "attendances": [
+//         {
+//           "studentId": "string",
+//           "status": "present | absent | late | null",
+//           "reason": "string",
+//           "lateArrivalTime": "HH:mm | empty string"
+//         }
+//       ]
+//     }
+//
+//     Expected response:
+//     {
+//       "success": true,
+//       "data": {
+//         "attendanceId": "string",
+//         "status": "draft",
+//         "savedAt": "ISO8601"
+//       }
+//     }
+// ───────────────────────────────────────────────────────────────────────────
 export async function saveDraftAttendance(payload) {
-  console.log('📡 POST /api/teacher/attendance/draft', payload);
-  console.log('📦 Payload contract:', {
-    academicYearId: 'string',
-    termId: 'string',
-    scheduleId: 'string',
-    classId: 'string',
-    subjectId: 'string',
-    periodId: 'string',
-    teacherId: 'string',
-    date: 'YYYY-MM-DD',
-    attendances: [
-      {
-        studentId: 'string',
-        status: 'present | absent | late | null',
-        reason: 'string',
-        lateArrivalTime: 'HH:mm | empty string',
-      },
-    ],
-  });
-  console.log('📦 Expected response:', {
-    success: true,
-    data: {
-      attendanceId: 'string',
-      status: 'draft',
-      savedAt: 'ISO8601',
-    },
-  });
+  if (ATTENDANCE_BACKEND_LIVE) {
+    const { data } = await apiClient.post('/api/teacher/attendance/draft', payload);
+    return data;
+  }
 
-  await delay(800);
+  // ── Mock (remove once backend is live) ────────────────────────────────────
+  await delay(600);
   return {
     success: true,
     data: {
-      attendanceId: payload.attendanceId || `att_${Date.now()}`,
+      attendanceId: payload.attendanceId || `att_draft_${Date.now()}`,
       status: 'draft',
       savedAt: new Date().toISOString(),
     },
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// POST  /api/teacher/attendance/submit
-// Finalises attendance. Backend should lock the record.
-// ─────────────────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────────
+// 4.  POST /api/teacher/attendance/submit
+//
+//     Finalises and locks an attendance record. Once submitted the record is
+//     visible to admins and parents. Only a teacher (or admin) can edit it
+//     afterwards via PUT /api/teacher/attendance/:attendanceId.
+//
+//     Request body: same shape as saveDraftAttendance.
+//     Note: status for every student SHOULD be "present | absent | late"
+//     (not null). Backend should reject records where all statuses are null.
+//
+//     Expected response:
+//     {
+//       "success": true,
+//       "data": {
+//         "attendanceId": "string",
+//         "status": "submitted",
+//         "submittedAt": "ISO8601",
+//         "summary": {
+//           "total": 30,
+//           "present": 25,
+//           "absent": 3,
+//           "late": 2
+//         }
+//       }
+//     }
+// ───────────────────────────────────────────────────────────────────────────
 export async function submitAttendance(payload) {
-  console.log('📡 POST /api/teacher/attendance/submit', payload);
-  console.log('📦 Payload contract:', {
-    academicYearId: 'string',
-    termId: 'string',
-    scheduleId: 'string',
-    classId: 'string',
-    subjectId: 'string',
-    periodId: 'string',
-    teacherId: 'string',
-    date: 'YYYY-MM-DD',
-    attendances: [
-      {
-        studentId: 'string',
-        status: 'present | absent | late',   // must NOT be null on submit
-        reason: 'string',
-        lateArrivalTime: 'HH:mm | empty string',
-      },
-    ],
-  });
-  console.log('📦 Expected response:', {
-    success: true,
-    data: {
-      attendanceId: 'string',
-      status: 'submitted',
-      submittedAt: 'ISO8601',
-      summary: {
-        total: 'number',
-        present: 'number',
-        absent: 'number',
-        late: 'number',
-      },
-    },
-  });
+  if (ATTENDANCE_BACKEND_LIVE) {
+    const { data } = await apiClient.post('/api/teacher/attendance/submit', payload);
+    return data;
+  }
 
-  await delay(1000);
-  const summary = payload.attendances.reduce(
+  // ── Mock ──────────────────────────────────────────────────────────────────
+  await delay(800);
+  const summary = (payload.attendances || []).reduce(
     (acc, a) => {
       acc.total++;
       if (a.status === 'present') acc.present++;
       else if (a.status === 'absent') acc.absent++;
-      else if (a.status === 'late') acc.late++;
+      else if (a.status === 'late')   acc.late++;
       return acc;
     },
     { total: 0, present: 0, absent: 0, late: 0 }
   );
+
   return {
     success: true,
     data: {
@@ -259,39 +351,213 @@ export async function submitAttendance(payload) {
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PUT  /api/teacher/attendance/:attendanceId
-// Edits a previously submitted attendance record
-// ─────────────────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────────
+// 5.  PUT /api/teacher/attendance/:attendanceId
+//
+//     Edits a previously submitted attendance record. The backend should log
+//     an audit trail entry (who changed what, at what time).
+//
+//     Path params:
+//       attendanceId — the ID returned by submitAttendance
+//
+//     Request body:
+//     {
+//       "editReason": "string (optional — reason for the correction)",
+//       "attendances": [
+//         {
+//           "studentId": "string",
+//           "status": "present | absent | late",
+//           "reason": "string",
+//           "lateArrivalTime": "HH:mm | empty string"
+//         }
+//       ]
+//     }
+//
+//     Expected response:
+//     {
+//       "success": true,
+//       "data": {
+//         "attendanceId": "string",
+//         "status": "submitted",
+//         "updatedAt": "ISO8601",
+//         "summary": {
+//           "total": 30,
+//           "present": 25,
+//           "absent": 3,
+//           "late": 2
+//         }
+//       }
+//     }
+// ───────────────────────────────────────────────────────────────────────────
 export async function updateAttendance(attendanceId, payload) {
-  console.log(`📡 PUT /api/teacher/attendance/${attendanceId}`, payload);
-  console.log('📦 Payload contract:', {
-    reason: 'Optional: reason for editing',
-    attendances: [
-      {
-        studentId: 'string',
-        status: 'present | absent | late',
-        reason: 'string',
-        lateArrivalTime: 'HH:mm | empty string',
-      },
-    ],
-  });
-  console.log('📦 Expected response:', {
-    success: true,
-    data: {
-      attendanceId: 'string',
-      status: 'submitted',
-      updatedAt: 'ISO8601',
-    },
-  });
+  if (ATTENDANCE_BACKEND_LIVE) {
+    const { data } = await apiClient.put(`/api/teacher/attendance/${attendanceId}`, payload);
+    return data;
+  }
 
-  await delay(800);
+  // ── Mock ──────────────────────────────────────────────────────────────────
+  await delay(600);
+  const summary = (payload.attendances || []).reduce(
+    (acc, a) => {
+      acc.total++;
+      if (a.status === 'present') acc.present++;
+      else if (a.status === 'absent') acc.absent++;
+      else if (a.status === 'late')   acc.late++;
+      return acc;
+    },
+    { total: 0, present: 0, absent: 0, late: 0 }
+  );
+
   return {
     success: true,
     data: {
       attendanceId,
       status: 'submitted',
       updatedAt: new Date().toISOString(),
+      summary,
+    },
+  };
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// 6.  GET /api/teacher/attendance/history
+//
+//     Returns a paginated list of submitted attendance records for this teacher.
+//     Useful for the attendance history / audit view.
+//
+//     Query params (all optional):
+//       page       — page number (default: 1)
+//       limit      — records per page (default: 20)
+//       classId    — filter by class
+//       subjectId  — filter by subject
+//       startDate  — ISO date YYYY-MM-DD (inclusive)
+//       endDate    — ISO date YYYY-MM-DD (inclusive)
+//       status     — "submitted" | "draft" | "all" (default: "submitted")
+//
+//     Expected response:
+//     {
+//       "success": true,
+//       "data": {
+//         "records": [
+//           {
+//             "attendanceId": "string",
+//             "scheduleId": "string",
+//             "classId": "string",
+//             "className": "string",
+//             "subjectId": "string",
+//             "subjectName": "string",
+//             "date": "YYYY-MM-DD",
+//             "periodNumber": 1,
+//             "status": "submitted | draft",
+//             "submittedAt": "ISO8601 | null",
+//             "summary": {
+//               "total": 30,
+//               "present": 25,
+//               "absent": 3,
+//               "late": 2
+//             }
+//           }
+//         ],
+//         "pagination": {
+//           "page": 1,
+//           "limit": 20,
+//           "total": 150,
+//           "totalPages": 8
+//         }
+//       }
+//     }
+// ───────────────────────────────────────────────────────────────────────────
+export async function getAttendanceHistory({ page = 1, limit = 20, classId, subjectId, startDate, endDate, status = 'submitted' } = {}) {
+  if (ATTENDANCE_BACKEND_LIVE) {
+    const { data } = await apiClient.get('/api/teacher/attendance/history', {
+      params: { page, limit, classId, subjectId, startDate, endDate, status },
+    });
+    return data;
+  }
+
+  // ── Mock ──────────────────────────────────────────────────────────────────
+  await delay(400);
+  return {
+    success: true,
+    data: {
+      records: [],
+      pagination: { page, limit, total: 0, totalPages: 0 },
+    },
+  };
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// 7.  GET /api/teacher/attendance/date/:date
+//
+//     Returns all attendance records (submitted + drafts) for a specific date.
+//     Useful for loading the board state when a teacher revisits a past date.
+//
+//     Path params:
+//       date — ISO date YYYY-MM-DD
+//
+//     Expected response:
+//     {
+//       "success": true,
+//       "data": {
+//         "date": "YYYY-MM-DD",
+//         "academicContext": { ... },
+//         "scheduledClasses": [ ... ] // same shape as getScheduledClasses
+//       }
+//     }
+// ───────────────────────────────────────────────────────────────────────────
+export async function getAttendanceByDate(date) {
+  if (ATTENDANCE_BACKEND_LIVE) {
+    const { data } = await apiClient.get(`/api/teacher/attendance/date/${date}`);
+    return data;
+  }
+
+  // ── Fallback: re-use getScheduledClasses ──────────────────────────────────
+  return getScheduledClasses(date);
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// 8.  GET /api/teacher/attendance/summary/:scheduleId
+//
+//     Returns a summary of attendance for a specific past session.
+//     Used to hydrate the class board card (presentCount, absentCount, etc.)
+//     after a session has been submitted.
+//
+//     Path params:
+//       scheduleId — the schedule identifier
+//
+//     Expected response:
+//     {
+//       "success": true,
+//       "data": {
+//         "scheduleId": "string",
+//         "attendanceId": "string",
+//         "attendanceStatus": "submitted",
+//         "submittedAt": "ISO8601",
+//         "summary": {
+//           "total": 30,
+//           "present": 25,
+//           "absent": 3,
+//           "late": 2
+//         }
+//       }
+//     }
+// ───────────────────────────────────────────────────────────────────────────
+export async function getAttendanceSummary(scheduleId) {
+  if (ATTENDANCE_BACKEND_LIVE) {
+    const { data } = await apiClient.get(`/api/teacher/attendance/summary/${scheduleId}`);
+    return data;
+  }
+
+  // ── Mock ──────────────────────────────────────────────────────────────────
+  await delay(300);
+  return {
+    success: true,
+    data: {
+      scheduleId,
+      attendanceId: null,
+      attendanceStatus: 'not_started',
+      submittedAt: null,
+      summary: { total: 0, present: 0, absent: 0, late: 0 },
     },
   };
 }

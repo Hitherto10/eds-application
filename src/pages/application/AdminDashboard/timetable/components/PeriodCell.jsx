@@ -5,7 +5,7 @@ import { useTimetable } from '../TimetableContext';
 
 /**
  * PeriodCell
- * ─────────────────────────────────────────────────────────────────────────────
+ * ───────────────────────────────
  * A single cell in the WeeklyGrid (represents one timeslot on one day).
  * Handles:
  * - Droppable target logic (via dnd-kit)

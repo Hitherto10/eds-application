@@ -109,7 +109,7 @@ export default function Wizard({
         onExit?.();
     };
 
-    /* ── Success screen ──────────────────────────────────────────────────── */
+    /* ── Success screen ────── */
     if (done) {
         return (
             <div className="flex justify-center py-12 px-4">
@@ -145,7 +145,7 @@ export default function Wizard({
 
     return (
         <div className="max-w-3xl mx-auto">
-            {/* ── Stepper header ──────────────────────────────────────────── */}
+            {/* ── Stepper header ─────── */}
             <div className="flex items-center justify-between mb-6">
                 <ol className="flex items-center gap-1 overflow-x-auto">
                     {allSteps.map((s, i) => {
@@ -190,7 +190,7 @@ export default function Wizard({
                 )}
             </div>
 
-            {/* ── Step body ───────────────────────────────────────────────── */}
+            {/* ── Step body ─── */}
             <div className="bg-white border border-gray-200 rounded-2xl p-6 min-h-[280px]">
                 {step.isReview
                     ? renderReview(data)
@@ -203,7 +203,7 @@ export default function Wizard({
                 </p>
             )}
 
-            {/* ── Footer nav ──────────────────────────────────────────────── */}
+            {/* ── Footer nav ── */}
             <div className="flex items-center justify-between mt-5">
                 <button
                     onClick={back}

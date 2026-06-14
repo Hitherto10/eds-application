@@ -1,9 +1,9 @@
 import apiClient from '../../../../utils/axiosConfig.js';
 
 /**
- * ─────────────────────────────────────────────────────────────────────────────
+ * ───────────────────────────────
  * Subject APIs  —  /api/academic/subjects
- * ─────────────────────────────────────────────────────────────────────────────
+ * ───────────────────────────────
  *
  * FEATURE FLAG:
  *   Set SUBJECTS_BACKEND_LIVE = true once the backend is deployed.
@@ -24,7 +24,7 @@ export const SUBJECTS_BACKEND_LIVE = true;
 
 const delay = (ms = 400) => new Promise(r => setTimeout(r, ms));
 
-// ── Category constants ────────────────────────────────────────────────────────
+// ── Category constants ──────────
 export const SUBJECT_CATEGORIES = ['core', 'elective', 'optional', 'religious'];
 
 export const CATEGORY_LABELS = {
@@ -50,7 +50,7 @@ const normalizeId = (obj) => {
 const normalizeList = (list) =>
   Array.isArray(list) ? list.map(normalizeId) : list;
 
-// ── Code auto-generator helper ────────────────────────────────────────────────
+// ── Code auto-generator helper ──
 /**
  * Derives a short subject code from the subject name.
  * Multi-word names → initials (e.g. "Basic Science" → "BS")

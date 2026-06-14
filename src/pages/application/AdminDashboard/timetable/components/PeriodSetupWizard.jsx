@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 
 /**
  * PeriodSetupWizard
- * ─────────────────────────────────────────────────────────────────────────────
+ * ───────────────────────────────
  * First-time configuration screen shown whenever no periods exist for the
  * selected class/term. It is also the screen shown on initial page load
  * (before any class is selected) — it gracefully handles that case by
@@ -44,7 +44,7 @@ export default function PeriodSetupWizard({ onContinue, resources }) {
     (!classHasArms || state.selectedArm)
   );
 
-  // ── Published Check ────────────────────────────────────────────────────────
+  // ── Published Check ──────────
   // If the state says it's published, we shouldn't show the wizard for creation.
   const isPublished = state.isPublished;
 
@@ -70,7 +70,7 @@ export default function PeriodSetupWizard({ onContinue, resources }) {
     setBreaks(breaks.filter(b => b.id !== id));
   };
 
-  // ── Time math ──────────────────────────────────────────────────────────────
+  // ── Time math ────────────────
   const addMinutesToTime = (timeStr, minsToAdd) => {
     const [hours, mins] = timeStr.split(':').map(Number);
     const date = new Date(2000, 0, 1, hours, mins + minsToAdd);
@@ -113,7 +113,7 @@ export default function PeriodSetupWizard({ onContinue, resources }) {
     return generated;
   };
 
-  // ── Generate & save ────────────────────────────────────────────────────────
+  // ── Generate & save ──────────
   const handleGenerate = async () => {
     // Guard: this should not be callable without class/term, but be defensive.
     if (!state.selectedClass || !currentTerm) return;
@@ -164,7 +164,7 @@ export default function PeriodSetupWizard({ onContinue, resources }) {
     }
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Render ───────────────────
   return (
       <div className="flex-1 flex items-center justify-center p-4 overflow-y-auto">
         <div className=" max-w-4xl w-full p-8 rounded-2xl">

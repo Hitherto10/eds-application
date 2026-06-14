@@ -7,9 +7,9 @@ import {
 import AdminLayout from '../../components/layout/AdminLayout.jsx';
 import {
     DetailPage, EmptyState, Timeline, Drawer, Field, inputClass,
-    ConfirmDestructiveDialog, pushToast,
+    ConfirmDestructiveDialog, ImageUploadField, pushToast,
 } from '../../../../../components/patterns';
-import { getStudentInfo, updateStudent, deleteStudent, toggleStudentStatus } from '../../../../auth/authAPIs.js';
+import { getStudentInfoAdmin, updateStudent, deleteStudent, toggleStudentStatus } from '../../../../auth/authAPIs.js';
 import { getSchoolClasses } from '../../services/classAPIs.js';
 import { getClassArms } from '../../services/armAPIs.js';
 import { useAuth } from '../../../../../contexts/AuthContext.jsx';
@@ -61,15 +61,16 @@ export default function StudentProfilePage() {
         setLoading(true);
         setError(null);
         try {
-            const [studentRes, classesRes] = await Promise.all([
-                getStudentInfo(studentId),
+            // getStudentInfoAdmin → GET /api/students/:id, returns the student object directly.
+            const [raw, classesRes] = await Promise.all([
+                getStudentInfoAdmin(studentId),
                 getSchoolClasses(),
             ]);
-            const raw = studentRes?.data?.student ?? studentRes?.data ?? {};
+            const s = raw ?? {};
             const classList = classesRes?.data?.classes ?? [];
             setClasses(classList);
 
-            const classId = raw.classId ?? null;
+            const classId = s.classId ?? null;
             let armList = [];
             if (classId) {
                 try {
@@ -80,24 +81,29 @@ export default function StudentProfilePage() {
             setArms(armList);
 
             setStudent({
-                id: raw.id ?? raw._id ?? studentId,
-                firstName: raw.firstName ?? '',
-                lastName: raw.lastName ?? '',
-                name: `${raw.firstName ?? ''} ${raw.lastName ?? ''}`.trim() || 'Student',
-                email: raw.email ?? '',
-                phone: raw.phone ?? '',
-                address: raw.address ?? '',
-                gender: raw.gender ?? '',
-                dateOfBirth: raw.dateOfBirth?.slice(0, 10) ?? '',
+                id: s.id ?? s._id ?? studentId,
+                admissionNumber: s.studentId ?? null,     // school-facing student/admission number
+                firstName: s.firstName ?? '',
+                lastName: s.lastName ?? '',
+                name: s.fullName || `${s.firstName ?? ''} ${s.lastName ?? ''}`.trim() || 'Student',
+                email: s.email ?? '',
+                phone: s.phone ?? '',
+                address: s.address ?? '',
+                gender: s.gender ?? '',
+                dateOfBirth: s.dateOfBirth?.slice(0, 10) ?? '',
+                rollNumber: s.rollNumber ?? null,
+                grade: s.grade ?? null,
+                profileImage: s.profileImage ?? null,
                 classId,
-                armId: raw.armId ?? null,
-                className: classList.find(c => c.id === classId)?.name ?? raw.class ?? '—',
-                armName: armList.find(a => a.id === raw.armId)?.name ?? raw.section ?? '—',
-                isActive: raw.isActive ?? true,
-                parents: raw.parents ?? [],
-                createdAt: raw.createdAt,
-                updatedAt: raw.updatedAt,
-                schoolId: raw.schoolId ?? user?.schoolId,
+                armId: s.armId ?? null,
+                className: classList.find(c => c.id === classId)?.name ?? s.class ?? '—',
+                armName: armList.find(a => a.id === s.armId)?.name ?? s.section ?? '—',
+                isActive: s.isActive ?? true,
+                parents: s.parents ?? [],
+                teachers: s.teachers ?? [],
+                createdAt: s.createdAt,
+                updatedAt: s.updatedAt,
+                schoolId: s.schoolId ?? user?.schoolId,
             });
         } catch (e) {
             setError(e?.message || 'Failed to load this student.');
@@ -108,7 +114,7 @@ export default function StudentProfilePage() {
 
     useEffect(() => { load(); }, [load]);
 
-    /* ── Edit drawer handlers ──────────────────────────────────────────── */
+    /* ── Edit drawer handlers ─────── */
     const openEdit = () => {
         setForm({
             firstName: student.firstName,
@@ -116,6 +122,7 @@ export default function StudentProfilePage() {
             phone: student.phone,
             classId: student.classId ?? '',
             armId: student.armId ?? '',
+            profileImage: student.profileImage ?? null,
         });
         setFormError(null);
         setEditOpen(true);
@@ -147,6 +154,7 @@ export default function StudentProfilePage() {
                 classId: form.classId || null,
                 armId: form.armId || null,
                 phone: form.phone,
+                profileImage: form.profileImage ?? null,
             });
             setEditOpen(false);
             pushToast({ message: 'Student updated' });
@@ -158,7 +166,7 @@ export default function StudentProfilePage() {
         }
     };
 
-    /* ── Status + remove ───────────────────────────────────────────────── */
+    /* ── Status + remove ─── */
     const handleStatusChange = async (reason) => {
         await toggleStudentStatus({
             studentId: student.id,
@@ -175,7 +183,7 @@ export default function StudentProfilePage() {
         navigate(ROUTES.students);
     };
 
-    /* ── Error state ───────────────────────────────────────────────────── */
+    /* ── Error state ─────── */
     if (!loading && error) {
         return (
             <AdminLayout>
@@ -213,8 +221,9 @@ export default function StudentProfilePage() {
                     { label: 'Students', to: ROUTES.students },
                     { label: student?.name ?? '…' },
                 ]}
-                avatar={{ name: student?.name }}
+                avatar={{ name: student?.name, image: student?.profileImage }}
                 title={student?.name}
+                idLabel={student?.admissionNumber ? `Adm. ${student.admissionNumber}` : undefined}
                 subtitle={student?.email || 'No email on record'}
                 status={student?.isActive ? 'active' : 'inactive'}
                 primaryActions={[
@@ -250,10 +259,13 @@ export default function StudentProfilePage() {
                             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
                                 <BioRow label="First name" value={student?.firstName} />
                                 <BioRow label="Last name" value={student?.lastName} />
+                                <BioRow label="Admission no." value={student?.admissionNumber} />
+                                <BioRow label="Roll number" value={student?.rollNumber} />
                                 <BioRow label="Email" value={student?.email} />
                                 <BioRow label="Phone" value={student?.phone} />
                                 <BioRow label="Date of birth" value={student?.dateOfBirth} />
                                 <BioRow label="Gender" value={student?.gender} />
+                                <BioRow label="Grade" value={student?.grade} />
                                 <BioRow label="Address" value={student?.address} />
                                 <BioRow label="Class" value={`${student?.className ?? '—'}${student?.armName && student.armName !== '—' ? ` · ${student.armName}` : ''}`} />
                                 <BioRow label="School ID" value={student?.schoolId} />
@@ -273,7 +285,9 @@ export default function StudentProfilePage() {
                                         </div>
                                         <div className="min-w-0">
                                             <p className="text-[13px] font-bold text-gray-800 truncate">{p.name ?? p.fullName ?? 'Guardian'}</p>
-                                            <p className="text-[12px] text-gray-400 truncate">{p.email}</p>
+                                            <p className="text-[12px] text-gray-400 truncate">
+                                                {p.email || 'No email'}{p.phone ? ` · ${p.phone}` : ''}
+                                            </p>
                                         </div>
                                     </div>
                                 ))}
@@ -286,6 +300,35 @@ export default function StudentProfilePage() {
                                 title="No guardians linked"
                                 description="Link a parent or guardian so this student's family can receive invoices, alerts, and results."
                                 action={{ label: 'Go to Guardians', to: ROUTES.guardians }}
+                            />
+                        ),
+                    },
+                    {
+                        id: 'teachers',
+                        label: 'Teachers',
+                        badge: student?.teachers?.length || undefined,
+                        content: (student?.teachers?.length ?? 0) > 0 ? (
+                            <div className="space-y-2.5">
+                                {student.teachers.map((t, i) => (
+                                    <div key={t.id ?? t.email ?? i} className="flex items-center gap-3 p-3.5 rounded-xl border border-gray-100 bg-gray-50/50">
+                                        <div className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold shrink-0">
+                                            {(t.name ?? t.fullName ?? t.email ?? '?')[0].toUpperCase()}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-[13px] font-bold text-gray-800 truncate">{t.name ?? t.fullName ?? 'Teacher'}</p>
+                                            <p className="text-[12px] text-gray-400 truncate">{t.subject || t.email || ''}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <EmptyState
+                                variant="first-use"
+                                icon={Users}
+                                compact
+                                title="No teachers assigned yet"
+                                description="Teachers appear here once this student's class and subjects have assigned teachers."
+                                action={{ label: 'Go to Staff', to: ROUTES.staff }}
                             />
                         ),
                     },
@@ -369,6 +412,12 @@ export default function StudentProfilePage() {
                     </>
                 }
             >
+                <ImageUploadField
+                    name={`${form.firstName ?? ''} ${form.lastName ?? ''}`.trim() || student?.name}
+                    value={form.profileImage}
+                    onChange={(url) => setForm(f => ({ ...f, profileImage: url }))}
+                    label="Student photo"
+                />
                 <Field label="First name" required error={formError && !form.firstName?.trim() ? 'Required' : null}>
                     <input className={inputClass(formError && !form.firstName?.trim())}
                         value={form.firstName ?? ''} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} />

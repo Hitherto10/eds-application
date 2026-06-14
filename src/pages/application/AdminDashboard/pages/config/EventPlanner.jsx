@@ -8,7 +8,7 @@ import {
     getEventNotificationsConfig, getEvents
 } from '../../timetable/timetableAPIs';
 
-// ── Time-grid constants ──────────────────────────────────────────────────────
+// ── Time-grid constants ────────
 const HOUR_H = 64; // px per hour
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
@@ -47,7 +47,7 @@ function buildMonthDays(year, month) {
     return days;
 }
 
-// ── Component ────────────────────────────────────────────────────────────────
+// ── Component ──────────────────
 export default function EventPlanner() {
     // Events are page-level data — owned here, fetched directly from the API.
     const [events, setEvents] = useState([]);
@@ -484,7 +484,7 @@ export default function EventPlanner() {
     return (
         <div className="flex h-full bg-gray-50 border w-full overflow-hidden relative">
 
-            {/* ── Main calendar area ─────────────────────────────────────── */}
+            {/* ── Main calendar area ── */}
             <div className="flex-1 flex flex-col bg-white overflow-hidden">
 
                 {/* Header */}
@@ -590,7 +590,7 @@ export default function EventPlanner() {
                 </div>
             </div>
 
-            {/* ── Right sidebar ─────────────────────────────────────────── */}
+            {/* ── Right sidebar ────── */}
             <div className={`transition-all duration-300 w-[288px] shrink-0 ${isPanelOpen ? 'mr-[400px]' : ''} border-l border-gray-200 bg-white p-5 flex flex-col gap-5 overflow-y-auto z-10`}>
 
                 {/* Brand + Create button */}
@@ -728,7 +728,7 @@ export default function EventPlanner() {
                 </div>
             </div>
 
-            {/* ── Slide-in event panel ───────────────────────────────────── */}
+            {/* ── Slide-in event panel  */}
             <div className={`fixed top-0 right-0 h-full w-[400px] bg-white border-l border-gray-200 shadow-xl transition-transform duration-300 z-50 ${isPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                 {isPanelOpen && (
                     <div className="flex flex-col h-full overflow-hidden">

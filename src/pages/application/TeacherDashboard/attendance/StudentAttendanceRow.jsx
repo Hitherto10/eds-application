@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// ─── Status button group (P / A / L) ─────────────────────────────────────────
+// ─── Status button group (P / A / L) ────
 const STATUS_OPTIONS = [
   { value: 'present', label: 'P', title: 'Present', activeClass: 'bg-emerald-500 text-white border-emerald-500' },
   { value: 'absent',  label: 'A', title: 'Absent',  activeClass: 'bg-red-500 text-white border-red-500' },

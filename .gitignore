@@ -25,3 +25,12 @@ dist-ssr
 /generate-icons.mjs
 .vercel
 /eslint.config.js
+/.env
+/attendanceAPIs.md
+/feeImplementation.md
+/FRONTEND_EXPERIENCE_BLUEPRINT.md
+/PRODUCT_REVIEW_AND_MODERNIZATION_PLAN.md
+/SCHOOL_PLATFORM_IMPLEMENTATION_ROADMAP.md
+/SECTION_4_1_SCHOOL_ONBOARDING_README.md
+/TEACHER_ASSIGNMENT_AND_PROFILE_IMAGES_README.md
+/Timetable_API_Reference.md

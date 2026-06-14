@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// ─── Status configuration ─────────────────────────────────────────────────────
+// ─── Status configuration ───────
 const STATUS_CONFIG = {
   completed: {
     label: 'Completed',
@@ -48,7 +48,7 @@ function formatTime(time) {
   return `${displayHour}:${m} ${ampm}`;
 }
 
-// ─── Summary bar at the top ───────────────────────────────────────────────────
+// ─── Summary bar at the top ─────
 function BoardSummary({ classes }) {
   const stats = useMemo(() => {
     return {
@@ -87,7 +87,7 @@ function BoardSummary({ classes }) {
   );
 }
 
-// ─── Completion mini-bar inside a row ────────────────────────────────────────
+// ─── Completion mini-bar inside a row ───
 function MiniProgressBar({ total, present, absent, late }) {
   const marked = present + absent + late;
   const pct = total > 0 ? Math.round((marked / total) * 100) : 0;
@@ -104,7 +104,7 @@ function MiniProgressBar({ total, present, absent, late }) {
   );
 }
 
-// ─── A single scheduled class row ────────────────────────────────────────────
+// ─── A single scheduled class row ───────
 function ClassRow({ schedule, onMark, onView, onEdit }) {
   const cfg = STATUS_CONFIG[schedule.attendanceStatus];
   const StatusIcon = cfg.icon;
@@ -237,7 +237,7 @@ function ClassRow({ schedule, onMark, onView, onEdit }) {
   );
 }
 
-// ─── Empty state ──────────────────────────────────────────────────────────────
+// ─── Empty state ────────────────
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -252,7 +252,7 @@ function EmptyState() {
   );
 }
 
-// ─── Main Board ───────────────────────────────────────────────────────────────
+// ─── Main Board ─────────────────
 export default function TodaysClassesBoard({ classes = [], loading = false, academicContext = null }) {
   const navigate = useNavigate();
 

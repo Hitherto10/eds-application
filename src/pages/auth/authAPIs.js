@@ -36,6 +36,59 @@ export async function getStudentInfo(studentId) {
     }
 }
 
+export async function getStudentInfoAdmin(studentId) {
+    // example response:
+    // {
+    //     "success": true,
+    //     "message": "Student details retrieved successfully",
+    //     "data": {
+    //     "student": {
+    //         "id": "453bb662-8842-445c-81ba-8980874a149b",
+    //             "studentId": null,
+    //             "firstName": "Prisilla",
+    //             "lastName": "Daniels",
+    //             "fullName": "Prisilla Daniels",
+    //             "email": "priscdaniels@gmail.com",
+    //             "classId": "e4d61b2d-e50c-41cc-b442-bf7e3f099703",
+    //             "armId": "ab3dc3c3-a654-40cf-8244-91b51962c04f",
+    //             "rollNumber": null,
+    //             "grade": null,
+    //             "dateOfBirth": "2026-06-17T00:00:00.000Z",
+    //             "gender": "male",
+    //             "address": "389, Avenue Des Rossignols, Morc Safeland",
+    //             "phone": "58534721",
+    //             "profileImage": null,
+    //             "isActive": true,
+    //             "createdAt": "2026-06-04T14:55:32.232Z",
+    //             "updatedAt": "2026-06-04T14:55:32.233Z",
+    //             "parents": [
+    //             {
+    //                 "id": "01870af8-23fc-4a0f-8ab2-0911a38d068e",
+    //                 "name": "Blessing Daniels",
+    //                 "email": "regos85058@aspensif.com",
+    //                 "phone": null
+    //             },
+    //             {
+    //                 "id": "8598ca83-bbed-47a8-88d4-d968eddbacdd",
+    //                 "name": "Test Parent",
+    //                 "email": "homaw79499@5nek.com",
+    //                 "phone": "+2348103203934"
+    //             }
+    //         ],
+    //             "teachers": []
+    //     },
+    //     "cached": false,
+    //         "generatedAt": "2026-06-11T17:27:37.122Z"
+    // }
+    // }
+    try {
+        const { data } = await apiClient.get(`/api/students/${studentId}`);
+        return data.data.student;
+    } catch (error) {
+        throw error?.response?.data || error;
+    }
+}
+
 export async function getParentProfile() {
     try {
         const { data } = await apiClient.get(`/api/parent/profile`);
@@ -379,6 +432,7 @@ export async function unlinkStudentToParent(payload, parentId) {
 }
 
 export async function assignSubjects(payload) {
+
     try {
         const { data } = await apiClient.post(`/api/admin/teachers/assign-subjects`,
             payload);
@@ -461,6 +515,16 @@ export async function updateAdminProfile(payload) {
 export async function getParentDetails(parentId) {
     try {
         const { data } = await apiClient.get(`/api/parent-management/parents/${parentId}`);
+        return data;
+    } catch (error) {
+        throw error?.response?.data || error;
+    }
+}
+
+
+export async function getTeacherDetails() {
+    try {
+        const { data } = await apiClient.get(`/api/teacher/profile`);
         return data;
     } catch (error) {
         throw error?.response?.data || error;

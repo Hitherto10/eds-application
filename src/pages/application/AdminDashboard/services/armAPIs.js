@@ -1,9 +1,9 @@
 import apiClient from '../../../../utils/axiosConfig.js';
 
 /**
- * ─────────────────────────────────────────────────────────────────────────────
+ * ───────────────────────────────
  * Arm APIs  —  /api/academic/arms  &  /api/academic/classes/:classId/arms
- * ─────────────────────────────────────────────────────────────────────────────
+ * ───────────────────────────────
  *
  * FEATURE FLAG:
  *   Set ARMS_BACKEND_LIVE = true once the backend endpoints are deployed.

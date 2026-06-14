@@ -9,7 +9,7 @@ import {deleteTimetableDraft} from "../timetableAPIs.js";
 
 /**
  * PropertiesPanel
- * ─────────────────────────────────────────────────────────────────────────────
+ * ───────────────────────────────
  * The right-hand inspector panel.
  * Shows context-sensitive details based on selection, plus global publish controls.
  */
@@ -147,7 +147,7 @@ export default function PropertiesPanel({ resources }) {
   );
 }
 
-// ─── Inline Editor for Selected Entry ─────────────────────────────────────────
+// ─── Inline Editor for Selected Entry ────
 function SelectionEditor({ entry, dispatch, state, resources }) {
   const isReadOnly = state.isPublished;
   const { teachers = [], rooms = [] } = resources || {};

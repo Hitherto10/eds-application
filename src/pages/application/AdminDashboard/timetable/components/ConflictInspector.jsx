@@ -3,7 +3,7 @@ import { AlertTriangle, AlertCircle, Info, ChevronRight } from 'lucide-react';
 
 /**
  * ConflictInspector
- * ─────────────────────────────────────────────────────────────────────────────
+ * ───────────────────────────────
  * Rendered inside the PropertiesPanel's right sidebar.
  * Lists all active conflicts with severity, message, and a "Jump to" action.
  */

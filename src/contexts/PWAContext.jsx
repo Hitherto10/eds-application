@@ -30,7 +30,7 @@ export function PWAProvider({ children }) {
 
     const location = useLocation();
 
-    // ── Detect if already installed ──────────────────────────────────────────
+    // ── Detect if already installed ─────
     useEffect(() => {
         let mounted = true;
 
@@ -80,7 +80,7 @@ export function PWAProvider({ children }) {
         };
     }, []);
 
-    // ── Online / Offline tracking ─────────────────────────────────────────────
+    // ── Online / Offline tracking ────────
     useEffect(() => {
         const goOnline = () => setIsOnline(true);
         const goOffline = () => setIsOnline(false);
@@ -92,7 +92,7 @@ export function PWAProvider({ children }) {
         };
     }, []);
 
-    // ── Register Service Worker ───────────────────────────────────────────────
+    // ── Register Service Worker ─
     useEffect(() => {
         if (!('serviceWorker' in navigator)) return;
 
@@ -160,7 +160,7 @@ export function PWAProvider({ children }) {
         };
     }, []);
 
-    // ── Capture beforeinstallprompt ────────────────────────────────────────────
+    // ── Capture beforeinstallprompt ───────
     useEffect(() => {
         const handler = (e) => {
             e.preventDefault(); // Prevent default browser mini-infobar
@@ -177,7 +177,7 @@ export function PWAProvider({ children }) {
         return () => window.removeEventListener('beforeinstallprompt', handler);
     }, []);
 
-    // ── Track app installed event ──────────────────────────────────────────────
+    // ── Track app installed event 
     useEffect(() => {
         const handler = () => {
             setIsInstalled(true);
@@ -226,7 +226,7 @@ export function PWAProvider({ children }) {
         };
     }, [isAuthenticated, isInstalled, location.pathname]);
 
-    // ── Actions ───────────────────────────────────────────────────────────────
+    // ── Actions ─────────────────
 
     /** Trigger native install flow */
     const handleInstall = useCallback(async () => {

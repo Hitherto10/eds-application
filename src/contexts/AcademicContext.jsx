@@ -3,9 +3,9 @@ import { useAuth } from './AuthContext.jsx';
 import { getAcademicYears, getAcademicProfile, getTerms } from '../pages/application/AdminDashboard/timetable/timetableAPIs.js';
 
 /**
- * ─────────────────────────────────────────────────────────────────────────────
+ * ───────────────────────────────
  * AcademicContext — the ONLY truly-global app state besides auth/PWA.
- * ─────────────────────────────────────────────────────────────────────────────
+ * ───────────────────────────────
  * Holds the system-wide academic scope:
  *   • currentYear  (selected academic year)
  *   • currentTerm  (selected term)

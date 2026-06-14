@@ -24,11 +24,11 @@ import {
 } from 'lucide-react';
 import { StatusChip } from '../../../../../components/patterns';
 
-// ─── Status pill ──────────────────────────────────────────────────────────────
+// ─── Status pill ────────────────
 // Status now uses the platform-wide StatusChip (draft → gray, published → green).
 const StatusPill = ({ status }) => <StatusChip status={status} />;
 
-// ─── Builder modal ────────────────────────────────────────────────────────────
+// ─── Builder modal ──────────────
 function StructureBuilder({ initial, onClose, onSaved, showToast, classes = [], currentYear, currentTerm }) {
   const isEdit = Boolean(initial?.id);
 
@@ -309,7 +309,7 @@ function StructureBuilder({ initial, onClose, onSaved, showToast, classes = [], 
   );
 }
 
-// ─── Main tab ─────────────────────────────────────────────────────────────────
+// ─── Main tab ───────────────────
 export default function FeeStructuresTab({ showToast, classes = [], currentYear, currentTerm, structures = [], setStructures }) {
   const [builder, setBuilder] = useState(null);              // null | {} | structure
   const [publishConfirm, setPublishConfirm] = useState(null); // null | structure
@@ -323,7 +323,7 @@ export default function FeeStructuresTab({ showToast, classes = [], currentYear,
       : [structure, ...prev]);
   };
 
-  // ── Publish flow ────────────────────────────────────────────────────────────
+  // ── Publish flow ──────────────
   // Step 1: open confirmation dialog.
   const handlePublishRequest = (s) => setPublishConfirm(s);
 

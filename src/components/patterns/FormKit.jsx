@@ -13,7 +13,7 @@ import { X } from 'lucide-react';
  *   • long forms autosave drafts (useFormDraft)
  */
 
-/* ── Field ─────────────────────────────────────────────────────────────────── */
+/* ── Field ───────────────────── */
 export function Field({
     label,
     required,

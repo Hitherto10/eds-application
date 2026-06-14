@@ -16,7 +16,7 @@ import {
 
 /**
  * PublishScheduler
- * ─────────────────────────────────────────────────────────────────────────────
+ * ───────────────────────────────
  * Publish workflow component.
  * 1. Checks for conflicts locally and via backend.
  * 2. Blocks publish if errors exist.

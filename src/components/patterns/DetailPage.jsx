@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, MoreHorizontal } from 'lucide-react';
 import StatusChip from './StatusChip.jsx';
+import Avatar from './Avatar.jsx';
 import { DetailSkeleton } from './Skeletons.jsx';
 
 /**
@@ -36,15 +37,12 @@ export default function DetailPage({
 
     if (loading) return <DetailSkeleton />;
 
-    const initials = avatar?.name
-        ? avatar.name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()
-        : null;
     const AvatarIcon = avatar?.icon;
     const current = tabs.find(t => t.id === activeTab) ?? tabs[0];
 
     return (
         <div className="space-y-4">
-            {/* ── Breadcrumb ───────────────────────────────────────────── */}
+            {/* ── Breadcrumb ──────── */}
             {breadcrumb.length > 0 && (
                 <nav className="flex items-center gap-1.5 px-1 text-[13px]">
                     {breadcrumb.map((crumb, i) => {
@@ -68,16 +66,14 @@ export default function DetailPage({
             {/* ── Header + stats strip ─────────────────────────────────── */}
             <div className="bg-white border border-gray-200 rounded-2xl">
                 <div className="flex flex-wrap items-center gap-4 p-5">
-                    {/* Avatar / icon */}
-                    {(initials || AvatarIcon) && (
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 text-lg font-bold ${
-                            avatar?.image ? '' : 'bg-blue-50 text-blue-600'
-                        }`}>
-                            {avatar?.image
-                                ? <img src={avatar.image} alt={title} className="w-14 h-14 rounded-2xl object-cover" />
-                                : AvatarIcon ? <AvatarIcon size={24} /> : initials}
+                    {/* Avatar / icon — people use the shared Avatar; entities use an icon tile */}
+                    {AvatarIcon ? (
+                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 bg-blue-50 text-blue-600">
+                            <AvatarIcon size={24} />
                         </div>
-                    )}
+                    ) : (avatar?.name || avatar?.image) ? (
+                        <Avatar name={avatar?.name ?? title} src={avatar?.image} size={56} rounded="lg" />
+                    ) : null}
 
                     <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
@@ -155,7 +151,7 @@ export default function DetailPage({
                 )}
             </div>
 
-            {/* ── Tabs + right rail ────────────────────────────────────── */}
+            {/* ── Tabs + right rail ─ */}
             <div className="grid lg:grid-cols-3 gap-4 items-start">
                 <div className={rail ? 'lg:col-span-2' : 'lg:col-span-3'}>
                     <div className="bg-white border border-gray-200 rounded-2xl">

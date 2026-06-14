@@ -5,10 +5,9 @@ import AdminLayout from '../components/layout/AdminLayout';
 import { getAllStudents } from '../../../auth/authAPIs.js';
 import { getSchoolClasses } from '../services/classAPIs.js';
 import { getClassArms } from '../services/armAPIs.js';
-import { getInitials } from '../utils/formatters.js';
 import { CreateStudentModal } from '../components/ui/modals.jsx';
 import { ROUTES } from '../navigation/navConfig.js';
-import { WorkbenchTable, StatusChip, pushToast } from '../../../../components/patterns';
+import { WorkbenchTable, StatusChip, Avatar, pushToast } from '../../../../components/patterns';
 
 /**
  * StudentManagement — reference migration onto the WorkbenchTable.
@@ -47,6 +46,7 @@ const StudentManagement = () => {
                 class: classMap[u.classId] || '—',
                 section: armMap[u.armId] || '—',
                 phone: u?.phone || '—',
+                profileImage: u.profileImage ?? null,
                 status: u.isActive,
                 parents: u.parents || [],
             }));
@@ -79,9 +79,7 @@ const StudentManagement = () => {
             hideable: false,
             render: r => (
                 <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-semibold text-xs shrink-0">
-                        {getInitials(r.name)}
-                    </div>
+                    <Avatar name={r.name} src={r.profileImage} size="sm" />
                     <span className="font-semibold text-gray-900">{r.name}</span>
                 </div>
             ),

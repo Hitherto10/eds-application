@@ -59,29 +59,29 @@ const initialState = {
   loading: { draft: false },
 };
 
-// ─── Reducer ──────────────────────────────────────────────────────────────────
+// ─── Reducer ────────────────────
 function timetableReducer(state, action) {
   switch (action.type) {
 
-    // ── Class selection ───────────────────────────────────────────────────────
+    // ── Class selection ─────────
     // Changing class resets arm, periods, schedules and draft state.
     case 'SELECT_CLASS':
       return { ...state, selectedClass: action.payload, selectedArm: null, periods: [], schedules: [], draftId: null, selectedEntryId: null, isPublished: false };
 
-    // ── Arm selection ─────────────────────────────────────────────────────────
+    // ── Arm selection ───────────
     // Changing arm resets draft state so the new arm's timetable loads fresh.
     // Passing null means "whole class" (class has no arms).
     case 'SELECT_ARM':
       return { ...state, selectedArm: action.payload, periods: [], schedules: [], draftId: null, selectedEntryId: null, isPublished: false };
 
-    // ── Periods config ────────────────────────────────────────────────────────
+    // ── Periods config ──────────
     case 'SET_PERIODS':
       return { ...state, periods: action.payload };
     
     case 'SET_PERIOD_CONFIG':
       return { ...state, periodConfig: action.payload };
 
-    // ── Schedule entries ──────────────────────────────────────────────────────
+    // ── Schedule entries ────────
     case 'SET_DRAFT':
       return { ...state, schedules: action.schedules, periods: action.periods || [], draftId: action.draftId, isDraft: true };
 
@@ -137,23 +137,23 @@ function timetableReducer(state, action) {
       return { ...state, schedules: stampedEntries };
     }
 
-    // ── Published ─────────────────────────────────────────────────────────────
+    // ── Published ───────────────
     case 'SET_PUBLISHED':
       return { ...state, isPublished: true, isDraft: false, publishedAt: action.publishedAt };
 
-    // ── UI selection ──────────────────────────────────────────────────────────
+    // ── UI selection ────────────
     case 'SELECT_ENTRY':
       return { ...state, selectedEntryId: action.id };
     case 'DESELECT_ENTRY':
       return { ...state, selectedEntryId: null };
 
-    // ── Draft save state ──────────────────────────────────────────────────────
+    // ── Draft save state ────────
     case 'SET_SAVING':
       return { ...state, isSaving: action.value };
     case 'SET_SAVED':
       return { ...state, lastSavedAt: action.at, isSaving: false, draftId: action.draftId ?? state.draftId };
 
-    // ── Loading ───────────────────────────────────────────────────────────────
+    // ── Loading ─────────────────
     case 'SET_LOADING':
       return { ...state, loading: { ...state.loading, ...action.payload } };
 
@@ -162,7 +162,7 @@ function timetableReducer(state, action) {
   }
 }
 
-// ─── Context ──────────────────────────────────────────────────────────────────
+// ─── Context ────────────────────
 const TimetableContext = createContext(null);
 
 export function TimetableProvider({ children }) {

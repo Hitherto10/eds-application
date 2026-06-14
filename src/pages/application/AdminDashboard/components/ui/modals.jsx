@@ -3,9 +3,6 @@ import { getStatusBadgeStyle } from '../../utils/styleHelpers.js';
 import { UserCircle2, X, Search, Plus, Loader2 } from 'lucide-react';
 import Input from './Input.jsx';
 import {
-    assignClasses,
-    assignStudenttoTeacher,
-    bulkAssignStudentToTeacher,
     createStudent,
     deleteClasses,
     deleteStudent,
@@ -17,301 +14,13 @@ import {
     linkStudentToParent,
     toggleStatus,
     toggleStudentStatus,
-    unassignStudentToTeacher,
     unlinkStudentToParent, getParentDetails,
 } from '../../../../auth/authAPIs.js';
 import { formatStatus, getInitials } from '../../utils/formatters.js';
 import { getSchoolClasses } from '../../services/classAPIs.js';
 import { getClassArms } from '../../services/armAPIs.js';
 import { getSchoolSubjects } from '../../services/subjectAPIs.js';
-
-// Reusable Student Selector Component
-const StudentSelector = ({ selectedStudentIds, onStudentToggle }) => {
-    const [students, setStudents] = useState([]);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchStudents = async () => {
-            try {
-                const res = await getAllStudents();
-                setStudents(res.data.students || []);
-            } catch (error) {
-                console.error('Failed to fetch students:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchStudents();
-    }, []);
-
-    const filteredStudents = students.filter(student =>
-        student.fullName.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    if (loading) return <p>Loading students...</p>;
-
-    return (
-        <div>
-            <Input
-                placeholder="Search for students..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <div className="mt-2 h-48 overflow-y-auto border border-gray-200 rounded-lg p-2">
-                {filteredStudents.map(student => (
-                    <div
-                        key={student.id}
-                        className="flex items-center p-2 rounded-md hover:bg-gray-100"
-                    >
-                        <input
-                            type="checkbox"
-                            id={`student-${student.id}`}
-                            checked={selectedStudentIds.includes(student.id)}
-                            onChange={() => onStudentToggle(student.id)}
-                            className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
-                        />
-                        <label
-                            htmlFor={`student-${student.id}`}
-                            className="ml-3 block text-sm font-medium text-gray-700"
-                        >
-                            {student.fullName}
-                        </label>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-
-export const AssignStudentsToTeacherModal = ({ onClose, showToast, teacher, schoolId }) => {
-    const [selectedStudentIds, setSelectedStudentIds] = useState([]);
-
-    const handleStudentToggle = (studentId) => {
-        setSelectedStudentIds(prev =>
-            prev.includes(studentId)
-                ? prev.filter(id => id !== studentId)
-                : [...prev, studentId]
-        );
-    };
-
-    const handleSubmit = async () => {
-        if (selectedStudentIds.length === 0) {
-            showToast('Please select at least one student.', 'error');
-            return;
-        }
-        try {
-            const payload = {
-                teacherId: teacher.id,
-                studentIds: selectedStudentIds,
-                schoolId,
-            };
-            await assignStudenttoTeacher(payload);
-            showToast('Students assigned successfully!', 'success');
-            onClose();
-        } catch (error) {
-            showToast(error.message || 'Failed to assign students.', 'error');
-        }
-    };
-
-    return (
-        <Modal title={`Assign Students to ${teacher.name}`} onClose={onClose} onSubmit={handleSubmit}>
-            <StudentSelector selectedStudentIds={selectedStudentIds} onStudentToggle={handleStudentToggle} />
-        </Modal>
-    );
-};
-
-export const UnassignStudentFromTeacherModal = ({ onClose, showToast, teacher, schoolId }) => {
-    const [selectedStudentIds, setSelectedStudentIds] = useState([]);
-
-    const handleStudentToggle = (studentId) => {
-        setSelectedStudentIds(prev =>
-            prev.includes(studentId)
-                ? prev.filter(id => id !== studentId)
-                : [...prev, studentId]
-        );
-    };
-
-    const handleSubmit = async () => {
-        if (selectedStudentIds.length === 0) {
-            showToast('Please select at least one student to unassign.', 'error');
-            return;
-        }
-        try {
-            const payload = {
-                teacherId: teacher.id,
-                studentIds: selectedStudentIds,
-                schoolId,
-            };
-            await unassignStudentToTeacher(payload);
-            showToast('Students unassigned successfully!', 'success');
-            onClose();
-        } catch (error) {
-            showToast(error.message || 'Failed to unassign students.', 'error');
-        }
-    };
-
-    return (
-        <Modal title={`Unassign Students from ${teacher.name}`} onClose={onClose} onSubmit={handleSubmit}>
-            <StudentSelector selectedStudentIds={selectedStudentIds} onStudentToggle={handleStudentToggle} />
-        </Modal>
-    );
-};
-
-export const BulkAssignStudentsModal = ({ onClose, showToast, allUsers, schoolId }) => {
-    const [teachers, setTeachers] = useState([]);
-    const [selectedTeacher, setSelectedTeacher] = useState(null);
-    const [selectedStudentIds, setSelectedStudentIds] = useState([]);
-
-    useEffect(() => {
-        const teacherList = allUsers.filter(u => u.role === 'teacher');
-        setTeachers(teacherList);
-    }, [allUsers]);
-
-    const handleStudentToggle = (studentId) => {
-        setSelectedStudentIds(prev =>
-            prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]
-        );
-    };
-
-    const handleSubmit = async () => {
-        if (!selectedTeacher || selectedStudentIds.length === 0) {
-            showToast('Please select a teacher and at least one student.', 'error');
-            return;
-        }
-        try {
-            const payload = {
-                assignments: [{
-                    teacherId: selectedTeacher.id,
-                    studentIds: selectedStudentIds
-                }],
-                schoolId
-            };
-            await bulkAssignStudentToTeacher(payload);
-            showToast('Students bulk assigned successfully!', 'success');
-            onClose();
-        } catch (error) {
-            showToast(error.message || 'Failed to bulk assign students.', 'error');
-        }
-    };
-
-    return (
-        <Modal title="Bulk Assign Students" onClose={onClose} onSubmit={handleSubmit}>
-            <div className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Select Teacher</label>
-                    <select
-                        onChange={(e) => setSelectedTeacher(teachers.find(t => t.id === e.target.value))}
-                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                    >
-                        <option value="">Select a teacher</option>
-                        {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                    </select>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Select Students</label>
-                    <StudentSelector selectedStudentIds={selectedStudentIds} onStudentToggle={handleStudentToggle} />
-                </div>
-            </div>
-        </Modal>
-    );
-};
-
-export const AssignClassesModal = ({ onClose, showToast, teacher, schoolId }) => {
-    const [selectedClasses, setSelectedClasses] = useState([]);
-    const [registryStyle, setRegistryStyle] = useState('');
-    const [placementValue, setPlacementValue] = useState('');
-    // ...existing code... (removed deprecated `section` state)
-
-    const classOptions = [
-        "Primary 1", "Primary 2", "Primary 3", "Primary 4", "Primary 5", "Primary 6",
-        "JSS1", "JSS2", "JSS3", "SS1", "SS2", "SS3"
-    ];
-    const gradeOptions = Array.from({ length: 12 }, (_, i) => `Grade ${i + 1}`);
-
-    const handleAddClass = () => {
-        if (!placementValue) return;
-        const className = registryStyle === 'class' ? `${placementValue}` : placementValue;
-        if (className && !selectedClasses.includes(className)) {
-            setSelectedClasses([...selectedClasses, className]);
-        }
-        setPlacementValue('');
-        setSection('');
-    };
-
-    const handleRemoveClass = (classToRemove) => {
-        setSelectedClasses(selectedClasses.filter(c => c !== classToRemove));
-    };
-
-    const handleSubmit = async () => {
-        if (selectedClasses.length === 0) {
-            showToast('Please assign at least one class.', 'error');
-            return;
-        }
-        try {
-            const payload = {
-                teacherId: teacher.id,
-                classes: selectedClasses,
-                schoolId,
-            };
-            await assignClasses(payload);
-            showToast('Classes assigned successfully!', 'success');
-            onClose();
-        } catch (error) {
-            showToast(error.message || 'Failed to assign classes.', 'error');
-        }
-    };
-
-    return (
-        <Modal title={`Assign Classes to ${teacher.name}`} onClose={onClose} onSubmit={handleSubmit}>
-            <div className="space-y-4">
-                <div className="flex flex-wrap gap-2 mb-3 p-2 border rounded-lg min-h-10">
-                    {selectedClasses.length > 0 ? selectedClasses.map(c => (
-                        <div key={c} className="inline-flex items-center gap-2 bg-blue-100 text-blue-800 text-sm font-medium mr-2 px-2.5 py-1 rounded-full">
-                            {c}
-                            <button onClick={() => handleRemoveClass(c)} type="button"><X size={14} /></button>
-                        </div>
-                    )) : <p className="text-sm text-gray-500">No classes added yet.</p>}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                    <div className="space-y-1.5">
-                        <label className="block text-sm font-medium text-gray-700">Registry Style</label>
-                        <select
-                            value={registryStyle}
-                            onChange={(e) => setRegistryStyle(e.target.value)}
-                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"
-                        >
-                            <option value="">Select Style</option>
-                            <option value="class">Class (e.g., JSS 1)</option>
-                            <option value="grade">Grade (e.g., Grade 7)</option>
-                        </select>
-                    </div>
-                    {registryStyle && (
-                        <>
-                            <div className="space-y-1.5">
-                                <label className="block text-sm font-medium text-gray-700">{registryStyle === 'grade' ? 'Level' : 'Class'}</label>
-                                <select
-                                    value={placementValue}
-                                    onChange={(e) => setPlacementValue(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"
-                                >
-                                    <option value="">Select Level</option>
-                                    {registryStyle === 'class' && classOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                    {registryStyle === 'grade' && gradeOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <button onClick={handleAddClass} className="w-full px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add Class</button>
-                            </div>
-                        </>
-                    )}
-                </div>
-            </div>
-        </Modal>
-    );
-};
+import { ImageUploadField } from '../../../../../components/patterns';
 
 export const UnassignClassesModal = ({ onClose, showToast, teacher, schoolId }) => {
     const [selectedClasses, setSelectedClasses] = useState([]);
@@ -614,12 +323,13 @@ export const StatusChangeModal = ({ onClose, showToast, user, schoolId }) => {
 };
 
 export const InviteTeacherModal = ({ onClose, showToast }) => {
-    // ── teacher form fields ───────────────────────────────────────────────────
+    // ── teacher form fields ─────
     const [teacherFormData, setTeacherFormData] = useState({
         firstName: '',
         lastName: '',
         email: '',
         message: '',
+        profileImage: null,
     });
 
     // ── subjects sourced from the school's configured subject list ────────────
@@ -627,7 +337,7 @@ export const InviteTeacherModal = ({ onClose, showToast }) => {
     const [selectedSubjects, setSelectedSubjects] = useState([]); // [subject names]
     const [loadingSubjects, setLoadingSubjects] = useState(true);
 
-    // ── search / dropdown state ───────────────────────────────────────────────
+    // ── search / dropdown state ─
     const [inputValue, setInputValue]   = useState('');
     const [showDropdown, setShowDropdown] = useState(false);
     const inputRef = useRef(null);
@@ -649,13 +359,13 @@ export const InviteTeacherModal = ({ onClose, showToast }) => {
         fetchSubjects();
     }, []);
 
-    // ── filtered dropdown options ─────────────────────────────────────────────
+    // ── filtered dropdown options ────────
     const filteredSubjects = schoolSubjects.filter(s =>
         !selectedSubjects.includes(s.name) &&
         s.name.toLowerCase().includes(inputValue.toLowerCase())
     );
 
-    // ── subject selection helpers ─────────────────────────────────────────────
+    // ── subject selection helpers ────────
     const handleAddSubject = (subjectName) => {
         if (subjectName.trim() && !selectedSubjects.includes(subjectName)) {
             setSelectedSubjects(prev => [...prev, subjectName]);
@@ -670,7 +380,7 @@ export const InviteTeacherModal = ({ onClose, showToast }) => {
 
     const handleKeyDown = (e) => { if (e.key === 'Enter') e.preventDefault(); };
 
-    // ── submit ────────────────────────────────────────────────────────────────
+    // ── submit ──────────────────
     const handleInviteTeacher = async () => {
         const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (!teacherFormData.firstName)  { showToast('Please input first name');                      return; }
@@ -682,11 +392,12 @@ export const InviteTeacherModal = ({ onClose, showToast }) => {
             return;
         }
         const payload = {
-            email:     teacherFormData.email.trim().toLowerCase(),
-            firstName: teacherFormData.firstName.trim(),
-            lastName:  teacherFormData.lastName.trim(),
-            subjects:  selectedSubjects,
-            message:   teacherFormData.message.trim(),
+            email:        teacherFormData.email.trim().toLowerCase(),
+            firstName:    teacherFormData.firstName.trim(),
+            lastName:     teacherFormData.lastName.trim(),
+            subjects:     selectedSubjects,
+            message:      teacherFormData.message.trim(),
+            profileImage: teacherFormData.profileImage ?? null,
         };
         try {
             await inviteTeacher(payload);
@@ -707,6 +418,12 @@ export const InviteTeacherModal = ({ onClose, showToast }) => {
                 </div>
             ) : (
                 <div className="space-y-5">
+                    <ImageUploadField
+                        name={`${teacherFormData.firstName} ${teacherFormData.lastName}`.trim()}
+                        value={teacherFormData.profileImage}
+                        onChange={(url) => setTeacherFormData({ ...teacherFormData, profileImage: url })}
+                        label="Teacher photo"
+                    />
                     {/* Names */}
                     <div className="grid grid-cols-2 gap-4">
                         <Input
@@ -816,6 +533,7 @@ export const InviteParentModal = ({ onClose, showToast }) => {
         lastName: '',
         studentIds: [''],
         message: '',
+        profileImage: null,
     });
     const [allStudents, setAllStudents] = useState([]);
     const [selectedStudents, setSelectedStudents] = useState([]);
@@ -835,7 +553,7 @@ export const InviteParentModal = ({ onClose, showToast }) => {
         }
         try {
             const studentIds = selectedStudents.map(s => s.id);
-            await inviteParent({ ...formData, studentIds });
+            await inviteParent({ ...formData, studentIds, profileImage: formData.profileImage ?? null });
             showToast("Parent invited successfully!", "success");
             onClose();
         } catch (error) {
@@ -903,6 +621,12 @@ export const InviteParentModal = ({ onClose, showToast }) => {
         <Modal title="Invite Parent" onClose={onClose} onSubmit={handleInvite}>
 
             <div className="space-y-5">
+                <ImageUploadField
+                    name={`${formData.firstName} ${formData.lastName}`.trim()}
+                    value={formData.profileImage}
+                    onChange={(url) => setFormData({ ...formData, profileImage: url })}
+                    label="Parent photo"
+                />
                 {/* Names */}
                 <div className="grid grid-cols-2 gap-4">
                     <Input
@@ -1030,7 +754,7 @@ export const InviteParentModal = ({ onClose, showToast }) => {
 };
 
 export const CreateStudentModal = ({ onClose, showToast }) => {
-    // ── form fields ───────────────────────────────────────────────────────────
+    // ── form fields ─────────────
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -1043,15 +767,16 @@ export const CreateStudentModal = ({ onClose, showToast }) => {
         dateOfBirth: '',
         gender: '',
         address: '',
+        profileImage: null,
     });
 
-    // ── backend data ──────────────────────────────────────────────────────────
+    // ── backend data ────────────
     const [classes, setClasses]     = useState([]);  // [{id, name}]
     const [arms, setArms]           = useState([]);  // [{id, name, classId}]
     const [loadingInit, setLoadingInit] = useState(true); // initial classes fetch
     const [loadingArms, setLoadingArms] = useState(false); // arms fetch per class
 
-    // ── fetch classes on mount ────────────────────────────────────────────────
+    // ── fetch classes on mount ──
     useEffect(() => {
         const fetchClasses = async () => {
             try {
@@ -1086,7 +811,7 @@ export const CreateStudentModal = ({ onClose, showToast }) => {
         }
     };
 
-    // ── submit ────────────────────────────────────────────────────────────────
+    // ── submit ──────────────────
     const handleCreate = async () => {
         const requiredFields = ['firstName', 'lastName', 'email', 'phone', 'class', 'dateOfBirth', 'gender', 'address'];
         // Arm (section) is required only when the class has configured arms
@@ -1111,6 +836,7 @@ export const CreateStudentModal = ({ onClose, showToast }) => {
                 dateOfBirth: formData.dateOfBirth,
                 gender:      formData.gender,
                 address:     (formData.address || '').trim(),
+                profileImage: formData.profileImage ?? null,
             };
 
             await createStudent(payload);
@@ -1137,6 +863,12 @@ export const CreateStudentModal = ({ onClose, showToast }) => {
                         <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] border-b border-slate-50 pb-2">
                             Personal Identification
                         </h3>
+                        <ImageUploadField
+                            name={`${formData.firstName} ${formData.lastName}`.trim()}
+                            value={formData.profileImage}
+                            onChange={(url) => setFormData({ ...formData, profileImage: url })}
+                            label="Student photo"
+                        />
                         <div className="grid grid-cols-2 gap-6">
                             <Input label="First Name" type="text" value={formData.firstName}
                                 onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} />

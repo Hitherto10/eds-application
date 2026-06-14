@@ -19,7 +19,7 @@ import {
   Pencil,
 } from 'lucide-react';
 
-// ─── Small helper ─────────────────────────────────────────────────────────────
+// ─── Small helper ───────────────
 const badge = (count, label) => (
   <span className="inline-flex items-center gap-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
     <span className="bg-gray-100 rounded px-1.5 py-0.5 text-gray-600">{count}</span>
@@ -80,7 +80,7 @@ export default function ClassSetupBuilder() {
   const [newArmName, setNewArmName] = useState('');
   const [armSubjectsTarget, setArmSubjectsTarget] = useState(null); // { arm, classArms }
 
-  // ─── 1. Base Levels ──────────────────────────────────────────────────────────
+  // ─── 1. Base Levels ────────────
   const loadRegistryStyle = (styleId) => {
     const style = registryStyles.find(s => s.id === styleId);
     if (!style) return;
@@ -106,7 +106,7 @@ export default function ClassSetupBuilder() {
     setMatrix(newM);
   };
 
-  // ─── 2. Streams / Arms ────────────────────────────────────────────────────────
+  // ─── 2. Streams / Arms ──────────
   const addStream = (e) => {
     e.preventDefault();
     const val = newStreamInput.trim();
@@ -124,7 +124,7 @@ export default function ClassSetupBuilder() {
     setMatrix(newM);
   };
 
-  // ─── 3. Matrix Mapping ────────────────────────────────────────────────────────
+  // ─── 3. Matrix Mapping ──────────
   const toggleMatrixMapping = (level, stream) => {
     const current = matrix[level] || [];
     const newM = { ...matrix };
@@ -134,7 +134,7 @@ export default function ClassSetupBuilder() {
     setMatrix(newM);
   };
 
-  // ─── 4. Preview ───────────────────────────────────────────────────────────────
+  // ─── 4. Preview ─────────────────
   const getGeneratedClasses = () => {
     const result = [];
     baseLevels.forEach(lv => {
@@ -151,7 +151,7 @@ export default function ClassSetupBuilder() {
   const uniqueBaseCount = baseLevels.length;
   const totalArmCount = getGeneratedClasses().filter(c => c.arm !== null).length;
 
-  // ─── 5. Two-phase Save ────────────────────────────────────────────────────────
+  // ─── 5. Two-phase Save ──────────
   /**
    * Phase 1: POST /api/academic/classes — save each unique base level.
    * Phase 2: POST /api/academic/arms    — save arms referencing the returned classIds.
@@ -202,7 +202,7 @@ export default function ClassSetupBuilder() {
     }
   };
 
-  // ─── 6. Delete (active-view) ──────────────────────────────────────────────────
+  // ─── 6. Delete (active-view) ────
   const handleDeleteClass = async (cls) => {
     if (!confirm(`Remove "${cls.name}" and all its arms? This cannot be undone.`)) return;
     try {
@@ -223,7 +223,7 @@ export default function ClassSetupBuilder() {
     } catch (e) { console.error(e); }
   };
 
-  // ─── 7. Edit arm name (optimistic + API) ──────────────────────────────────────
+  // ─── 7. Edit arm name (optimistic + API) ─
   const startEditArm = (arm) => {
     setEditingArmId(arm.id);
     setEditArmName(arm.name);
@@ -244,7 +244,7 @@ export default function ClassSetupBuilder() {
     }
   };
 
-  // ─── 8b. Add arm to existing class ────────────────────────────────────────────
+  // ─── 8b. Add arm to existing class ───────
   const handleAddArm = async (e, cls) => {
     e.preventDefault();
     const name = newArmName.trim();
@@ -276,17 +276,17 @@ export default function ClassSetupBuilder() {
     setShowBuilder(true);
   };
 
-  // ─── 8. Arms-subjects modal ───────────────────────────────────────────────────
+  // ─── 8. Arms-subjects modal ─────
   const openArmSubjects = (arm) => {
     const classArms = arms.filter(a => a.classId === arm.classId);
     setArmSubjectsTarget({ arm, classArms });
   };
 
-  // ─── Derived data ─────────────────────────────────────────────────────────────
+  // ─── Derived data ───────────────
   const hasExistingData = classes.length > 0 && !showBuilder;
   const armsForClass = (classId) => arms.filter(a => a.classId === classId);
 
-  // ─── Loading ─────────────────────────────────────────────────────────────────
+  // ─── Loading ───────────────────
   if (initialLoading) {
     return (
       <div className="flex-1 flex items-center justify-center py-32">
@@ -296,9 +296,9 @@ export default function ClassSetupBuilder() {
   }
 
 
-  // ─────────────────────────────────────────────────────────────────────────────
+  // ───────────────────────────────
   // ACTIVE DATA VIEW (classes already saved)
-  // ─────────────────────────────────────────────────────────────────────────────
+  // ───────────────────────────────
   if (hasExistingData) {
     const filtered = classes.filter(c =>
       c.name.toLowerCase().includes(search.toLowerCase())

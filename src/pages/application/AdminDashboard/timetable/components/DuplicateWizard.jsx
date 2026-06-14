@@ -10,7 +10,7 @@ import {
 
 /**
  * DuplicateWizard
- * ─────────────────────────────────────────────────────────────────────────────
+ * ───────────────────────────────
  * Modal dialog to copy a schedule from the currently selected class to another.
  */
 export default function DuplicateWizard({ open, onOpenChange, resources }) {

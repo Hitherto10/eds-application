@@ -17,7 +17,7 @@ import PeriodSetupWizard from './components/PeriodSetupWizard';
 
 /**
  * TimetableBuilder
- * ─────────────────────────────────────────────────────────────────────────────
+ * ───────────────────────────────
  * The core 3-panel builder layout.
  * Manages DndContext, drag overlay, and auto-saving drafts.
  *
@@ -73,7 +73,7 @@ export default function TimetableBuilder({ resources }) {
     return () => clearTimeout(saveTimeoutRef.current);
   }, [state.schedules, state.selectedClass, state.selectedArm, currentTerm, currentYear, state.isPublished, state.periods.length, resources.arms, dispatch]);
 
-  // ── DnD handlers ────────────────────────────────────────────────────────────
+  // ── DnD handlers ──────────────
 
   const handleDragStart = (e) => {
     setActiveDragData(e.active.data.current);
@@ -147,7 +147,7 @@ export default function TimetableBuilder({ resources }) {
 
   const handleDragCancel = () => setActiveDragData(null);
 
-  // ── Rendering decision ───────────────────────────────────────────────────────
+  // ── Rendering decision ─────────
   //
   // Show the Period Setup Wizard whenever no periods are configured OR if a
   // timetable is already published (so we can show the "Already Published" notice).

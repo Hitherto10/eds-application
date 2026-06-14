@@ -24,6 +24,7 @@ const BASE = '/dashboard/admin';
 
 export const ROUTES = {
     home:            `${BASE}`,
+    setup:           `${BASE}/setup`,
 
     students:        `${BASE}/people/students`,
     guardians:       `${BASE}/people/guardians`,
@@ -35,6 +36,7 @@ export const ROUTES = {
     grading:         `${BASE}/academics/grading`,
     reportCards:     `${BASE}/academics/report-cards`,
     timetables:      `${BASE}/academics/timetables`,
+    timetableView:   `${BASE}/academics/timetables/view`,
     timetableBuilder:`${BASE}/academics/timetables/builder`,
 
     attendance:      `${BASE}/attendance`,
@@ -162,6 +164,7 @@ export const PAGE_INDEX = [
     { label: 'Reports',             group: 'Navigation', route: ROUTES.reports,          keywords: 'analytics exports hub' },
     { label: 'My Profile',          group: 'Navigation', route: ROUTES.adminProfile,     keywords: 'account me admin profile' },
     { label: 'Approvals',           group: 'Navigation', route: ROUTES.approvals,        keywords: 'sign off review waiting queue inbox' },
+    { label: 'Setup Checklist',     group: 'Navigation', route: ROUTES.setup,            keywords: 'onboarding getting started setup welcome go live' },
 
     { label: 'Settings',                       group: 'Settings', route: ROUTES.settings,         keywords: 'configuration preferences' },
     { label: 'Settings · Identity & Branding', group: 'Settings', route: ROUTES.settingsIdentity, keywords: 'school profile logo name address contact deactivate' },

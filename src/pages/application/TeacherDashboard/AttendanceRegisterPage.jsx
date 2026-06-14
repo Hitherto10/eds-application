@@ -53,7 +53,7 @@ export default function AttendanceRegisterPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scheduleId]);
 
-  // ── Loading ─────────────────────────────────────────────────────────────
+  // ── Loading ───────────────
   if (loading) {
     return (
       <TeacherLayout>
@@ -68,7 +68,7 @@ export default function AttendanceRegisterPage() {
     );
   }
 
-  // ── Error / not found ───────────────────────────────────────────────────
+  // ── Error / not found ─────
   if (error || !schedule || !sessionData) {
     return (
       <TeacherLayout>

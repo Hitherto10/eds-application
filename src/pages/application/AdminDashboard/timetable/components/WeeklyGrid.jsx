@@ -5,7 +5,7 @@ import { useTimetable } from '../TimetableContext';
 
 /**
  * WeeklyGrid
- * ─────────────────────────────────────────────────────────────────────────────
+ * ───────────────────────────────
  * The main canvas of the builder. Renders the time matrix (Periods × Days).
  * Maps local `schedules` state to correct cells.
  */

@@ -5,7 +5,7 @@ import { getSubjectColor } from '../TimetableContext';
 
 /**
  * PeriodBlock
- * ─────────────────────────────────────────────────────────────────────────────
+ * ───────────────────────────────
  * Represents a placed schedule entry inside a WeeklyGrid cell.
  * - Draggable: can be moved to another cell via DnD
  * - Conflict-aware: shows red ring on error, amber ring on warning

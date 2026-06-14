@@ -3,10 +3,9 @@ import { Plus, UserCog } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/layout/AdminLayout';
 import { getDashboardUsers } from '../services/adminService';
-import { getInitials } from '../utils/formatters.js';
 import { InviteTeacherModal } from '../components/ui/modals.jsx';
 import { ROUTES } from '../navigation/navConfig.js';
-import { WorkbenchTable, StatusChip, pushToast } from '../../../../components/patterns';
+import { WorkbenchTable, StatusChip, Avatar, pushToast } from '../../../../components/patterns';
 
 /**
  * Staff list — migrated onto WorkbenchTable. The dual grid/table views and
@@ -33,6 +32,7 @@ const TeacherManagement = () => {
                 subjects: u.subjects || [],
                 classes: u.classes || [],
                 phone: u.phone || '—',
+                profileImage: u.profileImage ?? null,
             })));
         } catch (err) {
             console.error('Failed to fetch teachers:', err);
@@ -58,7 +58,7 @@ const TeacherManagement = () => {
             id: 'name', header: 'Staff', accessor: r => r.name, sortable: true, hideable: false,
             render: r => (
                 <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-semibold text-xs shrink-0">{getInitials(r.name)}</div>
+                    <Avatar name={r.name} src={r.profileImage} size="sm" />
                     <span className="font-semibold text-gray-900">{r.name}</span>
                 </div>
             ),

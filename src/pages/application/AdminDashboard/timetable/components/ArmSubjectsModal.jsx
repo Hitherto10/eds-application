@@ -20,14 +20,14 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 
-// ─── Tab IDs ──────────────────────────────────────────────────────────────────
+// ─── Tab IDs ────────────────────
 const TABS = [
   { id: 'current',  label: 'Assigned',    icon: BookOpen  },
   { id: 'add',      label: 'Add Subjects', icon: Plus      },
   { id: 'copy',     label: 'Copy from Arm', icon: Copy    },
 ];
 
-// ─── Tiny helpers ─────────────────────────────────────────────────────────────
+// ─── Tiny helpers ───────────────
 const CategoryPill = ({ category }) => {
   const cls = CATEGORY_STYLES[category] || 'bg-gray-100 text-gray-600 border border-gray-200';
   return (
@@ -103,7 +103,7 @@ export default function ArmSubjectsModal({ arm, classArms, onClose, onSubjectsCh
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [arm.id]);
 
-  // ─── Toast helper ───────────────────────────────────────────────────────────
+  // ─── Toast helper ─────────────
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
@@ -126,7 +126,7 @@ export default function ArmSubjectsModal({ arm, classArms, onClose, onSubjectsCh
     });
   }, [subjects, assignedIds, search]);
 
-  // ─── Remove a single subject from arm ──────────────────────────────────────
+  // ─── Remove a single subject from arm ─
   const handleRemove = async (subject) => {
     const previous = armSubjects;
     const next = armSubjects.filter(s => s.id !== subject.id);
@@ -144,7 +144,7 @@ export default function ArmSubjectsModal({ arm, classArms, onClose, onSubjectsCh
     }
   };
 
-  // ─── Add selected subjects ──────────────────────────────────────────────────
+  // ─── Add selected subjects ────
   const handleAddSelected = async () => {
     if (selectedToAdd.size === 0) return;
     const ids = [...selectedToAdd];
@@ -178,7 +178,7 @@ export default function ArmSubjectsModal({ arm, classArms, onClose, onSubjectsCh
     }
   };
 
-  // ─── Copy from another arm ──────────────────────────────────────────────────
+  // ─── Copy from another arm ────
   const handleCopy = async () => {
     if (!sourceArmId) return;
     setLoading(true);
@@ -213,7 +213,7 @@ export default function ArmSubjectsModal({ arm, classArms, onClose, onSubjectsCh
 
   const siblingsForCopy = classArms.filter(a => a.id !== arm.id);
 
-  // ─── Render ─────────────────────────────────────────────────────────────────
+  // ─── Render ───────────────────
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-full items-center justify-center p-4">
@@ -282,7 +282,7 @@ export default function ArmSubjectsModal({ arm, classArms, onClose, onSubjectsCh
           {/* Tab Content */}
           <div className="flex-1 overflow-y-auto p-6">
 
-            {/* ── CURRENT SUBJECTS ─────────────────────────────────────────── */}
+            {/* ── CURRENT SUBJECTS ────── */}
             {activeTab === 'current' && (
               <>
                 {initializing ? (
@@ -330,7 +330,7 @@ export default function ArmSubjectsModal({ arm, classArms, onClose, onSubjectsCh
               </>
             )}
 
-            {/* ── ADD SUBJECTS ──────────────────────────────────────────────── */}
+            {/* ── ADD SUBJECTS ── */}
             {activeTab === 'add' && (
               <div className="space-y-4">
                 {/* Search */}
@@ -413,7 +413,7 @@ export default function ArmSubjectsModal({ arm, classArms, onClose, onSubjectsCh
               </div>
             )}
 
-            {/* ── COPY FROM ARM ─────────────────────────────────────────────── */}
+            {/* ── COPY FROM ARM ─ */}
             {activeTab === 'copy' && (
               <div className="space-y-5">
                 {siblingsForCopy.length === 0 ? (

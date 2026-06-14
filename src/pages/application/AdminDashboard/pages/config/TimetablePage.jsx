@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Loader2, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout.jsx';
 import { TimetableProvider, useTimetable } from '../../timetable/TimetableContext.jsx';
 import { useAcademic } from '../../../../../contexts/AcademicContext.jsx';
@@ -18,6 +18,32 @@ function TimetableContent() {
     const { state, dispatch } = useTimetable();
     const { academicYears, currentYear, terms, currentTerm, selectYear, selectTerm, loading: academicLoading } = useAcademic();
     const { initialLoad, resources } = useGlobalTimetableData();
+    const [searchParams] = useSearchParams();
+    const preselectedRef = useRef(false);
+
+    // ── Edit prefill: when arriving from "Edit timetable" with ?classId&armId&termId,
+    // preselect class / arm / term once resources are loaded. useGlobalTimetableData
+    // then loads the existing periods + schedules into the editor automatically.
+    useEffect(() => {
+        if (preselectedRef.current || initialLoad || academicLoading) return;
+        const classId = searchParams.get('classId');
+        const armId = searchParams.get('armId');
+        const termId = searchParams.get('termId');
+        if (!classId) return;
+
+        const cls = resources.classes.find(c => c.id === classId);
+        if (!cls) return;
+        preselectedRef.current = true;
+
+        if (termId && termId !== currentTerm?.id && terms.some(t => t.id === termId)) {
+            selectTerm(termId);
+        }
+        dispatch({ type: 'SELECT_CLASS', payload: cls });
+        if (armId) {
+            const arm = resources.arms.find(a => a.id === armId);
+            if (arm) dispatch({ type: 'SELECT_ARM', payload: arm });
+        }
+    }, [initialLoad, academicLoading, resources, searchParams, terms, currentTerm, selectTerm, dispatch]);
 
     if (initialLoad || academicLoading) {
         return (

@@ -26,7 +26,7 @@ import StudentAttendanceRow from './StudentAttendanceRow';
 import { saveDraftAttendance, submitAttendance, updateAttendance } from './attendanceAPIs';
 import { useAuth } from '@/contexts/AuthContext';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Helpers ────────────────────
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
@@ -49,7 +49,7 @@ const FILTER_OPTIONS = [
   { value: 'unmarked', label: 'Unmarked' },
 ];
 
-// ─── Summary stats bar ────────────────────────────────────────────────────────
+// ─── Summary stats bar ──────────
 function SummaryBar({ students }) {
   const stats = useMemo(() => {
     const total = students.length;
@@ -133,7 +133,7 @@ function StatPill({ value, label, color }) {
   );
 }
 
-// ─── Inline notification banner ───────────────────────────────────────────────
+// ─── Inline notification banner ─
 function Notification({ notification, onDismiss }) {
   if (!notification) return null;
   const styles = {
@@ -153,7 +153,7 @@ function Notification({ notification, onDismiss }) {
   );
 }
 
-// ─── Bulk actions toolbar ─────────────────────────────────────────────────────
+// ─── Bulk actions toolbar ───────
 function BulkActionsToolbar({ selectedCount, onBulkStatus, onClearSelection }) {
   const [open, setOpen] = useState(false);
   if (selectedCount === 0) return null;
@@ -192,7 +192,7 @@ function BulkActionsToolbar({ selectedCount, onBulkStatus, onClearSelection }) {
   );
 }
 
-// ─── Main AttendanceRegister ──────────────────────────────────────────────────
+// ─── Main AttendanceRegister ────
 export default function AttendanceRegister({
   schedule,
   initialStudents,
@@ -209,7 +209,7 @@ export default function AttendanceRegister({
   const isReadOnly = isViewMode && !isEditMode;
   const isAlreadySubmitted = initialStatus === 'completed';
 
-  // ─── State ────────────────────────────────────────────────────────────────
+  // ─── State ──────────────────
   const [students, setStudents] = useState(initialStudents || []);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -221,7 +221,7 @@ export default function AttendanceRegister({
   const [attendanceId, setAttendanceId] = useState(schedule?.attendanceId || null);
   const hasUnsavedRef = useRef(false);
 
-  // ─── Track unsaved changes ────────────────────────────────────────────────
+  // ─── Track unsaved changes ──
   useEffect(() => {
     if (!isReadOnly && !isSubmitted) {
       const handler = (e) => {
@@ -235,7 +235,7 @@ export default function AttendanceRegister({
     }
   }, [isReadOnly, isSubmitted]);
 
-  // ─── Handlers ─────────────────────────────────────────────────────────────
+  // ─── Handlers ───────────────
   const markUnsaved = () => { hasUnsavedRef.current = true; };
 
   const handleStatusChange = useCallback((studentId, status) => {
@@ -300,7 +300,7 @@ export default function AttendanceRegister({
     setNotification({ type: 'info', message: 'All students marked as Present.' });
   }, []);
 
-  // ─── Filtered view ────────────────────────────────────────────────────────
+  // ─── Filtered view ──────────
   const filteredStudents = useMemo(() => {
     return students.filter(s => {
       const matchesSearch = s.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -316,7 +316,7 @@ export default function AttendanceRegister({
     filteredStudents.length > 0 &&
     filteredStudents.every(s => selectedIds.has(s.studentId));
 
-  // ─── Build payload ────────────────────────────────────────────────────────
+  // ─── Build payload ──────────
   const buildPayload = (statusOverride) => ({
     // Academic context: prefer prop, fall back to schedule field, then empty stubs
     academicYearId: academicContext?.academicYearId ?? schedule?.academicContext?.academicYearId ?? '',
@@ -338,7 +338,7 @@ export default function AttendanceRegister({
     })),
   });
 
-  // ─── Save draft ───────────────────────────────────────────────────────────
+  // ─── Save draft ─────────────
   const handleSaveDraft = async () => {
     setIsSaving(true);
     setNotification(null);
@@ -357,7 +357,7 @@ export default function AttendanceRegister({
     }
   };
 
-  // ─── Submit ───────────────────────────────────────────────────────────────
+  // ─── Submit ─────────────────
   const handleSubmit = async () => {
     const unmarked = students.filter(s => !s.status);
     if (unmarked.length > 0) {
@@ -375,18 +375,20 @@ export default function AttendanceRegister({
     setNotification(null);
     try {
       const payload = buildPayload();
-      const fn = (isAlreadySubmitted && isEditMode) ? updateAttendance : submitAttendance;
-      const res = isAlreadySubmitted && isEditMode
+      const res = (isAlreadySubmitted && isEditMode)
         ? await updateAttendance(attendanceId, payload)
         : await submitAttendance(payload);
 
       if (res.success) {
         setIsSubmitted(true);
         hasUnsavedRef.current = false;
+        // Update the attendanceId in case backend assigned a new one
+        if (res.data.attendanceId) setAttendanceId(res.data.attendanceId);
         const s = res.data.summary;
+        const action = (isAlreadySubmitted && isEditMode) ? 'updated' : 'submitted';
         setNotification({
           type: 'success',
-          message: `Attendance submitted — ${s?.present ?? '—'} present, ${s?.absent ?? '—'} absent, ${s?.late ?? '—'} late.`,
+          message: `Attendance ${action} — ${s?.present ?? '—'} present, ${s?.absent ?? '—'} absent, ${s?.late ?? '—'} late.`,
         });
       }
     } catch (err) {
@@ -396,7 +398,7 @@ export default function AttendanceRegister({
     }
   };
 
-  // ─── Back navigation ──────────────────────────────────────────────────────
+  // ─── Back navigation ────────
   const handleBack = () => {
     if (hasUnsavedRef.current && !isSubmitted) {
       const leave = window.confirm('You have unsaved changes. Leave without saving?');
@@ -409,7 +411,7 @@ export default function AttendanceRegister({
 
   return (
     <div className="flex flex-col h-full">
-      {/* ── Header ──────────────────────────────────────────────────────── */}
+      {/* ── Header ────────── */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
         <div>
           <button
@@ -458,13 +460,13 @@ export default function AttendanceRegister({
         </div>
       </div>
 
-      {/* ── Notification ────────────────────────────────────────────────── */}
+      {/* ── Notification ──── */}
       <Notification notification={notification} onDismiss={() => setNotification(null)} />
 
-      {/* ── Summary stats ───────────────────────────────────────────────── */}
+      {/* ── Summary stats ─── */}
       <SummaryBar students={students} />
 
-      {/* ── Toolbar ─────────────────────────────────────────────────────── */}
+      {/* ── Toolbar ───────── */}
       {!isReadOnly && (
         <div className="flex flex-col sm:flex-row gap-2 mb-3">
           {/* Search */}
@@ -526,7 +528,7 @@ export default function AttendanceRegister({
         </div>
       )}
 
-      {/* ── Bulk actions ─────────────────────────────────────────────────── */}
+      {/* ── Bulk actions ───── */}
       {!isReadOnly && !isSubmitted && (
         <div className="mb-3">
           <BulkActionsToolbar
@@ -537,7 +539,7 @@ export default function AttendanceRegister({
         </div>
       )}
 
-      {/* ── Student list ─────────────────────────────────────────────────── */}
+      {/* ── Student list ───── */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex-1">
         {/* Column headers */}
         <div className="flex items-center gap-3 px-4 py-2.5 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-400 uppercase tracking-wide">
@@ -583,7 +585,7 @@ export default function AttendanceRegister({
         </div>
       </div>
 
-      {/* ── Footer actions ───────────────────────────────────────────────── */}
+      {/* ── Footer actions ─── */}
       {!isReadOnly && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-4 border-t border-gray-100">
           {/* Left: student count */}
