@@ -136,7 +136,7 @@ export function formatNaira(kobo = 0) {
   }).format(naira);
 }
 
-/** Convert a Naira input (number/string) → kobo integer for transmission. */
+/** Convert a Naira input (number/string)GO  → kobo integer for transmission. */
 export function toKobo(naira) {
   return Math.round((Number(naira) || 0) * 100);
 }
@@ -160,61 +160,25 @@ const mockId = (prefix) => `${prefix}_${Date.now().toString(36)}_${_seq++}`;
  * Query: ?academicYearId=&termId=&classId=&status=
  */
 export async function getFeeStructures(filters = {}) {
-  console.log('📡 GET /api/fees/structures', { params: filters });
-  console.log('📦 Expected response:', {
-    success: true,
-    data: {
-      feeStructures: [{
-        _id: 'fs_001',
-        schoolId: 'SUN8935',
-        academicYearId: 'year_2025',
-        termId: 'term_1',
-        classId: 'class_10',
-        className: 'JSS1',
-        name: 'JSS1 First Term Fees',
-        items: [
-          { feeType: 'tuition',     name: 'Tuition',          amount: 5000000, optional: false },
-          { feeType: 'development', name: 'Development Levy',  amount: 1000000, optional: false },
-          { feeType: 'transport',  name: 'Transport',         amount: 1500000, optional: true  },
-        ],
-        totalAmount: 7500000,
-        dueDate: '2026-01-15',
-        paymentType: 'installment',
-        installmentPlans: [
-          { label: '1st Installment', percentage: 50, dueDate: '2026-01-15' },
-          { label: '2nd Installment', percentage: 50, dueDate: '2026-03-01' },
-        ],
-        status: 'published',
-        version: 2,
-        isLocked: false,
-        createdAt: 'ISO', updatedAt: 'ISO',
-      }],
-      total: 1,
-    },
-  });
-
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.get('/api/fees/structures', { params: filters });
-    if (data.success) data.data.feeStructures = normalizeList(data.data.feeStructures);
-    return data;
-  }
-
-  await delay();
-  return { success: true, data: { feeStructures: [], total: 0 } };
+  const { data } = await apiClient.get('/api/fees/structures', { params: filters });
+  if (data.success) data.data.feeStructures = normalizeList(data.data.feeStructures);
+  return data;
 }
 
 /**
  * GET /api/fees/structures/:id
  */
 export async function getFeeStructureById(structureId) {
-  console.log(`📡 GET /api/fees/structures/${structureId}`);
-  if (FEE_BACKEND_LIVE) {
+  try {
     const { data } = await apiClient.get(`/api/fees/structures/${structureId}`);
-    if (data.success) data.data = normalizeId(data.data.feeStructure || data.data);
+    if (data.success && data.data) {
+      const fs = data.data.feeStructure || data.data;
+      data.data.feeStructure = normalizeId(fs);
+    }
     return data;
+  } catch (error) {
+    throw error?.response?.data || error;
   }
-  await delay();
-  return { success: true, data: { feeStructure: null } };
 }
 
 /**
@@ -233,32 +197,9 @@ export async function getFeeStructureById(structureId) {
  * Response (201): { success, message, data: { feeStructure } }
  */
 export async function createFeeStructure(payload) {
-  console.log('📡 POST /api/fees/structures', payload);
-  console.log('📦 Expected response (201):', {
-    success: true,
-    message: 'Fee structure created successfully',
-    data: { feeStructure: { _id: 'fs_xxx', status: 'draft', version: 1 } },
-  });
-
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.post('/api/fees/structures', payload);
-    if (data.success) data.data.feeStructure = normalizeId(data.data.feeStructure);
-    return data;
-  }
-
-  await delay(700);
-  const id = mockId('fs');
-  const feeStructure = {
-    id, _id: id,
-    ...payload,
-    totalAmount: sumItems(payload.items),
-    status: 'draft',
-    version: 1,
-    isLocked: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-  return { success: true, message: 'Fee structure created successfully', data: { feeStructure } };
+  const { data } = await apiClient.post('/api/fees/structures', payload);
+  if (data.success) data.data.feeStructure = normalizeId(data.data.feeStructure);
+  return data;
 }
 
 /**
@@ -270,28 +211,9 @@ export async function createFeeStructure(payload) {
  * Backend rule: reject (409) if status is 'published'.
  */
 export async function updateFeeStructure(structureId, payload) {
-  console.log(`📡 PUT /api/fees/structures/${structureId}`, payload);
-  console.log('📦 Backend rule: reject (409) if status is published/locked.');
-
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.put(`/api/fees/structures/${structureId}`, payload);
-    if (data.success) data.data.feeStructure = normalizeId(data.data.feeStructure);
-    return data;
-  }
-
-  await delay();
-  return {
-    success: true,
-    message: 'Fee structure updated successfully',
-    data: {
-      feeStructure: {
-        id: structureId, _id: structureId,
-        ...payload,
-        totalAmount: sumItems(payload.items),
-        updatedAt: new Date().toISOString(),
-      },
-    },
-  };
+  const { data } = await apiClient.put(`/api/fees/structures/${structureId}`, payload);
+  if (data.success) data.data.feeStructure = normalizeId(data.data.feeStructure);
+  return data;
 }
 
 /**
@@ -299,13 +221,12 @@ export async function updateFeeStructure(structureId, payload) {
  * Backend rule: only DRAFT structures are deletable; published with invoices → 409.
  */
 export async function deleteFeeStructure(structureId) {
-  console.log(`📡 DELETE /api/fees/structures/${structureId}`);
-  if (FEE_BACKEND_LIVE) {
+  try {
     const { data } = await apiClient.delete(`/api/fees/structures/${structureId}`);
     return data;
+  } catch (error) {
+    throw error?.response?.data || error;
   }
-  await delay();
-  return { success: true, message: 'Fee structure deleted successfully' };
 }
 
 /**
@@ -315,21 +236,13 @@ export async function deleteFeeStructure(structureId) {
  * Response: { success, data: { feeStructures: [...] } }  // one per target class
  */
 export async function cloneFeeStructure(structureId, payload) {
-  console.log(`📡 POST /api/fees/structures/${structureId}/clone`, payload);
-  console.log('📦 Effect: deep-copies items/installments into a fresh DRAFT.');
-
-  if (FEE_BACKEND_LIVE) {
+  try {
     const { data } = await apiClient.post(`/api/fees/structures/${structureId}/clone`, payload);
     if (data.success) data.data.feeStructures = normalizeList(data.data.feeStructures);
     return data;
+  } catch (error) {
+    throw error?.response?.data || error;
   }
-
-  await delay(600);
-  return {
-    success: true,
-    message: 'Fee structure cloned successfully',
-    data: { feeStructures: [] },
-  };
 }
 
 /**
@@ -354,35 +267,13 @@ export async function cloneFeeStructure(structureId, payload) {
  * Response: { success, message, data: { feeStructure: { id, status } } }
  */
 export async function transitionFeeStructure(structureId, action) {
-  console.log(`📡 POST /api/fees/structures/${structureId}/transition`, { action });
-  console.log('📦 Valid actions: publish | revert_draft');
-  console.log('📦 Emits: FEE_STRUCTURE_PUBLISHED when action = "publish".');
-
-  if (FEE_BACKEND_LIVE) {
+  try {
     const { data } = await apiClient.post(`/api/fees/structures/${structureId}/transition`, { action });
-    if (data.success) data.data.feeStructure = normalizeId(data.data.feeStructure);
+    if (data.success && data.data?.feeStructure) data.data.feeStructure = normalizeId(data.data.feeStructure);
     return data;
+  } catch (error) {
+    throw error?.response?.data || error;
   }
-
-  await delay(500);
-  // Only two valid transitions in the 2-phase lifecycle.
-  const actionToStatus = { publish: 'published', revert_draft: 'draft' };
-  const nextStatus = actionToStatus[action];
-
-  if (!nextStatus) {
-    return {
-      success: false,
-      message: `Unknown transition action "${action}". Valid actions: publish, revert_draft.`,
-    };
-  }
-
-  return {
-    success: true,
-    message: action === 'publish'
-      ? 'Fee structure published — parents and students can now see it on their dashboards.'
-      : 'Fee structure reverted to draft.',
-    data: { feeStructure: { id: structureId, status: nextStatus } },
-  };
 }
 
 /**
@@ -390,13 +281,8 @@ export async function transitionFeeStructure(structureId, action) {
  * Returns the immutable change-history (version control / audit trail).
  */
 export async function getFeeStructureVersions(structureId) {
-  console.log(`📡 GET /api/fees/structures/${structureId}/versions`);
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.get(`/api/fees/structures/${structureId}/versions`);
-    return data;
-  }
-  await delay();
-  return { success: true, data: { versions: [], total: 0 } };
+  const { data } = await apiClient.get(`/api/fees/structures/${structureId}/versions`);
+  return data;
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -410,35 +296,9 @@ export async function getFeeStructureVersions(structureId) {
  * Response includes a roll-up `summary` for the toolbar KPIs.
  */
 export async function getInvoices(filters = {}) {
-  console.log('📡 GET /api/fees/invoices', { params: filters });
-  console.log('📦 Expected response:', {
-    success: true,
-    data: {
-      invoices: [{
-        _id: 'inv_001',
-        studentId: 'stu_1', studentName: 'John Doe',
-        className: 'JSS1', classId: 'class_10',
-        feeStructureId: 'fs_001', feeStructureName: 'JSS1 First Term Fees',
-        amount: 7500000, amountPaid: 2500000, amountDue: 5000000,
-        status: 'partial', dueDate: '2026-01-15',
-        createdAt: 'ISO',
-      }],
-      total: 50,
-      summary: { totalBilled: 250000000, totalPaid: 150000000, totalOutstanding: 100000000 },
-    },
-  });
-
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.get('/api/fees/invoices', { params: filters });
-    if (data.success) data.data.invoices = normalizeList(data.data.invoices);
-    return data;
-  }
-
-  await delay();
-  return {
-    success: true,
-    data: { invoices: [], total: 0, summary: { totalBilled: 0, totalPaid: 0, totalOutstanding: 0 } },
-  };
+  const { data } = await apiClient.get('/api/fees/invoices', { params: filters });
+  if (data.success) data.data.invoices = normalizeList(data.data.invoices);
+  return data;
 }
 
 /**
@@ -448,31 +308,9 @@ export async function getInvoices(filters = {}) {
  * Emits BILL_GENERATED per invoice. Creates a DEBIT ledger entry per invoice.
  */
 export async function createInvoices(payload) {
-  console.log('📡 POST /api/fees/invoices', payload);
-  console.log('📦 Emits BILL_GENERATED + posts ledger DEBIT (Student Receivable).');
-
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.post('/api/fees/invoices', payload);
-    if (data.success) data.data.invoices = normalizeList(data.data.invoices);
-    return data;
-  }
-
-  await delay(800);
-  const invoices = (payload.invoices || []).map((inv) => {
-    const id = mockId('inv');
-    return {
-      id, _id: id,
-      ...inv,
-      amount: 0, amountPaid: 0, amountDue: 0,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-    };
-  });
-  return {
-    success: true,
-    message: `${invoices.length} invoice(s) created successfully`,
-    data: { invoices, total: invoices.length, errors: [] },
-  };
+  const { data } = await apiClient.post('/api/fees/invoices', payload);
+  if (data.success) data.data.invoices = normalizeList(data.data.invoices);
+  return data;
 }
 
 /**
@@ -490,35 +328,18 @@ export async function createInvoices(payload) {
  * Response: { success, message, data: { generated, skipped, invoices:[] } }
  */
 export async function generateInvoicesForClass(payload) {
-  console.log('📡 POST /api/fees/invoices/generate', payload);
-  console.log('📦 Resolves roster server-side; idempotent (skips existing).');
-
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.post('/api/fees/invoices/generate', payload);
-    if (data.success) data.data.invoices = normalizeList(data.data.invoices);
-    return data;
-  }
-
-  await delay(900);
-  return {
-    success: true,
-    message: 'Invoices generated for class',
-    data: { generated: 0, skipped: 0, invoices: [] },
-  };
+  const { data } = await apiClient.post('/api/fees/invoices/generate', payload);
+  if (data.success) data.data.invoices = normalizeList(data.data.invoices);
+  return data;
 }
 
 /**
  * GET /api/fees/invoices/:id
  */
 export async function getInvoiceById(invoiceId) {
-  console.log(`📡 GET /api/fees/invoices/${invoiceId}`);
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.get(`/api/fees/invoices/${invoiceId}`);
-    if (data.success) data.data = normalizeId(data.data.invoice || data.data);
-    return data;
-  }
-  await delay();
-  return { success: true, data: { invoice: null } };
+  const { data } = await apiClient.get(`/api/fees/invoices/${invoiceId}`);
+  if (data.success) data.data = normalizeId(data.data.invoice || data.data);
+  return data;
 }
 
 /**
@@ -527,14 +348,8 @@ export async function getInvoiceById(invoiceId) {
  * Payload: { reason }
  */
 export async function voidInvoice(invoiceId, reason) {
-  console.log(`📡 POST /api/fees/invoices/${invoiceId}/void`, { reason });
-  console.log('📦 Emits INVOICE_VOIDED + reversing ledger entry.');
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.post(`/api/fees/invoices/${invoiceId}/void`, { reason });
-    return data;
-  }
-  await delay();
-  return { success: true, message: 'Invoice voided successfully' };
+  const { data } = await apiClient.post(`/api/fees/invoices/${invoiceId}/void`, { reason });
+  return data;
 }
 
 /**
@@ -542,30 +357,8 @@ export async function voidInvoice(invoiceId, reason) {
  * Full fee position for one student (all invoices + computed balance).
  */
 export async function getStudentFees(studentId) {
-  console.log(`📡 GET /api/fees/student/${studentId}`);
-  console.log('📦 Expected response:', {
-    success: true,
-    data: {
-      student: { id: studentId, name: 'John Doe', className: 'JSS1' },
-      invoices: [{ feeStructureName: 'JSS1 First Term', amount: 7500000, amountPaid: 0, status: 'pending' }],
-      totals: { billed: 7500000, paid: 0, outstanding: 7500000 },
-    },
-  });
-
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.get(`/api/fees/student/${studentId}`);
-    return data;
-  }
-
-  await delay();
-  return {
-    success: true,
-    data: {
-      student: { id: studentId },
-      invoices: [],
-      totals: { billed: 0, paid: 0, outstanding: 0 },
-    },
-  };
+  const { data } = await apiClient.get(`/api/fees/student/${studentId}`);
+  return data;
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -581,45 +374,12 @@ export async function getStudentFees(studentId) {
  * Payload: { amount(kobo), paymentMethod, referenceNumber, receiptNumber?, note?, paidAt? }
  */
 export async function recordPayment(invoiceId, payload) {
-  console.log(`📡 POST /api/fees/invoices/${invoiceId}/payment`, payload);
-  console.log('📦 Emits PAYMENT_CONFIRMED + ledger CREDIT. Returns receipt.');
-  console.log('📦 Expected response:', {
-    success: true,
-    message: 'Payment recorded successfully',
-    data: {
-      payment: { id: 'pay_x', amount: 2500000, method: 'cash', receiptNumber: 'RCP-0001' },
-      invoice: { status: 'partial', amountPaid: 2500000, amountDue: 5000000 },
-    },
-  });
-
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.post(`/api/fees/invoices/${invoiceId}/payment`, payload);
-    return data;
-  }
-
-  await delay(700);
-  const payId = mockId('pay');
-  return {
-    success: true,
-    message: 'Payment recorded successfully',
-    data: {
-      payment: {
-        id: payId, _id: payId,
-        invoiceId,
-        amount: payload.amount,
-        method: payload.paymentMethod,
-        referenceNumber: payload.referenceNumber,
-        receiptNumber: payload.receiptNumber || `RCP-${Date.now().toString().slice(-6)}`,
-        paidAt: payload.paidAt || new Date().toISOString(),
-        status: 'confirmed',
-      },
-      invoice: { id: invoiceId, status: 'partial' },
-    },
-  };
+  const { data } = await apiClient.post(`/api/fees/invoices/${invoiceId}/payments`, payload);
+  return data;
 }
 
 /**
- * POST /api/fees/invoices/:invoiceId/payment/initialize   (GATEWAY)
+ * POST /api/fees/invoices/:invoiceId/initialize   (GATEWAY)
  * Starts an online payment with Paystack / Flutterwave.
  * Emits PAYMENT_INITIATED. Returns a hosted checkout URL + reference.
  *
@@ -627,28 +387,20 @@ export async function recordPayment(invoiceId, payload) {
  * Response: { success, data: { authorizationUrl, reference, accessCode } }
  */
 export async function initializePayment(invoiceId, payload) {
-  console.log(`📡 POST /api/fees/invoices/${invoiceId}/payment/initialize`, payload);
-  console.log('📦 Emits PAYMENT_INITIATED. Returns gateway authorizationUrl.');
-
-  if (FEE_BACKEND_LIVE) {
+  try {
     const { data } = await apiClient.post(
-      `/api/fees/invoices/${invoiceId}/payment/initialize`, payload
+      `/api/fees/invoices/${invoiceId}/initialize`, payload
     );
     return data;
+  } catch (err) {
+    if (err?.response?.status === 404) {
+      const { data } = await apiClient.post(
+        `/api/fees/invoices/${invoiceId}/payment/initialize`, payload
+      );
+      return data;
+    }
+    throw err;
   }
-
-  await delay(800);
-  const reference = `${payload.gateway || 'psk'}_${mockId('ref')}`;
-  return {
-    success: true,
-    message: 'Payment initialized',
-    data: {
-      authorizationUrl: `https://checkout.${payload.gateway || 'paystack'}.com/${reference}`,
-      reference,
-      accessCode: mockId('ac'),
-      gateway: payload.gateway,
-    },
-  };
 }
 
 /**
@@ -660,23 +412,8 @@ export async function initializePayment(invoiceId, payload) {
  * Payload: { reference, gateway }
  */
 export async function verifyPayment(payload) {
-  console.log('📡 POST /api/fees/payments/verify', payload);
-  console.log('📦 Emits PAYMENT_CONFIRMED | PAYMENT_FAILED.');
-
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.post('/api/fees/payments/verify', payload);
-    return data;
-  }
-
-  await delay(900);
-  return {
-    success: true,
-    message: 'Payment verified',
-    data: {
-      status: 'confirmed',
-      payment: { reference: payload.reference, gateway: payload.gateway, amount: 0 },
-    },
-  };
+  const { data } = await apiClient.post('/api/fees/payments/verify', payload);
+  return data;
 }
 
 /**
@@ -684,14 +421,9 @@ export async function verifyPayment(payload) {
  * Payment history for one invoice.
  */
 export async function getPaymentHistory(invoiceId) {
-  console.log(`📡 GET /api/fees/invoices/${invoiceId}/payments`);
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.get(`/api/fees/invoices/${invoiceId}/payments`);
-    if (data.success) data.data.payments = normalizeList(data.data.payments);
-    return data;
-  }
-  await delay();
-  return { success: true, data: { payments: [], totalPaid: 0 } };
+  const { data } = await apiClient.get(`/api/fees/invoices/${invoiceId}/payments`);
+  if (data.success) data.data.payments = normalizeList(data.data.payments);
+  return data;
 }
 
 /**
@@ -700,14 +432,9 @@ export async function getPaymentHistory(invoiceId) {
  * Query: ?from=&to=&method=&gateway=&status=&page=&limit=
  */
 export async function getAllPayments(filters = {}) {
-  console.log('📡 GET /api/fees/payments', { params: filters });
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.get('/api/fees/payments', { params: filters });
-    if (data.success) data.data.payments = normalizeList(data.data.payments);
-    return data;
-  }
-  await delay();
-  return { success: true, data: { payments: [], total: 0 } };
+  const { data } = await apiClient.get('/api/fees/payments', { params: filters });
+  if (data.success) data.data.payments = normalizeList(data.data.payments);
+  return data;
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -720,19 +447,8 @@ export async function getAllPayments(filters = {}) {
  * Payload: { studentId, invoiceId?, type, amount(kobo), reason, approvedBy }
  */
 export async function applyAdjustment(payload) {
-  console.log('📡 POST /api/fees/adjustments', payload);
-  console.log('📦 Emits ADJUSTMENT_APPLIED + ledger ADJUSTMENT entry.');
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.post('/api/fees/adjustments', payload);
-    return data;
-  }
-  await delay(600);
-  const id = mockId('adj');
-  return {
-    success: true,
-    message: 'Adjustment applied successfully',
-    data: { adjustment: { id, _id: id, ...payload, createdAt: new Date().toISOString() } },
-  };
+  const { data } = await apiClient.post('/api/fees/adjustments', payload);
+  return data;
 }
 
 /**
@@ -740,14 +456,9 @@ export async function applyAdjustment(payload) {
  * Query: ?studentId=&type=&from=&to=
  */
 export async function getAdjustments(filters = {}) {
-  console.log('📡 GET /api/fees/adjustments', { params: filters });
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.get('/api/fees/adjustments', { params: filters });
-    if (data.success) data.data.adjustments = normalizeList(data.data.adjustments);
-    return data;
-  }
-  await delay();
-  return { success: true, data: { adjustments: [], total: 0 } };
+  const { data } = await apiClient.get('/api/fees/adjustments', { params: filters });
+  if (data.success) data.data.adjustments = normalizeList(data.data.adjustments);
+  return data;
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -763,30 +474,8 @@ export async function getAdjustments(filters = {}) {
  *             balance, reference, account }  // account = receivable | revenue
  */
 export async function getStudentLedger(studentId, filters = {}) {
-  console.log(`📡 GET /api/fees/ledger/students/${studentId}`, { params: filters });
-  console.log('📦 Expected response:', {
-    success: true,
-    data: {
-      student: { id: studentId, name: 'John Doe' },
-      entries: [
-        { date: 'ISO', type: 'debit',  description: 'JSS1 First Term Fees', debit: 7500000, credit: 0, balance: 7500000, account: 'receivable' },
-        { date: 'ISO', type: 'credit', description: 'Cash payment RCP-0001', debit: 0, credit: 2500000, balance: 5000000, account: 'receivable' },
-      ],
-      openingBalance: 0,
-      closingBalance: 5000000,
-    },
-  });
-
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.get(`/api/fees/ledger/students/${studentId}`, { params: filters });
-    return data;
-  }
-
-  await delay();
-  return {
-    success: true,
-    data: { student: { id: studentId }, entries: [], openingBalance: 0, closingBalance: 0 },
-  };
+  const { data } = await apiClient.get(`/api/fees/ledger/students/${studentId}`, { params: filters });
+  return data;
 }
 
 /**
@@ -795,19 +484,8 @@ export async function getStudentLedger(studentId, filters = {}) {
  * Query: ?academicYearId=&termId=
  */
 export async function getLedgerSummary(filters = {}) {
-  console.log('📡 GET /api/fees/ledger/summary', { params: filters });
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.get('/api/fees/ledger/summary', { params: filters });
-    return data;
-  }
-  await delay();
-  return {
-    success: true,
-    data: {
-      totalReceivable: 0, totalRevenue: 0, totalCollected: 0,
-      totalAdjustments: 0, totalOutstanding: 0,
-    },
-  };
+  const { data } = await apiClient.get('/api/fees/ledger/summary', { params: filters });
+  return data;
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -819,29 +497,8 @@ export async function getLedgerSummary(filters = {}) {
  * Returns a render-ready digital receipt document.
  */
 export async function getReceipt(paymentId) {
-  console.log(`📡 GET /api/fees/receipts/${paymentId}`);
-  console.log('📦 Expected response:', {
-    success: true,
-    data: {
-      receipt: {
-        receiptNumber: 'RCP-0001',
-        paymentId,
-        school: { name: '', logoUrl: '', address: '' },
-        student: { name: '', className: '' },
-        items: [{ name: 'Tuition', amount: 5000000 }],
-        amountPaid: 2500000, balance: 5000000,
-        method: 'cash', reference: 'TXN123', paidAt: 'ISO',
-        issuedBy: 'Bursar',
-      },
-    },
-  });
-
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.get(`/api/fees/receipts/${paymentId}`);
-    return data;
-  }
-  await delay();
-  return { success: true, data: { receipt: null } };
+  const { data } = await apiClient.get(`/api/fees/receipts/${paymentId}`);
+  return data;
 }
 
 /**
@@ -850,13 +507,8 @@ export async function getReceipt(paymentId) {
  * Payload: { channel: 'email' | 'sms', to }
  */
 export async function sendReceipt(paymentId, payload) {
-  console.log(`📡 POST /api/fees/receipts/${paymentId}/send`, payload);
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.post(`/api/fees/receipts/${paymentId}/send`, payload);
-    return data;
-  }
-  await delay(500);
-  return { success: true, message: 'Receipt dispatched' };
+  const { data } = await apiClient.post(`/api/fees/receipts/${paymentId}/send`, payload);
+  return data;
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -868,35 +520,8 @@ export async function sendReceipt(paymentId, payload) {
  * Query: ?classId=&academicYearId=&termId=
  */
 export async function getFeeAnalytics(filters = {}) {
-  console.log('📡 GET /api/fees/analytics', { params: filters });
-  console.log('📦 Expected response:', {
-    success: true,
-    data: {
-      totalExpected: 500000000,
-      totalCollected: 350000000,
-      totalPending: 150000000,
-      collectionRate: 70.0,
-      studentsBilled: 240, studentsFullyPaid: 150, studentsOwing: 90,
-      byClass: [{ classId: 'c1', className: 'JSS1', expected: 100000000, collected: 80000000 }],
-      byMethod: [{ method: 'paystack', total: 120000000 }, { method: 'cash', total: 90000000 }],
-      monthlyTrend: [{ month: '2025-09', collected: 50000000 }],
-    },
-  });
-
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.get('/api/fees/reports/analytics', { params: filters });
-    return data;
-  }
-
-  await delay();
-  return {
-    success: true,
-    data: {
-      totalExpected: 0, totalCollected: 0, totalPending: 0, collectionRate: 0,
-      studentsBilled: 0, studentsFullyPaid: 0, studentsOwing: 0,
-      byClass: [], byMethod: [], monthlyTrend: [],
-    },
-  };
+  const { data } = await apiClient.get('/api/fees/reports/analytics', { params: filters });
+  return data;
 }
 
 /**
@@ -905,27 +530,8 @@ export async function getFeeAnalytics(filters = {}) {
  * Query: ?classId=&armId=&threshold=&academicYearId=&termId=&page=&limit=
  */
 export async function getOutstandingBalances(filters = {}) {
-  console.log('📡 GET /api/fees/reports/outstanding', { params: filters });
-  console.log('📦 Expected response:', {
-    success: true,
-    data: {
-      students: [{
-        studentId: 'stu_1', studentName: 'John Doe', className: 'JSS1',
-        billed: 7500000, paid: 2500000, outstanding: 5000000,
-        oldestDueDate: '2026-01-15', daysOverdue: 12,
-      }],
-      total: 90,
-      totals: { billed: 0, paid: 0, outstanding: 0 },
-    },
-  });
-
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.get('/api/fees/reports/outstanding', { params: filters });
-    return data;
-  }
-
-  await delay();
-  return { success: true, data: { students: [], total: 0, totals: { billed: 0, paid: 0, outstanding: 0 } } };
+  const { data } = await apiClient.get('/api/fees/reports/outstanding', { params: filters });
+  return data;
 }
 
 /**
@@ -933,23 +539,8 @@ export async function getOutstandingBalances(filters = {}) {
  * Aging buckets of arrears (0-30 / 31-60 / 61-90 / 90+ days).
  */
 export async function getAgingReport(filters = {}) {
-  console.log('📡 GET /api/fees/reports/aging', { params: filters });
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.get('/api/fees/reports/aging', { params: filters });
-    return data;
-  }
-  await delay();
-  return {
-    success: true,
-    data: {
-      buckets: [
-        { range: '0-30',  label: 'Current',   amount: 0, count: 0 },
-        { range: '31-60', label: '31-60 days', amount: 0, count: 0 },
-        { range: '61-90', label: '61-90 days', amount: 0, count: 0 },
-        { range: '90+',   label: '90+ days',   amount: 0, count: 0 },
-      ],
-    },
-  };
+  const { data } = await apiClient.get('/api/fees/reports/aging', { params: filters });
+  return data;
 }
 
 /**
@@ -957,13 +548,8 @@ export async function getAgingReport(filters = {}) {
  * Collection performance over a date range (for charts / export).
  */
 export async function getCollectionReport(filters = {}) {
-  console.log('📡 GET /api/fees/reports/collections', { params: filters });
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.get('/api/fees/reports/collections', { params: filters });
-    return data;
-  }
-  await delay();
-  return { success: true, data: { series: [], totalCollected: 0 } };
+  const { data } = await apiClient.get('/api/fees/reports/collections', { params: filters });
+  return data;
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -976,13 +562,8 @@ export async function getCollectionReport(filters = {}) {
  * Query: ?gateway=&from=&to=&status=matched|unmatched
  */
 export async function getReconciliation(filters = {}) {
-  console.log('📡 GET /api/fees/reconciliation', { params: filters });
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.get('/api/fees/reconciliation', { params: filters });
-    return data;
-  }
-  await delay();
-  return { success: true, data: { rows: [], summary: { matched: 0, unmatched: 0 } } };
+  const { data } = await apiClient.get('/api/fees/reconciliation', { params: filters });
+  return data;
 }
 
 /**
@@ -991,11 +572,6 @@ export async function getReconciliation(filters = {}) {
  * Payload: { settlementId, paymentId }
  */
 export async function reconcileTransaction(payload) {
-  console.log('📡 POST /api/fees/reconciliation/match', payload);
-  if (FEE_BACKEND_LIVE) {
-    const { data } = await apiClient.post('/api/fees/reconciliation/match', payload);
-    return data;
-  }
-  await delay();
-  return { success: true, message: 'Transaction reconciled' };
+  const { data } = await apiClient.post('/api/fees/reconciliation/match', payload);
+  return data;
 }

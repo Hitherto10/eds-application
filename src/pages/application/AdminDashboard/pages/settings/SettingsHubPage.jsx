@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
     School, CalendarDays, Globe2, ClipboardCheck, Wallet, MessagesSquare,
     BellRing, ShieldCheck, FolderArchive, DatabaseZap, ScrollText, ChevronRight,
+    SplitSquareVertical,
 } from 'lucide-react';
 import AdminLayout from '../../components/layout/AdminLayout.jsx';
 import { ROUTES } from '../../navigation/navConfig.js';
@@ -25,6 +26,13 @@ const SECTIONS = [
         title: 'Academic Calendar',
         description: 'Academic years and terms — the calendar every module runs on.',
         to: ROUTES.settingsAcademic,
+        live: true,
+    },
+    {
+        icon: SplitSquareVertical,
+        title: 'Grading & Assessment',
+        description: 'Set up grading schemes (grade bands & points) and assessment policies (CA components, exam weights, and where each policy applies).',
+        to: ROUTES.settingsGradingSetup,
         live: true,
     },
     {
@@ -86,12 +94,9 @@ const SECTIONS = [
 export default function SettingsHubPage() {
     return (
         <AdminLayout>
-            <div className="max-w-5xl mx-auto px-2 py-4">
+            <div className="mx-auto px-2 py-4">
                 <div className="mb-7">
                     <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-                    <p className="text-sm text-gray-500 mt-1">
-                        Your school is in charge here — everything configurable lives on this page.
-                    </p>
                 </div>
 
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

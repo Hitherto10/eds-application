@@ -9,13 +9,14 @@
 export const TOAST_EVENT = 'educonnect:toast';
 let seq = 0;
 
-export function pushToast({ message, undo, duration }) {
+export function pushToast({ message, type, undo, duration }) {
     window.dispatchEvent(new CustomEvent(TOAST_EVENT, {
         detail: {
             id: ++seq,
             message,
+            type: type || (undo ? 'info' : 'success'),
             undo,
-            duration: duration ?? (undo ? 8000 : 4000),
+            duration: duration ?? (type === 'error' ? 6000 : (undo ? 8000 : 4000)),
         },
     }));
 }

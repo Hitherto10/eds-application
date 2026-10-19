@@ -26,7 +26,7 @@ export default function StaffProfilePage() {
     const [error, setError] = useState(null);
     const [modal, setModal] = useState(null); // status | delete | assignClasses | unassignClasses | assignSubjects
 
-    const toast = (message) => pushToast({ message });
+    const toast = (message, type) => pushToast({ message, type });
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -35,6 +35,15 @@ export default function StaffProfilePage() {
             const res = await getDashboardUsers('teacher', '');
             const found = (res.data?.users ?? []).find(u => u.id === staffId);
             if (!found) throw new Error('Staff member not found.');
+            // subjects and classes may be arrays of objects or plain strings depending
+            // on the API version — normalise both to plain strings for safe rendering.
+            const toStringArray = (arr) =>
+                (arr ?? []).map(item =>
+                    typeof item === 'string'
+                        ? item
+                        : item?.name ?? item?.subjectName ?? item?.className ?? String(item)
+                );
+
             setStaff({
                 id: found.id,
                 name: `${found.firstName ?? ''} ${found.lastName ?? ''}`.trim() || 'Staff',
@@ -44,8 +53,8 @@ export default function StaffProfilePage() {
                 phone: found.phone || '—',
                 profileImage: found.profileImage ?? null,
                 status: found.isActive,
-                subjects: found.subjects || [],
-                classes: found.classes || [],
+                subjects: toStringArray(found.subjects),
+                classes: toStringArray(found.classes),
                 updatedAt: found.updatedAt,
                 createdAt: found.createdAt,
             });

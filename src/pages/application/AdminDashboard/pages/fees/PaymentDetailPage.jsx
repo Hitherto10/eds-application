@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { Receipt, Send, CheckCircle2 } from 'lucide-react';
 import AdminLayout from '../../components/layout/AdminLayout.jsx';
-import { DetailPage, EmptyState, Timeline, pushToast } from '../../../../../components/patterns';
+import { DetailPage, EmptyState, Timeline, pushToast } from '../../../../../components/patterns/index.js';
 import { getReceipt, sendReceipt, formatNaira } from '../../services/feeAPIs.js';
 import { ROUTES } from '../../navigation/navConfig.js';
 

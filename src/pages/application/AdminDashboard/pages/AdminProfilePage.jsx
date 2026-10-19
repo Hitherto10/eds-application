@@ -15,7 +15,7 @@ const AdminProfilePage = () => {
         phone: user?.phone ?? '',
         profileImage: user?.profileImage ?? null,
     });
-    const showToast = (message) => pushToast({ message });
+    const showToast = (message, type) => pushToast({ message, type });
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };

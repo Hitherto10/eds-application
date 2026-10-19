@@ -276,6 +276,16 @@ export async function terminateInvitation(payload) {
     }
 }
 
+export async function deletePermanentInvitation(invitationId) {
+    try {
+        const { data } = await apiClient.delete(`/api/admin/dashboard/invitations/${invitationId}/permanent`);
+        return data;
+    } catch (error) {
+        throw error?.response?.data || error;
+    }
+}
+
+
 export async function getAllStudents() {
     try {
         const { data } = await apiClient.get('/api/students');

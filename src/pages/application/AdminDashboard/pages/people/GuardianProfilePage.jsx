@@ -19,7 +19,7 @@ export default function GuardianProfilePage() {
     const [error, setError] = useState(null);
     const [modal, setModal] = useState(null); // status | delete | links
 
-    const toast = (message) => pushToast({ message });
+    const toast = (message, type) => pushToast({ message, type });
 
     const load = useCallback(async () => {
         setLoading(true);

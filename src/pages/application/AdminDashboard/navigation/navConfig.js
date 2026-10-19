@@ -56,8 +56,9 @@ export const ROUTES = {
     approvals:       `${BASE}/approvals`,
 
     settings:        `${BASE}/settings`,
-    settingsIdentity:`${BASE}/settings/identity`,
-    settingsAcademic:`${BASE}/settings/academic`,
+    settingsIdentity:           `${BASE}/settings/identity`,
+    settingsAcademic:           `${BASE}/settings/academic`,
+    settingsGradingSetup:       `${BASE}/settings/grading`,
 
     adminProfile:    `${BASE}/profile`,
 };
@@ -107,7 +108,7 @@ export const NAV_GROUPS = [
             { name: 'Fee Structures', link: ROUTES.feeStructures },
             { name: 'Invoices',       link: ROUTES.invoices },
             { name: 'Payments',       link: ROUTES.payments },
-            { name: 'Defaulters',     link: ROUTES.defaulters },
+            // { name: 'Defaulters',     link: ROUTES.defaulters },
             { name: 'Reports',        link: ROUTES.financeReports },
         ],
     },
@@ -147,8 +148,8 @@ export const PAGE_INDEX = [
     { label: 'Admissions',          group: 'Navigation', route: ROUTES.admissions,       keywords: 'applications enrol enroll intake' },
     { label: 'Classes & Arms',      group: 'Navigation', route: ROUTES.classes,          keywords: 'class setup sections streams config' },
     { label: 'Subjects',            group: 'Navigation', route: ROUTES.subjects,         keywords: 'subject setup curriculum config' },
-    { label: 'Grading & Results',   group: 'Navigation', route: ROUTES.grading,          keywords: 'scores grades assessment exams marks' },
-    { label: 'Report Cards',        group: 'Navigation', route: ROUTES.reportCards,      keywords: 'results terminal report' },
+    { label: 'Grading & Results',   group: 'Navigation', route: ROUTES.grading,          keywords: 'scores grades assessment exams marks schemes submission matrix broadsheet publish results positions average' },
+    { label: 'Report Cards',        group: 'Navigation', route: ROUTES.reportCards,      keywords: 'results terminal report template builder comments traits sign off principal publish parents print' },
     { label: 'Timetables',          group: 'Navigation', route: ROUTES.timetables,       keywords: 'timetable library schedule periods' },
     { label: 'Timetable Builder',   group: 'Navigation', route: ROUTES.timetableBuilder, keywords: 'timetable builder schedule editor config' },
     { label: 'Attendance',          group: 'Navigation', route: ROUTES.attendance,       keywords: 'register absent present roll call' },
@@ -167,8 +168,9 @@ export const PAGE_INDEX = [
     { label: 'Setup Checklist',     group: 'Navigation', route: ROUTES.setup,            keywords: 'onboarding getting started setup welcome go live' },
 
     { label: 'Settings',                       group: 'Settings', route: ROUTES.settings,         keywords: 'configuration preferences' },
-    { label: 'Settings · Identity & Branding', group: 'Settings', route: ROUTES.settingsIdentity, keywords: 'school profile logo name address contact deactivate' },
-    { label: 'Settings · Academic Calendar',   group: 'Settings', route: ROUTES.settingsAcademic, keywords: 'calendar years terms sessions config' },
+    { label: 'Settings · Identity & Branding',      group: 'Settings', route: ROUTES.settingsIdentity,           keywords: 'school profile logo name address contact deactivate' },
+    { label: 'Settings · Academic Calendar',         group: 'Settings', route: ROUTES.settingsAcademic,           keywords: 'calendar years terms sessions config' },
+    { label: 'Settings · Grading & Assessment',      group: 'Settings', route: ROUTES.settingsGradingSetup, keywords: 'grading scheme scale bands grade points assessment policy ca exam marks breakdown continuous components setup' },
 ];
 
 /** Legacy paths → canonical paths (mounted as <Navigate replace> routes). */

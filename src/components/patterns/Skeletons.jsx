@@ -131,3 +131,25 @@ export function CardGridSkeleton({ cards = 6 }) {
         </div>
     );
 }
+
+/**
+ * Finance page: 3 summary stat cards + toolbar + table rows.
+ * Matches the layout of FeeInvoicesTab / FeePaymentsTab.
+ */
+export function FinanceTableSkeleton({ statCards = 3, rows = 8 }) {
+    return (
+        <div className="space-y-5">
+            {/* Summary stat cards */}
+            <div className={`grid gap-4 grid-cols-1 sm:grid-cols-${statCards}`}>
+                {Array.from({ length: statCards }).map((_, i) => (
+                    <div key={i} className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+                        <Shimmer className="h-3 w-28" />
+                        <Shimmer className="h-7 w-36" />
+                    </div>
+                ))}
+            </div>
+            {/* Table */}
+            <TableSkeleton rows={rows} withToolbar />
+        </div>
+    );
+}

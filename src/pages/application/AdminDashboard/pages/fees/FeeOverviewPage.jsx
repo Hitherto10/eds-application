@@ -8,7 +8,7 @@ import FeeOverviewTab from '../../fees/components/FeeOverviewTab.jsx';
 
 function FeeOverviewContent() {
     const { loading: scopeLoading, currentYear, currentTerm } = useAcademic();
-    const showToast = (message) => pushToast({ message });
+    const showToast = (message, type) => pushToast({ message, type });
 
     const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -22,13 +22,16 @@ function FeeOverviewContent() {
             academicYearId: currentYear.id,
             ...(currentTerm?.id ? { termId: currentTerm.id } : {}),
         })
-            .then(res => { if (!cancelled && res?.success) setAnalytics(res.data); })
+            .then(res => { if (!cancelled && res?.success) {
+                setAnalytics(res.data)
+                console.log(res.data)
+            } })
             .catch(err => console.error('[FeeOverview] analytics failed:', err))
             .finally(() => { if (!cancelled) setLoading(false); });
         return () => { cancelled = true; };
     }, [currentYear?.id, currentTerm?.id]);
 
-    if (scopeLoading) {
+    if (scopeLoading || loading) {
         return <DashboardSkeleton />;
     }
 
@@ -41,7 +44,7 @@ function FeeOverviewContent() {
                 </div>
                 <ScopeBar />
             </div>
-            <FeeOverviewTab analytics={analytics} loading={loading} showToast={showToast} />
+            <FeeOverviewTab analytics={analytics} showToast={showToast} />
         </div>
     );
 }

@@ -156,7 +156,7 @@ const StudentManagement = () => {
             {createStudent && (
                 <CreateStudentModal
                     onClose={() => setCreateStudent(false)}
-                    showToast={(message) => pushToast({ message })}
+                    showToast={(message, type) => pushToast({ message, type })}
                     onStudentAdded={fetchStudents}
                 />
             )}

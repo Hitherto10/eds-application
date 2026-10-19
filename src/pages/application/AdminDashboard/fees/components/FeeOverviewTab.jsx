@@ -10,25 +10,16 @@ import {
   Clock,
 } from 'lucide-react';
 
-const StatCard = ({ title, value, sub, icon: Icon, tone }) => (
-  <div className={`p-5 rounded-xl border ${tone.border} ${tone.bg} flex flex-col gap-3`}>
-    <div className="flex items-center justify-between">
-      <span className="text-xs font-bold uppercase tracking-wider text-gray-500">{title}</span>
-      {/*<Icon size={18} className={tone.icon} />*/}
-    </div>
-    <div>
-      <p className="text-2xl font-semibold text-gray-900">{value}</p>
-      {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
-    </div>
+const StatCard = ({ title, value, sub, tint, text }) => (
+  <div className={`${tint} rounded-2xl p-5 flex flex-col justify-center items-center text-center`}>
+    <p className={`text-sm font-medium mb-1 ${text}`}>{title}</p>
+    <h2 className="text-3xl font-bold text-gray-900">{value}</h2>
+    {sub && <p className={`text-xs mt-1 ${text} opacity-75`}>{sub}</p>}
   </div>
 );
 
-export default function FeeOverviewTab({ analytics, loading }) {
+export default function FeeOverviewTab({ analytics }) {
   const a = analytics;
-
-  if (loading && !a) {
-    return <p className="text-sm text-gray-400 py-16 text-center">Loading analytics…</p>;
-  }
 
   if (!a) {
     return (
@@ -44,28 +35,24 @@ export default function FeeOverviewTab({ analytics, loading }) {
 
   const cards = [
     {
-      title: 'Total Expected', value: formatNaira(a.totalExpected),
+      title: 'Total expected', value: formatNaira(a.totalExpected),
       sub: `${a.studentsBilled || 0} students billed`,
-      icon: Target,
-      tone: { bg: 'bg-[#E9F2FC]', border: ' ', icon: 'text-blue-500' },
+      tint: 'bg-[#E9F2FC]', text: 'text-blue-800/70',
     },
     {
-      title: 'Total Collected', value: formatNaira(a.totalCollected),
+      title: 'Total collected', value: formatNaira(a.totalCollected),
       sub: `${a.studentsFullyPaid || 0} fully paid`,
-      icon: Wallet,
-      tone: { bg: 'bg-[#FBFADE]', border: ' ', icon: 'text-green-500' },
+      tint: 'bg-[#FBFADE]', text: 'text-amber-800/70',
     },
     {
       title: 'Outstanding', value: formatNaira(a.totalPending),
       sub: `${a.studentsOwing || 0} students owing`,
-      icon: AlertTriangle,
-      tone: { bg: 'bg-[#EAFBF0]', border: ' ', icon: 'text-amber-500' },
+      tint: 'bg-[#EAFBF0]', text: 'text-emerald-800/70',
     },
     {
-      title: 'Collection Rate', value: `${(a.collectionRate || 0).toFixed(1)}%`,
+      title: 'Collection rate', value: `${(a.collectionRate || 0).toFixed(1)}%`,
       sub: 'of total expected',
-      icon: TrendingUp,
-      tone: { bg: 'bg-[#F5F1FD]', border: ' ', icon: 'text-violet-500' },
+      tint: 'bg-[#F5F1FD]', text: 'text-violet-800/70',
     },
   ];
 

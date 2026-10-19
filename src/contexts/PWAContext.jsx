@@ -96,6 +96,16 @@ export function PWAProvider({ children }) {
     useEffect(() => {
         if (!('serviceWorker' in navigator)) return;
 
+        // In development mode, unregister Service Worker to prevent Vite HMR & node_modules cache corruption
+        if (import.meta.env.DEV) {
+            navigator.serviceWorker.getRegistrations().then((registrations) => {
+                for (const registration of registrations) {
+                    registration.unregister();
+                }
+            });
+            return;
+        }
+
         let mounted = true;
 
         const registerSW = async () => {

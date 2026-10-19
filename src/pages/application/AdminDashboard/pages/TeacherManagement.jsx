@@ -42,6 +42,8 @@ const TeacherManagement = () => {
         }
     }, []);
 
+    console.log("teachers", teachers);
+
     useEffect(() => { fetchTeachers(); }, [fetchTeachers]);
 
     const activeCount = teachers.filter(t => t.status).length;
@@ -63,9 +65,11 @@ const TeacherManagement = () => {
                 </div>
             ),
         },
-        { id: 'email', header: 'Email', accessor: r => r.email, sortable: true, render: r => <span className="text-gray-500">{r.email}</span> },
+        { id: 'email',    header: 'Email',    accessor: r => r.email, sortable: true, render: r => <span className="text-gray-500">{r.email}</span> },
         { id: 'subjects', header: 'Subjects', accessor: r => r.subjects.join(', '), render: r => <span className="text-gray-600 truncate block max-w-[220px]">{r.subjects.join(', ') || '—'}</span> },
-        { id: 'classes', header: 'Classes', accessor: r => r.classes.join(', '), render: r => <span className="text-gray-500 truncate block max-w-[160px]">{r.classes.join(', ') || '—'}</span> },
+        { id: 'classes',  header: 'Classes',  accessor: r => r.classes?.map(c => c.className).join(', '),render: r => { const classText = r.classes?.map(c => c.className).join(', ') || '—';
+                return ( <span className="text-gray-500 truncate block max-w-40" title={classText}> {classText} </span> );}
+        },
         { id: 'status', header: 'Status', accessor: r => (r.status ? 'Active' : 'Inactive'), sortable: true, render: r => <StatusChip status={r.status} /> },
     ], []);
 
@@ -121,7 +125,7 @@ const TeacherManagement = () => {
             {showInvite && (
                 <InviteTeacherModal
                     onClose={() => setShowInvite(false)}
-                    showToast={(message) => pushToast({ message })}
+                    showToast={(message, type) => pushToast({ message, type })}
                     onTeacherAdded={fetchTeachers}
                 />
             )}

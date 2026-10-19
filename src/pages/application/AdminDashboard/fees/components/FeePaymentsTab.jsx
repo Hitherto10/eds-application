@@ -108,13 +108,13 @@ export default function FeePaymentsTab({ currentYear }) {
   const columns = useMemo(() => [
     { id: 'receipt', header: 'Receipt', accessor: r => r.receiptNumber, sortable: true, render: r => <span className="font-mono text-xs text-gray-600">{r.receiptNumber}</span> },
     { id: 'student', header: 'Student', accessor: r => r.studentName || r.studentId, sortable: true, render: r => <span className="text-gray-700">{r.studentName || r.studentId}</span> },
-    { id: 'method', header: 'Method', accessor: r => r.method, render: r => <span className="capitalize text-gray-600">{(r.method || '').replace('_', ' ')}</span> },
+    { id: 'method', header: 'Method', accessor: r => r.paymentMethod, render: r => <span className="capitalize text-gray-600">{(r.paymentMethod || '').replace('_', ' ')}</span> },
     { id: 'amount', header: 'Amount', accessor: r => r.amount, sortable: true, align: 'right', render: r => <span className="font-semibold text-green-600">{formatNaira(r.amount)}</span> },
     { id: 'date', header: 'Date', accessor: r => r.paidAt, sortable: true, render: r => <span className="text-xs text-gray-500">{r.paidAt ? new Date(r.paidAt).toLocaleDateString() : '—'}</span> },
   ], []);
 
   const filters = useMemo(() => [
-    { id: 'method', label: 'Method', getValue: r => r.method, options: PAYMENT_METHODS.map(m => ({ value: m.id, label: m.label })) },
+    { id: 'method', label: 'Method', getValue: r => r.paymentMethod, options: PAYMENT_METHODS.map(m => ({ value: m.id, label: m.label })) },
   ], []);
 
   return (

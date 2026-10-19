@@ -77,6 +77,17 @@ self.addEventListener('fetch', (event) => {
     if (request.method !== 'GET') return;
     if (url.origin !== self.location.origin && !url.pathname.startsWith('/api')) return;
 
+    // Skip Vite dev server internal assets & node_modules dependency requests
+    if (
+        url.pathname.includes('/node_modules/') ||
+        url.pathname.includes('/@vite') ||
+        url.pathname.includes('/@fs') ||
+        url.searchParams.has('v') ||
+        url.searchParams.has('t')
+    ) {
+        return;
+    }
+
     // Never cache sensitive auth/user endpoints
     if (NEVER_CACHE_PATTERNS.some((p) => p.test(url.pathname))) {
         event.respondWith(fetch(request));

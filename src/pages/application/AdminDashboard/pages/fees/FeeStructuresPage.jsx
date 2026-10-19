@@ -9,10 +9,11 @@ import FeeStructuresTab from '../../fees/components/FeeStructuresTab.jsx';
 
 function FeeStructuresContent() {
     const { loading: scopeLoading, currentYear, currentTerm } = useAcademic();
-    const showToast = (message) => pushToast({ message });
+    const showToast = (message, type) => pushToast({ message, type });
 
     const [classes, setClasses] = useState([]);
     const [structures, setStructures] = useState([]);
+    const [loadingData, setLoadingData] = useState(true);
 
     // Classes are reference data — fetch once.
     useEffect(() => {
@@ -23,18 +24,24 @@ function FeeStructuresContent() {
 
     // Structures are scoped to the active year/term.
     useEffect(() => {
-        if (!currentYear?.id) return;
+        if (scopeLoading) return;
+        if (!currentYear?.id) {
+            setLoadingData(false);
+            return;
+        }
         let cancelled = false;
+        setLoadingData(true);
         getFeeStructures({
             academicYearId: currentYear.id,
             ...(currentTerm?.id ? { termId: currentTerm.id } : {}),
         })
             .then(res => { if (!cancelled && res?.success) setStructures(res.data?.feeStructures ?? []); })
-            .catch(err => console.error('[FeeStructures] structures failed:', err));
+            .catch(err => console.error('[FeeStructures] structures failed:', err))
+            .finally(() => { if (!cancelled) setLoadingData(false); });
         return () => { cancelled = true; };
-    }, [currentYear?.id, currentTerm?.id]);
+    }, [currentYear?.id, currentTerm?.id, scopeLoading]);
 
-    if (scopeLoading) {
+    if (scopeLoading || loadingData) {
         return <DashboardSkeleton />;
     }
 

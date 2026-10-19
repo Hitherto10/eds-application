@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from './AuthContext.jsx';
 import { getAcademicYears, getAcademicProfile, getTerms } from '../pages/application/AdminDashboard/timetable/timetableAPIs.js';
+import { getTeacherDashboard } from '../pages/auth/authAPIs.js';
 
 /**
  * ───────────────────────────────
@@ -41,7 +42,8 @@ function pickTerm(terms, profileTerm) {
 
 export function AcademicProvider({ children }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin   = user?.role === 'admin';
+  const isTeacher = user?.role === 'teacher';
 
   const [loading, setLoading] = useState(true);
   const [academicYears, setAcademicYears] = useState([]);
@@ -95,6 +97,34 @@ export function AcademicProvider({ children }) {
     loadedRef.current = true;
     load();
   }, [isAdmin, load]);
+
+  // One-shot load for an authenticated teacher.
+  // Teachers don't have access to the admin academic API, so we pull
+  // currentAcademicYear and currentAcademicTerm from the teacher dashboard
+  // instead (data.school.currentAcademicYear / currentAcademicTerm).
+  const loadForTeacher = useCallback(async () => {
+    try {
+      const res = await getTeacherDashboard();
+      if (!mountedRef.current) return;
+      const school = res?.data?.school ?? {};
+      const year   = school.currentAcademicYear ?? null;
+      const term   = school.currentAcademicTerm ?? null;
+      setCurrentYear(year);
+      setCurrentTerm(term);
+      if (year) setAcademicYears([year]);
+      if (term) setTerms([term]);
+    } catch (err) {
+      console.error('[Academic] teacher load failed:', err);
+    } finally {
+      if (mountedRef.current) setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isTeacher || loadedRef.current) return;
+    loadedRef.current = true;
+    loadForTeacher();
+  }, [isTeacher, loadForTeacher]);
 
   // Change the active year — fetches its terms and selects a sensible default term.
   const selectYear = useCallback(async (yearId) => {

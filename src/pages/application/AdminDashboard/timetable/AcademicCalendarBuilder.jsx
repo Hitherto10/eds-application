@@ -26,6 +26,8 @@ export default function AcademicCalendarBuilder() {
   const { refresh: refreshAcademic } = useAcademic();
   const [academicYears, setAcademicYears] = useState([]);
   const [terms, setTerms] = useState([]);
+  const [isYearsLoading, setIsYearsLoading] = useState(true);
+  const [isTermsLoading, setIsTermsLoading] = useState(false);
 
 
 
@@ -72,18 +74,23 @@ export default function AcademicCalendarBuilder() {
   useEffect(() => {
     if (!selectedViewYearId) { setTerms([]); return; }
     let cancelled = false;
+    setIsTermsLoading(true);
     getTerms(selectedViewYearId)
       .then(res => { if (!cancelled && res?.success) setTerms(res.data?.terms ?? []); })
-      .catch(e => console.error('Failed to load terms', e));
+      .catch(e => console.error('Failed to load terms', e))
+      .finally(() => { if (!cancelled) setIsTermsLoading(false); });
     return () => { cancelled = true; };
   }, [selectedViewYearId]);
 
   const loadYears = async () => {
+    setIsYearsLoading(true);
     try {
       const res = await getAcademicYears();
       if (res?.success) setAcademicYears(res.data?.years ?? []);
     } catch (e) {
       console.error('Failed to load academic years', e);
+    } finally {
+      setIsYearsLoading(false);
     }
   };
 
@@ -308,7 +315,12 @@ export default function AcademicCalendarBuilder() {
             </div>
 
             <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-[500px]">
-              {academicYears.length === 0 ? (
+              {isYearsLoading ? (
+                  <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                    <Loader2 className="animate-spin text-blue-500 mb-4" size={32} />
+                    <p className="text-gray-500 text-sm">Loading academic years...</p>
+                  </div>
+              ) : academicYears.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
                     <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
                       <CalendarIcon className="text-gray-400" size={32} />
@@ -405,6 +417,11 @@ export default function AcademicCalendarBuilder() {
                   <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-gray-500">
                     <ArrowRight className="text-gray-300 mb-3" size={32} />
                     <p>Select an Academic Year from the left to view its terms.</p>
+                  </div>
+              ) : isTermsLoading ? (
+                  <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                    <Loader2 className="animate-spin text-blue-500 mb-4" size={32} />
+                    <p className="text-gray-500 text-sm">Loading terms...</p>
                   </div>
               ) : terms.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">

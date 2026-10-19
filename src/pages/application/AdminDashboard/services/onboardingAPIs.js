@@ -1,17 +1,11 @@
 /**
- * onboardingAPIs — the data layer for Section 4.1 (School Onboarding & Setup Journey).
+ * onboardingAPIs — the data layer for the School Onboarding & Setup Journey.
  *
- * Design rules (kept deliberately simple):
- *   • Step completion is INFERRED from real platform data wherever a real
- *     endpoint exists — never a manual checkbox.
- *   • Steps with no backend yet (timetable publish, grading scheme, payment
- *     gateway) fall back to a localStorage flag that is CLEARLY LABELLED as
- *     "awaiting backend" in the UI. We never silently fake production state.
- *   • School logo, colleague invites, go-live status and sample data are
- *     localStorage / static mocks until the backend lands — each is labelled.
+ * Design rules:
+ *   • Step completion is INFERRED from real platform data — never a manual checkbox.
+ *   • All steps connect to real backend endpoints; the checklist reflects live state.
  *
- * Everything here is a plain async function or a tiny sync helper. Call them
- * directly from components with useEffect — no reducers, no memo, no context.
+ * Everything here is a plain async function or a tiny sync helper.
  */
 
 import { getAllStudents } from '../../../auth/authAPIs.js';
@@ -20,13 +14,11 @@ import { getSchoolClasses } from './classAPIs.js';
 import { getSchoolSubjects } from './subjectAPIs.js';
 import { getFeeStructures } from './feeAPIs.js';
 import { getAcademicYears, getTerms, getAllPublishedTimetables } from '../timetable/timetableAPIs.js';
+import { listGradingScales } from './gradingAPIs.js';
 import { ROUTES } from '../navigation/navConfig.js';
 
-/* ─── localStorage keys (mock persistence — replace with backend) ──────────── */
-const MOCK_FLAGS_KEY = 'educonnect-onboarding-mock';   // { timetable, grading, paymentGateway }
-const LOGO_KEY       = 'educonnect-school-logo';        // data URL
-const GOLIVE_KEY     = 'educonnect-go-live';            // { liveAt: ISO }
-const INVITES_KEY    = 'educonnect-onboarding-invites'; // [{ id, email, role, stepId, sentAt }]
+const LOGO_KEY       = 'educonnect-school-logo'; // data URL
+const GOLIVE_KEY     = 'educonnect-go-live';      // { liveAt: ISO }
 
 function readJSON(key, fallback) {
     try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
@@ -46,16 +38,6 @@ export function saveSchoolLogo(dataUrl) {
     return { success: true, mock: true };
 }
 
-/* ─── Mock completion flags for backend-less steps ───────────────────────────── */
-export function getMockFlags() {
-    return readJSON(MOCK_FLAGS_KEY, { timetable: false, grading: false, paymentGateway: false });
-}
-export function setMockFlag(key, value) {
-    const flags = getMockFlags();
-    flags[key] = value;
-    writeJSON(MOCK_FLAGS_KEY, flags);
-    return { success: true, mock: true };
-}
 
 /* ─── Go-live status (MOCK: localStorage) ─ */
 export function getGoLive() {
@@ -74,61 +56,45 @@ export function isWithinGoLiveWindow() {
     return days <= 7;
 }
 
-/* ─── Colleague invites (MOCK: localStorage; awaiting backend) ────────────────── */
-export function getColleagueInvites() {
-    return readJSON(INVITES_KEY, []);
-}
-export function inviteColleague({ email, role, stepId }) {
-    const invites = getColleagueInvites();
-    const invite = { id: `inv_${Date.now()}`, email, role, stepId, sentAt: new Date().toISOString(), mock: true };
-    invites.unshift(invite);
-    writeJSON(INVITES_KEY, invites);
-    return { success: true, mock: true, invite };
-}
 
 /* ─── Step catalogue ────────────
  * estMin       — shown to the user
  * unlocks      — the "what this enables" line
  * route        — Start/Resume deep-links here (existing builder/page)
  * dependsOn    — step id that must be done first (drives the Locked state)
- * source       — 'real' (inferred from data) | 'mock' (localStorage flag, labelled)
  */
 export const ONBOARDING_STEPS = [
     { id: 'academic-calendar', title: 'Academic Calendar', estMin: 3, route: ROUTES.settingsAcademic,
       description: 'Set your academic year and its terms — the calendar every module runs on.',
-      unlocks: 'Terms & sessions', dependsOn: null, source: 'real' },
+      unlocks: 'Terms & sessions', dependsOn: null },
     { id: 'school-structure', title: 'School Structure', estMin: 5, route: ROUTES.classes,
       description: 'Create your classes and arms so students and timetables have a home.',
-      unlocks: 'Students & timetables', dependsOn: 'academic-calendar', source: 'real' },
+      unlocks: 'Students & timetables', dependsOn: 'academic-calendar' },
     { id: 'subjects', title: 'Subjects', estMin: 4, route: ROUTES.subjects,
       description: 'Build your subject catalogue and assign subjects to arms.',
-      unlocks: 'Grading & timetables', dependsOn: 'school-structure', source: 'real' },
+      unlocks: 'Grading & timetables', dependsOn: 'school-structure' },
     { id: 'staff', title: 'Staff', estMin: 3, route: ROUTES.staff,
-      description: 'Invite teachers and other staff so they can be assigned classes and subjects.',
-      unlocks: 'Class & subject assignments', dependsOn: null, source: 'real' },
+      description: 'Add teachers and other staff so they can be assigned classes and subjects.',
+      unlocks: 'Class & subject assignments', dependsOn: null },
     { id: 'students', title: 'Students & Guardians', estMin: 6, route: ROUTES.students,
       description: 'Add students and link their guardians — one by one or by import.',
-      unlocks: 'Attendance & fees', dependsOn: 'school-structure', source: 'real' },
+      unlocks: 'Attendance & fees', dependsOn: 'school-structure' },
     { id: 'timetable', title: 'Periods & Timetable', estMin: 8, route: ROUTES.timetables,
       description: 'Define periods and publish a timetable for each class.',
-      unlocks: 'Attendance registers', dependsOn: 'subjects', source: 'real' },
+      unlocks: 'Attendance registers', dependsOn: 'subjects' },
     { id: 'grading', title: 'Grading Scheme', estMin: 5, route: ROUTES.grading,
       description: 'Define how scores become grades (CA/exam weights, grade bands).',
-      unlocks: 'Report cards', dependsOn: 'subjects', source: 'mock', mockKey: 'grading' },
+      unlocks: 'Report cards', dependsOn: 'subjects' },
     { id: 'fees', title: 'Fees', estMin: 5, route: ROUTES.feeStructures,
       description: 'Create fee structures per class so invoices can be generated.',
-      unlocks: 'Invoicing', dependsOn: 'school-structure', source: 'real' },
-    { id: 'payment-gateway', title: 'Payment Gateways', estMin: 4, route: ROUTES.settings,
-      description: 'Connect Paystack / Flutterwave so parents can pay online.',
-      unlocks: 'Online payments', dependsOn: 'fees', source: 'mock', mockKey: 'paymentGateway' },
+      unlocks: 'Invoicing', dependsOn: 'school-structure' },
 ];
 
 /* ─── The single source of truth for onboarding state ─────────────────────────── */
 export async function getOnboardingState() {
-    const flags = getMockFlags();
 
     // Fetch all real signals in parallel; tolerate individual failures.
-    const [yearsRes, classesRes, subjectsRes, staffRes, studentsRes, feesRes, timetablesRes] = await Promise.allSettled([
+    const [yearsRes, classesRes, subjectsRes, staffRes, studentsRes, feesRes, timetablesRes, gradingRes] = await Promise.allSettled([
         getAcademicYears(),
         getSchoolClasses(),
         getSchoolSubjects(),
@@ -136,6 +102,7 @@ export async function getOnboardingState() {
         getAllStudents(),
         getFeeStructures(),
         getAllPublishedTimetables(),   // all published timetables, any term/class/arm
+        listGradingScales(),
     ]);
     const val = (r) => (r.status === 'fulfilled' ? r.value : null);
 
@@ -159,12 +126,13 @@ export async function getOnboardingState() {
         'fees':              (val(feesRes)?.data?.feeStructures ?? val(feesRes)?.data?.structures ?? []).length > 0,
         // getAllPublishedTimetables resolves to the array directly
         'timetable':         (val(timetablesRes) ?? []).length > 0,
+        'grading':           (val(gradingRes) ?? []).length > 0 || (val(gradingRes)?.data ?? []).length > 0,
     };
 
     // Resolve done + locked for every step.
     const doneById = {};
     const steps = ONBOARDING_STEPS.map(step => {
-        const done = step.source === 'real' ? !!realDone[step.id] : !!flags[step.mockKey];
+        const done = !!realDone[step.id];
         doneById[step.id] = done;
         return { ...step, done };
     }).map(step => ({

@@ -31,7 +31,7 @@ import {
 
 // ─── Feature flag ──────────────────────────────────────────────────────────
 // Set to `true` once ALL attendance backend endpoints are live.
-export const ATTENDANCE_BACKEND_LIVE = false;
+export const ATTENDANCE_BACKEND_LIVE = true;
 
 // ─── Period time slots (used in fallback mode only) ─────────────────────────
 const PERIOD_SLOTS = [

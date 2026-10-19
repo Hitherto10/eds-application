@@ -34,7 +34,7 @@ const SchoolProfilePage = () => {
     const [loading, setLoading] = useState(false);
     const [school, setSchool] = useState({});
 
-    const showToast = (message) => pushToast({ message });
+    const showToast = (message, type) => pushToast({ message, type });
 
     const [formData, setFormData] = useState({
         schoolName: '',

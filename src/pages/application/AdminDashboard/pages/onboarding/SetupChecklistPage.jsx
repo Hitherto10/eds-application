@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    CheckCircle2, Lock, ArrowRight, Clock, Sparkles, Eye, UserPlus,
-    Rocket, FlaskConical, PartyPopper,
+    CheckCircle2, Lock, ArrowRight, Clock, Sparkles, Eye,
+    Rocket, PartyPopper,
 } from 'lucide-react';
 import AdminLayout from '../../components/layout/AdminLayout.jsx';
 import { useAuth } from '../../../../../contexts/AuthContext.jsx';
@@ -10,7 +10,7 @@ import { getOnboardingState, markGoLive } from '../../services/onboardingAPIs.js
 import useSchoolBrand from '../../hooks/useSchoolBrand.js';
 import { CardGridSkeleton, pushToast } from '../../../../../components/patterns';
 import ProgressRing from './ProgressRing.jsx';
-import InviteColleagueModal from './InviteColleagueModal.jsx';
+
 import PreviewSampleModal from './PreviewSampleModal.jsx';
 import GoLiveCelebration from './GoLiveCelebration.jsx';
 
@@ -28,7 +28,7 @@ export default function SetupChecklistPage() {
 
     const [state, setState] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [inviteStep, setInviteStep] = useState(null);
+
     const [showPreview, setShowPreview] = useState(false);
     const [showCelebration, setShowCelebration] = useState(false);
 
@@ -102,7 +102,6 @@ export default function SetupChecklistPage() {
                                     index={i + 1}
                                     step={step}
                                     onStart={() => navigate(step.route)}
-                                    onInvite={() => setInviteStep(step)}
                                 />
                             ))}
                         </div>
@@ -118,9 +117,7 @@ export default function SetupChecklistPage() {
                 )}
             </div>
 
-            {inviteStep && (
-                <InviteColleagueModal step={inviteStep} onClose={() => setInviteStep(null)} onInvited={load} />
-            )}
+
             {showPreview && <PreviewSampleModal onClose={() => setShowPreview(false)} />}
             {showCelebration && (
                 <GoLiveCelebration schoolName={schoolName} onClose={() => setShowCelebration(false)} />
@@ -136,7 +133,7 @@ export default function SetupChecklistPage() {
 // }
 
 /* ─── Step card ──────────────── */
-function StepCard({ index, step, onStart, onInvite }) {
+function StepCard({ index, step, onStart }) {
     const { done, locked } = step;
 
     return (
@@ -168,11 +165,7 @@ function StepCard({ index, step, onStart, onInvite }) {
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-400">
                             <Clock size={11} /> ~{step.estMin} min
                         </span>
-                        {step.source === 'mock' && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-50 text-amber-600 border border-amber-200">
-                                <FlaskConical size={9} /> Mock
-                            </span>
-                        )}
+
                         {done && <span className="text-[10px] font-bold uppercase tracking-wider text-green-600">Done</span>}
                     </div>
                     <p className="text-[13px] text-gray-500 mt-1 leading-relaxed">{step.description}</p>
@@ -194,12 +187,7 @@ function StepCard({ index, step, onStart, onInvite }) {
                                 {done ? 'Review' : 'Continue setup'} <ArrowRight size={13} />
                             </button>
                         )}
-                        {!done && !locked && (
-                            <button onClick={onInvite}
-                                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 bg-white text-[12px] font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
-                                <UserPlus size={13} /> Invite colleague
-                            </button>
-                        )}
+
                     </div>
                 </div>
             </div>

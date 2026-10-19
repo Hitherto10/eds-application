@@ -449,18 +449,13 @@ export default function ClassSetupBuilder() {
                                   {arm.name}
                                 </span>
 
-                                {/* Subject count */}
-                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                  {subjectCount} subject{subjectCount !== 1 ? 's' : ''}
-                                </span>
-
                                 {/* Manage subjects */}
                                 <button
                                   onClick={() => openArmSubjects(arm)}
                                   className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition-colors"
                                 >
                                   <BookOpen size={11} />
-                                  Subjects
+                                  View Linked Subjects
                                 </button>
 
                                 {/* Edit arm name */}

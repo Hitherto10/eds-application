@@ -4,7 +4,7 @@ import { Wallet, Ban, BookText, FilePlus2, CheckCircle2 } from 'lucide-react';
 import AdminLayout from '../../components/layout/AdminLayout.jsx';
 import {
     DetailPage, EmptyState, Timeline, pushToast, ConfirmDestructiveDialog,
-} from '../../../../../components/patterns';
+} from '../../../../../components/patterns/index.js';
 import { getInvoiceById, voidInvoice, formatNaira } from '../../services/feeAPIs.js';
 import RecordPaymentModal from '../../fees/components/RecordPaymentModal.jsx';
 import StudentLedgerModal from '../../fees/components/StudentLedgerModal.jsx';
@@ -134,7 +134,7 @@ export default function InvoiceDetailPage() {
                     invoice={invoice}
                     onClose={() => setPayOpen(false)}
                     onRecorded={() => { pushToast({ message: 'Payment recorded' }); load(); }}
-                    showToast={(message) => pushToast({ message })}
+                    showToast={(message, type) => pushToast({ message, type })}
                 />
             )}
             {ledgerOpen && (

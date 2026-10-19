@@ -111,7 +111,7 @@ const ParentManagement = () => {
             {showInvite && (
                 <InviteParentModal
                     onClose={() => setShowInvite(false)}
-                    showToast={(message) => pushToast({ message })}
+                    showToast={(message, type) => pushToast({ message, type })}
                 />
             )}
         </AdminLayout>

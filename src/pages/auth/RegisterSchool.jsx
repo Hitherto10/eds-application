@@ -1,10 +1,9 @@
 // src/pages/auth/RegisterSchool.jsx
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {Eye, EyeOff, ArrowLeft, ArrowRight, Check, Home, ImagePlus, X} from 'lucide-react';
 import { RegSchool } from './authAPIs.js';
 import { Toast } from '../application/AdminDashboard/components/ui/Toast.jsx';
-import { VerifySchoolModal } from '../../components/modals.jsx';
 import { saveSchoolLogo } from '../application/AdminDashboard/services/onboardingAPIs.js';
 
 // ─── Shared styles ──────────────
@@ -54,13 +53,12 @@ const NG_STATES = [
 
 // ─── Component ──────────────────
 export function RegisterSchool() {
+    const navigate = useNavigate();
     const [step, setStep]           = useState(1);
     const [direction, setDirection] = useState('forward');
     const [animating, setAnimating] = useState(false);
     const [loading, setLoading]     = useState(false);
     const [showPw, setShowPw]       = useState(false);
-    const [showModal, setShowModal] = useState(false);
-    const [verEmail, setVerEmail]   = useState('');
     const [toast, setToast]         = useState({ show: false, message: '', type: 'error' });
 
     const [schoolData, setSchoolData]     = useState({ schoolName: '', website: '', phone: '', description: '' });
@@ -149,8 +147,8 @@ export function RegisterSchool() {
             // Persist the optional logo locally so it appears on first login.
             // MOCK: stored client-side until a backend logo-upload endpoint exists.
             if (logoData) saveSchoolLogo(logoData);
-            setVerEmail(payload.email);
-            setShowModal(true);
+            if (logoData) saveSchoolLogo(logoData);
+            navigate(`/verify/school?email=${encodeURIComponent(payload.email)}`);
         } catch (err) {
             showToast(err?.message || err?.error || 'Registration failed. Please try again.');
         } finally {
@@ -402,10 +400,6 @@ export function RegisterSchool() {
                     </p>
                 )}
             </div>
-
-            {showModal && (
-                <VerifySchoolModal onClose={() => setShowModal(false)} email={verEmail} showToast={showToast} />
-            )}
         </>
     );
 }

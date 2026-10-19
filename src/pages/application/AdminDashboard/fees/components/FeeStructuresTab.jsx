@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
+  getFeeStructureById,
   createFeeStructure,
   updateFeeStructure,
   deleteFeeStructure,
   transitionFeeStructure,
   cloneFeeStructure,
   generateInvoicesForClass,
+  getFeeStructureVersions,
   formatNaira,
   toKobo,
   sumItems,
@@ -21,12 +23,347 @@ import {
   X,
   Loader2,
   FileStack,
+  Eye,
+  History,
 } from 'lucide-react';
-import { StatusChip } from '../../../../../components/patterns';
+import { WorkbenchTable, StatusChip } from '../../../../../components/patterns';
 
 // ─── Status pill ────────────────
-// Status now uses the platform-wide StatusChip (draft → gray, published → green).
 const StatusPill = ({ status }) => <StatusChip status={status} />;
+
+// ─── Format date to human-readable format e.g. "Jun 17, 2026" ───
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return '—';
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  } catch {
+    return '—';
+  }
+}
+
+// ─── Item Pluralization and Summary Breakdown ───
+function formatItemSummary(items = []) {
+  if (!items.length) {
+    return <span className="text-gray-400">No items</span>;
+  }
+
+  const names = items.map((i) => i?.name).filter(Boolean);
+
+  if (!names.length) {
+    return (
+        <span className="font-semibold text-gray-700">
+        {items.length} {items.length === 1 ? 'item' : 'items'}
+      </span>
+    );
+  }
+
+  const visibleNames = names.slice(0, 2).join(', ');
+  const remaining = items.length - 2;
+
+  return (
+      <span className="truncate block">
+      {visibleNames}
+        {remaining > 0 && (
+            <>
+              {' '}
+              <span className="text-blue-600 font-semibold bg-blue-50 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">
+            +{remaining} more
+          </span>
+            </>
+        )}
+    </span>
+  );
+}
+
+// ─── Section Grouping Categorizer ───
+function getSectionCategory(className = '') {
+  const name = String(className).toUpperCase().trim();
+  if (name.includes('SSS') || name.includes('SENIOR') || /^SS\s*\d/.test(name)) return 'Senior Secondary';
+  if (name.includes('JSS') || name.includes('JUNIOR') || /^JS\s*\d/.test(name)) return 'Junior Secondary';
+  if (name.includes('PRIMARY') || name.includes('BASIC') || /^PR\s*\d/.test(name)) return 'Primary School';
+  if (
+    name.includes('NURSERY') ||
+    name.includes('KG') ||
+    name.includes('CRECHE') ||
+    name.includes('RECEPTION') ||
+    name.includes('KINDER')
+  )
+    return 'Nursery & Early Years';
+  return 'General / Uncategorized';
+}
+
+// ─── Fee Structure Detail View Modal ──────────────
+function FeeStructureDetailModal({ structure, onClose, formatNaira, onViewHistory, classes = [], currentTerm }) {
+  if (!structure) return null;
+
+  const totalKobo = structure.totalAmount ?? structure.items?.reduce((acc, it) => acc + (Number(it.amount) || 0), 0) ?? 0;
+  const clsObj = classes.find(c => c.id === structure.classId);
+  const targetClassName = structure.className || clsObj?.name || '—';
+  const displayClass = structure.armName ? `${targetClassName} (${structure.armName})` : targetClassName;
+  const displayTerm = structure.termName || currentTerm?.name || '—';
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/40" onClick={onClose} />
+        <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[88vh] animate-in zoom-in-95 duration-150 border border-gray-100">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+                <FileStack size={20} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-gray-900">{structure.name}</h3>
+                  <StatusChip status={structure.status} />
+                  <span className="text-[10px] font-bold text-gray-400 uppercase bg-gray-100 px-1.5 py-0.5 rounded">
+                    v{structure.version || 1}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Class: <span className="font-semibold text-gray-700">{displayClass}</span>
+                  {displayTerm !== '—' && (
+                    <> &bull; Term: <span className="font-semibold text-gray-700">{displayTerm}</span></>
+                  )}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* Overview Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-50/70 p-4 rounded-xl border border-gray-100">
+              <div>
+                <span className="text-[10px] font-bold uppercase text-gray-400 block tracking-wider">Target Class</span>
+                <span className="text-sm font-bold text-gray-900 truncate block">{displayClass}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase text-gray-400 block tracking-wider">Term</span>
+                <span className="text-sm font-semibold text-gray-800 truncate block">{displayTerm}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase text-gray-400 block tracking-wider">Total Amount</span>
+                <span className="text-base font-bold text-gray-900">{formatNaira(totalKobo)}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase text-gray-400 block tracking-wider">Payment Type</span>
+                <span className="text-sm font-semibold text-gray-800 capitalize">{structure.paymentType || 'one-time'}</span>
+              </div>
+            </div>
+
+            {/* Fee Items Breakdown */}
+            <div>
+              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">
+                Fee Items Breakdown ({structure.items?.length || 0})
+              </h4>
+              <div className="border border-gray-100 rounded-xl overflow-hidden divide-y divide-gray-100">
+                {structure.items?.length > 0 ? (
+                  structure.items.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-white hover:bg-gray-50/50 transition-colors">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-xs font-bold text-gray-400 w-5">{idx + 1}.</span>
+                        <div>
+                          <p className="text-sm font-bold text-gray-800">{item.name}</p>
+                          <span className="text-[10px] font-bold text-blue-600 uppercase bg-blue-50 px-1.5 py-0.5 rounded">
+                            {item.feeType}
+                          </span>
+                          {item.optional && (
+                            <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded ml-1.5">
+                              Optional
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-sm font-bold text-gray-900">{formatNaira(item.amount)}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-gray-400 p-4 text-center">No fee items defined.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Installment Plans (if any) */}
+            {structure.installmentPlans?.length > 0 && (
+              <div>
+                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Installment Schedule</h4>
+                <div className="space-y-2">
+                  {structure.installmentPlans.map((plan, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-amber-50/40 border border-amber-100 rounded-xl">
+                      <div>
+                        <p className="text-xs font-bold text-gray-800">{plan.label}</p>
+                        <p className="text-[11px] text-gray-500">Due: {formatDate(plan.dueDate)}</p>
+                      </div>
+                      <span className="text-sm font-bold text-amber-700">{plan.percentage}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Metadata Footer info */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-4 border-t border-gray-100 text-[11px] text-gray-400">
+              <div>
+                <span className="block font-bold text-gray-500">Class Name</span>
+                <span className="truncate block font-semibold text-gray-700">{displayClass}</span>
+              </div>
+              <div>
+                <span className="block font-bold text-gray-500">Term Name</span>
+                <span className="truncate block font-semibold text-gray-700">{displayTerm}</span>
+              </div>
+              <div>
+                <span className="block font-bold text-gray-500">Created At</span>
+                <span>{formatDate(structure.createdAt)}</span>
+              </div>
+              <div>
+                <span className="block font-bold text-gray-500">Last Updated</span>
+                <span>{formatDate(structure.updatedAt)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50 rounded-b-2xl">
+            {onViewHistory ? (
+              <button
+                onClick={() => {
+                  onClose();
+                  onViewHistory(structure);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 rounded-xl transition-colors"
+              >
+                <History size={14} /> View Version History
+              </button>
+            ) : <div />}
+            <button
+              onClick={onClose}
+              className="px-5 py-2 text-sm font-semibold bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Version History Audit Trail Modal ──────────────
+function VersionHistoryModal({ structure, onClose }) {
+  const [versions, setVersions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadVersions() {
+      try {
+        setLoading(true);
+        const res = await getFeeStructureVersions(structure.id);
+        if (isMounted) {
+          const list = res.data?.versions || res.versions || res.data || [];
+          setVersions(Array.isArray(list) ? list : []);
+        }
+      } catch {
+        if (isMounted) setVersions([]);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+    if (structure?.id) {
+      loadVersions();
+    }
+    return () => { isMounted = false; };
+  }, [structure?.id]);
+
+  if (!structure) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/40" onClick={onClose} />
+        <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[85vh] border border-gray-100 animate-in zoom-in-95 duration-150">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+                <History size={20} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-900">Version Audit Trail</h3>
+                <p className="text-xs text-gray-400">{structure.name}</p>
+              </div>
+            </div>
+            <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
+              <X size={18} />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                <Loader2 size={24} className="animate-spin mb-2 text-blue-600" />
+                <p className="text-xs font-semibold">Loading version history...</p>
+              </div>
+            ) : versions.length > 0 ? (
+              <div className="relative pl-6 border-l-2 border-gray-100 space-y-6">
+                {versions.map((ver, idx) => (
+                  <div key={ver.id || idx} className="relative">
+                    <div className="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-blue-600 border-4 border-white shadow-sm" />
+                    <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-gray-900 bg-white border border-gray-200 px-2 py-0.5 rounded-md">
+                            Version {ver.version || (versions.length - idx)}
+                          </span>
+                          <StatusChip status={ver.status || structure.status} />
+                        </div>
+                        <span className="text-[11px] text-gray-400">
+                          {formatDate(ver.createdAt || ver.updatedAt)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-700 font-medium mb-1">
+                        Total Amount: <span className="font-bold text-gray-900">{formatNaira(ver.totalAmount || 0)}</span>
+                      </p>
+                      {ver.items?.length > 0 && (
+                        <p className="text-[11px] text-gray-500 mt-1">
+                          Items: {ver.items.map(i => i.name).join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <p className="text-sm font-semibold">Current Version: v{structure.version || 1}</p>
+                <p className="text-xs mt-1">No prior revision records found for this fee structure.</p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end px-6 py-4 border-t border-gray-100 bg-gray-50/50 rounded-b-2xl">
+            <button onClick={onClose} className="px-5 py-2 text-sm font-semibold bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Builder modal ──────────────
 function StructureBuilder({ initial, onClose, onSaved, showToast, classes = [], currentYear, currentTerm }) {
@@ -34,7 +371,7 @@ function StructureBuilder({ initial, onClose, onSaved, showToast, classes = [], 
 
   const [name, setName]               = useState(initial?.name || '');
   const [classId, setClassId]         = useState(initial?.classId || '');
-  const [dueDate, setDueDate]         = useState(initial?.dueDate || '');
+  const [dueDate, setDueDate]         = useState(initial?.dueDate ? initial.dueDate.split('T')[0] : '');
   const [paymentType, setPaymentType] = useState(initial?.paymentType || 'one-time');
   const [items, setItems]             = useState(
     initial?.items?.map(i => ({ ...i, amount: i.amount / 100 })) || [
@@ -270,7 +607,7 @@ function StructureBuilder({ initial, onClose, onSaved, showToast, classes = [], 
                       </div>
                       <input
                         type="date"
-                        value={p.dueDate}
+                        value={p.dueDate ? p.dueDate.split('T')[0] : ''}
                         onChange={e => updatePlan(idx, { dueDate: e.target.value })}
                         className="px-2 py-1.5 border border-gray-200 rounded text-xs"
                       />
@@ -309,13 +646,104 @@ function StructureBuilder({ initial, onClose, onSaved, showToast, classes = [], 
   );
 }
 
+// ─── Clone Structure Modal ──────────────
+function CloneStructureModal({ structure, classes, onClose, onConfirm, cloning }) {
+  if (!structure) return null;
+  const [cloneName, setCloneName] = useState(`${structure.name} (Draft)`);
+  const [targetClassId, setTargetClassId] = useState(structure.classId || '');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!cloneName.trim() || !targetClassId) return;
+    onConfirm({
+      name: cloneName.trim(),
+      classId: targetClassId,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black/40" onClick={() => !cloning && onClose()} />
+      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 border border-gray-100 animate-in zoom-in-95 duration-150">
+        <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+              <Copy size={18} />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-gray-900">Clone Fee Structure</h3>
+              <p className="text-xs text-gray-500">Create a draft duplicate for a class</p>
+            </div>
+          </div>
+          <button onClick={onClose} disabled={cloning} className="p-1 text-gray-400 hover:bg-gray-100 rounded-lg">
+            <X size={18} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="text-xs font-bold text-gray-600 uppercase mb-1 block">New Structure Name *</label>
+            <input
+              type="text"
+              value={cloneName}
+              onChange={(e) => setCloneName(e.target.value)}
+              placeholder="e.g. SSS2 First Term Fees (Draft)"
+              className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 outline-none"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-gray-600 uppercase mb-1 block">Target Class *</label>
+            <select
+              value={targetClassId}
+              onChange={(e) => setTargetClassId(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500/20 outline-none"
+              required
+            >
+              <option value="">Select class…</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="pt-2 flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={cloning}
+              className="flex-1 px-4 py-2.5 text-sm border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={cloning || !cloneName.trim() || !targetClassId}
+              className="flex-1 px-4 py-2.5 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {cloning && <Loader2 size={14} className="animate-spin" />}
+              {cloning ? 'Cloning…' : 'Create Draft'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main tab ───────────────────
 export default function FeeStructuresTab({ showToast, classes = [], currentYear, currentTerm, structures = [], setStructures }) {
   const [builder, setBuilder] = useState(null);              // null | {} | structure
   const [publishConfirm, setPublishConfirm] = useState(null); // null | structure
-  // Tracks which step of the publish sequence we are in:
-  // false | 'publishing' | 'generating'
-  const [publishStep, setPublishStep] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);   // null | structure
+  const [cloneConfirm, setCloneConfirm] = useState(null);     // null | structure
+  const [viewDetailModal, setViewDetailModal] = useState(null); // null | structure object
+  const [versionHistoryModal, setVersionHistoryModal] = useState(null); // null | structure object
+  const [loadingDetail, setLoadingDetail] = useState(null);     // null | structureId
+  const [deleting, setDeleting] = useState(false);
+  const [cloning, setCloning] = useState(false);
+  const [publishStep, setPublishStep] = useState(false);       // false | 'publishing' | 'generating'
 
   const handleSaved = (structure, isEdit) => {
     setStructures(prev => isEdit
@@ -323,18 +751,31 @@ export default function FeeStructuresTab({ showToast, classes = [], currentYear,
       : [structure, ...prev]);
   };
 
+  // ── View Detail flow ───────────
+  const handleViewDetail = async (structureId) => {
+    try {
+      setLoadingDetail(structureId);
+      const res = await getFeeStructureById(structureId);
+      if (res.success && res.data?.feeStructure) {
+        setViewDetailModal(res.data.feeStructure);
+      } else {
+        showToast(res.message || 'Failed to load details', 'error');
+      }
+    } catch (e) {
+      showToast(e.message || 'Failed to load details', 'error');
+    } finally {
+      setLoadingDetail(null);
+    }
+  };
+
   // ── Publish flow ──────────────
-  // Step 1: open confirmation dialog.
   const handlePublishRequest = (s) => setPublishConfirm(s);
 
-  // Step 2: transition → auto-generate invoices → refresh invoice list.
   const handleConfirmPublish = async () => {
     if (!publishConfirm) return;
 
     try {
-      // ── 2a. Transition the structure to 'published' ────────────────────────
       setPublishStep('publishing');
-      console.log('[FeeStructuresTab] Publishing structure:', publishConfirm.id);
       const transRes = await transitionFeeStructure(publishConfirm.id, 'publish');
 
       if (!transRes.success) {
@@ -342,20 +783,16 @@ export default function FeeStructuresTab({ showToast, classes = [], currentYear,
         return;
       }
 
-      // Update the structure card to 'published' immediately so the UI reflects it.
       setStructures(prev => prev.map(s =>
         s.id === publishConfirm.id ? { ...s, ...transRes.data.feeStructure } : s
       ));
 
-      // ── 2b. Auto-generate invoices for the class ───────────────────────────
       setPublishStep('generating');
-      console.log('[FeeStructuresTab] Auto-generating invoices for class:', publishConfirm.classId);
       const genRes = await generateInvoicesForClass({
         feeStructureId: publishConfirm.id,
         classId: publishConfirm.classId,
       });
 
-      // ── 2c. Show combined success toast ───────────────────────────────────
       const invoiceCount = genRes.data?.generated ?? 0;
       const skipped      = genRes.data?.skipped ?? 0;
       const className    = publishConfirm.className || 'the class';
@@ -368,154 +805,295 @@ export default function FeeStructuresTab({ showToast, classes = [], currentYear,
       setPublishConfirm(null);
 
     } catch (e) {
-      console.error('[FeeStructuresTab] Publish + invoice generation failed:', e);
       showToast(e.message || 'Publish failed', 'error');
     } finally {
       setPublishStep(false);
     }
   };
 
-  const handleDelete = async (s) => {
-    if (!confirm(`Delete draft "${s.name}"?`)) return;
+  // ── Delete flow ───────────────
+  const handleDeleteRequest = (s) => setDeleteConfirm(s);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirm) return;
     try {
-      const res = await deleteFeeStructure(s.id);
-      if (res.success) {
-        setStructures(prev => prev.filter(x => x.id !== s.id));
-        showToast('Fee structure deleted');
+      setDeleting(true);
+      const res = await deleteFeeStructure(deleteConfirm.id);
+      if (res.success || res.status === 200) {
+        setStructures(prev => prev.filter(x => x.id !== deleteConfirm.id));
+        showToast('Fee structure deleted successfully');
+        setDeleteConfirm(null);
+      } else {
+        showToast(res.message || 'Delete failed', 'error');
       }
     } catch (e) {
-      showToast(e.message || 'Delete failed', 'error');
+      showToast(e.message || 'Failed to delete fee structure', 'error');
+    } finally {
+      setDeleting(false);
     }
   };
 
-  const handleClone = async (s) => {
+  // ── Clone flow ───────────────
+  const handleCloneRequest = (s) => setCloneConfirm(s);
+
+  const handleConfirmClone = async (cloneData) => {
+    if (!cloneConfirm) return;
     try {
-      const res = await cloneFeeStructure(s.id, {
+      setCloning(true);
+      const targetClassId = cloneData?.classId || cloneConfirm.classId;
+      const targetName = cloneData?.name || `${cloneConfirm.name} (Draft)`;
+      const targetClass = classes.find(c => c.id === targetClassId);
+
+      const res = await cloneFeeStructure(cloneConfirm.id, {
         targetAcademicYearId: currentYear?.id,
         targetTermId: currentTerm?.id,
-        targetClassIds: [s.classId],
+        targetClassIds: [targetClassId],
       });
-      if (res.success) {
-        const cloned = res.data.feeStructures?.length
-          ? res.data.feeStructures
-          : [{ ...s, id: `clone_${Date.now()}`, name: `${s.name} (Copy)`, status: 'draft', version: 1 }];
+
+      if (res.success || res.status === 200) {
+        const cloned = res.data?.feeStructures?.length
+          ? res.data.feeStructures.map(s => ({
+              ...s,
+              name: targetName,
+              className: targetClass?.name || s.className,
+              status: 'draft',
+            }))
+          : [{
+              ...cloneConfirm,
+              id: `clone_${Date.now()}`,
+              name: targetName,
+              classId: targetClassId,
+              className: targetClass?.name || cloneConfirm.className,
+              status: 'draft',
+              version: 1,
+            }];
         setStructures(prev => [...cloned, ...prev]);
-        showToast('Structure cloned as draft');
+        showToast(`Fee structure cloned as draft successfully`);
+        setCloneConfirm(null);
+      } else {
+        showToast(res.message || 'Clone failed', 'error');
       }
     } catch (e) {
       showToast(e.message || 'Clone failed', 'error');
+    } finally {
+      setCloning(false);
     }
   };
 
-  return (
-    <div className="bg-white border border-gray-200 rounded-xl">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-5 border-b border-gray-100">
-        <div>
-          <h2 className="text-base font-bold text-gray-800">
-            Fee Structures ({structures.length})
-          </h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            {currentYear?.name} {currentTerm ? `· ${currentTerm.name}` : ''}
-            {' '}— Create as draft, then publish when ready
-          </p>
-        </div>
-        <button
-          onClick={() => setBuilder({})}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 flex items-center gap-2"
-        >
-          <Plus size={16} /> New Structure
-        </button>
-      </div>
+  // ── Published Count per Class for Conflict Detection ──────
+  const publishedCountByClass = useMemo(() => {
+    return structures.reduce((acc, s) => {
+      if (s.status === 'published' && s.classId) {
+        acc[s.classId] = (acc[s.classId] || 0) + 1;
+      }
+      return acc;
+    }, {});
+  }, [structures]);
 
-      {/* List */}
-      <div className="p-5 space-y-3">
-        {structures.length === 0 ? (
-          <div className="text-center py-16">
-            <FileStack size={36} className="mx-auto text-gray-200 mb-3" />
-            <p className="text-sm font-semibold text-gray-500">No fee structures for this scope</p>
-            <p className="text-xs text-gray-400 mt-1">Create one to begin billing.</p>
+  const existingPublishedForClass = publishConfirm
+    ? structures.find(
+        s => s.status === 'published' && s.classId === publishConfirm.classId && s.id !== publishConfirm.id
+      )
+    : null;
+
+  // ── WorkbenchTable Columns Configuration ──────────────────
+  const columns = useMemo(() => [
+    {
+      id: 'class',
+      header: 'Class / Level',
+      accessor: r => r.className || classes.find(c => c.id === r.classId)?.name || '—',
+      sortable: true,
+      hideable: false,
+      render: r => {
+        const clsName = r.className || classes.find(c => c.id === r.classId)?.name || '—';
+        const hasCustomName = r.name && r.name.trim().toLowerCase() !== clsName.trim().toLowerCase();
+        return (
+          <div className="flex flex-col">
+            <span className="font-semibold text-gray-900">{clsName}</span>
+            {hasCustomName && (
+              <span className="text-xs text-gray-400 font-normal truncate max-w-[220px]" title={r.name}>
+                {r.name}
+              </span>
+            )}
           </div>
-        ) : (
-          structures.map(s => {
-            // Only draft structures can be edited or deleted.
-            const isDraft = s.status === 'draft';
-            return (
-              <div key={s.id} className="border border-gray-200 rounded-xl p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-bold text-gray-900 text-sm">{s.name}</h3>
-                      <StatusPill status={s.status} />
-                      <span className="text-[10px] text-gray-400 font-bold uppercase">v{s.version || 1}</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {s.className || '—'} · {s.items?.length || 0} item(s) ·{' '}
-                      <span className="font-semibold text-gray-700">
-                        {formatNaira(s.totalAmount ?? sumItems(s.items))}
-                      </span>
-                      {s.paymentType === 'installment' && ' · installment'}
-                      {s.dueDate && ` · due ${s.dueDate}`}
-                    </p>
-                  </div>
+        );
+      },
+    },
+    {
+      id: 'items',
+      header: 'Fee Components',
+      accessor: r => r.items?.length || 0,
+      sortable: true,
+      render: r => formatItemSummary(r.items),
+    },
+    {
+      id: 'totalAmount',
+      header: 'Total Amount',
+      accessor: r => r.totalAmount ?? sumItems(r.items),
+      sortable: true,
+      align: 'right',
+      render: r => (
+        <span className="font-semibold text-gray-900">
+          {formatNaira(r.totalAmount ?? sumItems(r.items))}
+        </span>
+      ),
+    },
+    {
+      id: 'dueDate',
+      header: 'Due Date',
+      accessor: r => r.dueDate,
+      sortable: true,
+      render: r => <span className="text-gray-600">{formatDate(r.dueDate)}</span>,
+    },
+    {
+      id: 'status',
+      header: 'Status & Version',
+      accessor: r => r.status,
+      sortable: true,
+      render: r => {
+        const isPublishedConflict = publishedCountByClass[r.classId] > 1 && r.status === 'published';
+        return (
+          <div className="flex items-center gap-2">
+            <StatusChip status={r.status} />
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setVersionHistoryModal(r);
+              }}
+              className="text-[10px] font-bold text-gray-500 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 px-1.5 py-0.5 rounded transition-colors"
+              title="Click to view version history audit trail"
+            >
+              v{r.version || 1}
+            </button>
+            {isPublishedConflict && (
+              <span
+                className="inline-flex items-center text-amber-600 bg-amber-50 p-1 rounded-md"
+                title="Multiple published versions exist for this class"
+              >
+                <AlertTriangle size={13} />
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      align: 'right',
+      hideable: false,
+      render: r => {
+        const isDraft = r.status === 'draft';
+        return (
+          <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
+            {/* View Details */}
+            <button
+              onClick={() => handleViewDetail(r.id)}
+              disabled={loadingDetail === r.id}
+              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+              title="View Details"
+            >
+              {loadingDetail === r.id ? (
+                <Loader2 size={14} className="animate-spin text-blue-600" />
+              ) : (
+                <Eye size={14} />
+              )}
+            </button>
 
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {/* Publish button — only visible on draft structures */}
-                    {isDraft && (
-                      <button
-                        onClick={() => handlePublishRequest(s)}
-                        className="px-3 py-1.5 text-xs font-semibold bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 flex items-center gap-1"
-                      >
-                        <CheckCircle2 size={12} /> Publish
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleClone(s)}
-                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-                      title="Clone as new draft"
-                    >
-                      <Copy size={14} />
-                    </button>
-                    {isDraft && (
-                      <button
-                        onClick={() => setBuilder(s)}
-                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-                        title="Edit"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                    )}
-                    {isDraft && (
-                      <button
-                        onClick={() => handleDelete(s)}
-                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg"
-                        title="Delete"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-                </div>
+            {/* Publish (Draft only) */}
+            {isDraft && (
+              <button
+                onClick={() => handlePublishRequest(r)}
+                className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                title="Publish Structure"
+              >
+                <CheckCircle2 size={14} />
+              </button>
+            )}
 
-                {/* Items preview */}
-                {s.items?.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-gray-100">
-                    {s.items.map((it, i) => (
-                      <span
-                        key={i}
-                        className="text-[11px] bg-gray-50 border border-gray-200 rounded px-2 py-0.5 text-gray-600"
-                      >
-                        {it.name}: {formatNaira(it.amount)}
-                        {it.optional && <span className="text-amber-500 ml-1">(opt)</span>}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
+            {/* Clone / Duplicate */}
+            <button
+              onClick={() => handleCloneRequest(r)}
+              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              title="Clone Structure"
+            >
+              <Copy size={14} />
+            </button>
+
+            {/* Edit (Draft only) */}
+            {isDraft && (
+              <button
+                onClick={() => setBuilder(r)}
+                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                title="Edit Draft"
+              >
+                <Pencil size={14} />
+              </button>
+            )}
+
+            {/* Delete (Draft only) */}
+            {isDraft && (
+              <button
+                onClick={() => handleDeleteRequest(r)}
+                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                title="Delete Draft"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
+        );
+      },
+    },
+  ], [classes, loadingDetail, publishedCountByClass]);
+
+  // ── WorkbenchTable Filters ──────────────────
+  const filters = useMemo(() => [
+    {
+      id: 'status',
+      label: 'Status',
+      getValue: r => r.status,
+      options: [
+        { value: 'published', label: 'Published' },
+        { value: 'draft', label: 'Draft' },
+        { value: 'archived', label: 'Archived' },
+      ],
+    },
+    {
+      id: 'classId',
+      label: 'Class',
+      getValue: r => r.classId,
+      options: classes.map(c => ({ value: c.id, label: c.name })),
+    },
+  ], [classes]);
+
+  return (
+    <div className="space-y-5">
+      <WorkbenchTable
+        title="Fee Structures"
+        storageKey="fee-structures"
+        rows={structures}
+        columns={columns}
+        filters={filters}
+        searchPlaceholder="Search class, structure or item…"
+        searchKeys={[
+          r => r.name,
+          r => r.className || classes.find(c => c.id === r.classId)?.name,
+          r => r.items?.map(i => i.name).join(' '),
+        ]}
+        onRowClick={(r) => handleViewDetail(r.id)}
+        primaryAction={{
+          label: 'New Structure',
+          icon: Plus,
+          onClick: () => setBuilder({}),
+        }}
+        emptyState={{
+          icon: FileStack,
+          title: 'No fee structures yet',
+          description: 'Create fee structures per class and term to begin billing.',
+          action: { label: 'New Structure', onClick: () => setBuilder({}) },
+        }}
+      />
 
       {/* Structure builder modal */}
       {builder && (
@@ -530,12 +1108,31 @@ export default function FeeStructuresTab({ showToast, classes = [], currentYear,
         />
       )}
 
+      {/* Fee Structure Detail View Modal */}
+      {viewDetailModal && (
+        <FeeStructureDetailModal
+          structure={viewDetailModal}
+          onClose={() => setViewDetailModal(null)}
+          formatNaira={formatNaira}
+          onViewHistory={(str) => setVersionHistoryModal(str)}
+          classes={classes}
+          currentTerm={currentTerm}
+        />
+      )}
+
+      {/* Version History Audit Trail Modal */}
+      {versionHistoryModal && (
+        <VersionHistoryModal
+          structure={versionHistoryModal}
+          onClose={() => setVersionHistoryModal(null)}
+        />
+      )}
+
       {/* Publish confirmation modal */}
       {publishConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/40" onClick={() => !publishStep && setPublishConfirm(null)} />
-          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl p-6">
-            {/* Icon */}
+          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 border border-gray-100">
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-amber-50 border border-amber-200 mx-auto mb-4">
               <AlertTriangle size={22} className="text-amber-500" />
             </div>
@@ -548,10 +1145,25 @@ export default function FeeStructuresTab({ showToast, classes = [], currentYear,
               &ldquo;{publishConfirm.name}&rdquo;
             </p>
 
+            {/* Dual published warning */}
+            {existingPublishedForClass && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 mb-4 text-left">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-xs font-bold text-amber-800 uppercase tracking-wider">Duplicate Published Alert</h4>
+                    <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
+                      Class <strong>{publishConfirm.className || 'this class'}</strong> already has an active published structure: &ldquo;{existingPublishedForClass.name}&rdquo;. Publishing this version will replace it as active.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Warning callout */}
-            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-5">
-              <p className="text-xs font-semibold text-amber-800 leading-relaxed">
-                ⚠️&nbsp; Once published, <span className="underline">parents and students will be able to see this fee structure on their dashboards immediately</span>. This action cannot be undone from the portal.
+            <div className="bg-blue-50/70 border border-blue-100 rounded-xl px-4 py-3 mb-5">
+              <p className="text-xs font-semibold text-blue-800 leading-relaxed">
+                ℹ️&nbsp; Once published, invoices will be automatically generated and visible to students/parents.
               </p>
             </div>
 
@@ -576,6 +1188,59 @@ export default function FeeStructuresTab({ showToast, classes = [], currentYear,
             </div>
           </div>
         </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/40" onClick={() => !deleting && setDeleteConfirm(null)} />
+          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 border border-gray-100">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-50 border border-red-200 mx-auto mb-4">
+              <Trash2 size={22} className="text-red-600" />
+            </div>
+
+            <h3 className="text-base font-bold text-gray-900 text-center mb-1">Delete Fee Structure?</h3>
+            <p className="text-sm text-gray-600 text-center mb-1">
+              Are you sure you want to delete draft fee structure:
+            </p>
+            <p className="text-sm font-semibold text-gray-800 text-center mb-4">
+              &ldquo;{deleteConfirm.name}&rdquo;
+            </p>
+
+            <p className="text-xs text-gray-500 text-center mb-6">
+              This will permanently remove the fee structure draft.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                disabled={deleting}
+                className="flex-1 px-4 py-2.5 text-sm border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                className="flex-1 px-4 py-2.5 text-sm font-semibold bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deleting && <Loader2 size={14} className="animate-spin" />}
+                {deleting ? 'Deleting…' : 'Delete Draft'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Clone modal */}
+      {cloneConfirm && (
+        <CloneStructureModal
+          structure={cloneConfirm}
+          classes={classes}
+          onClose={() => setCloneConfirm(null)}
+          onConfirm={handleConfirmClone}
+          cloning={cloning}
+        />
       )}
     </div>
   );
